@@ -1,0 +1,11 @@
+name: flutter_web.examples.gallery
+dependencies:
+  flutter_web:
+    path: ../../flutter_web
+  intl: ^0.15.7
+dev_dependencies:
+  build_runner: any
+  build_web_compilers: any
+  flutter_web_test:
+    path: ../../flutter_web_test
+  test: ^1.0.0
