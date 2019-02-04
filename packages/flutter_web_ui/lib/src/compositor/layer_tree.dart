@@ -23,7 +23,7 @@ class LayerTree {
   /// pictures are registered with the raster cache as potential candidates
   /// to raster. If [ignoreRasterCache] is `true`, then there will be no
   /// attempt to register pictures to cache.
-  void preroll(Frame frame, {bool ignoreRasterCache: false}) {
+  void preroll(Frame frame, {bool ignoreRasterCache = false}) {
     final context =
         PrerollContext(ignoreRasterCache ? null : frame.rasterCache);
     rootLayer.preroll(context, Matrix4.identity());
@@ -33,7 +33,7 @@ class LayerTree {
   ///
   /// If [ignoreRasterCache] is `true`, then the raster cache will
   /// not be used.
-  void paint(Frame frame, {bool ignoreRasterCache: false}) {
+  void paint(Frame frame, {bool ignoreRasterCache = false}) {
     final context = PaintContext(
         frame.canvas, ignoreRasterCache ? null : frame.rasterCache);
     if (rootLayer.needsPainting) {
@@ -53,7 +53,7 @@ class Frame {
   Frame(this.canvas, this.rasterCache);
 
   /// Rasterize the given layer tree into this frame.
-  bool raster(LayerTree layerTree, {bool ignoreRasterCache: false}) {
+  bool raster(LayerTree layerTree, {bool ignoreRasterCache = false}) {
     layerTree.preroll(this, ignoreRasterCache: ignoreRasterCache);
     layerTree.paint(this, ignoreRasterCache: ignoreRasterCache);
     return true;

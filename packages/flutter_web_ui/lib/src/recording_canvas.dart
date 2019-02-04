@@ -50,7 +50,7 @@ class RecordingCanvas {
     return _paintBounds.computeBounds();
   }
 
-  void apply(EngineCanvas engineCanvas, {bool clearFirst: true}) {
+  void apply(EngineCanvas engineCanvas, {bool clearFirst = true}) {
     if (_debugDumpPaintCommands) {
       print('--- Applying RecordingCanvas to ${engineCanvas.runtimeType} '
           'with bounds $_paintBounds');

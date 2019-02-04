@@ -31,11 +31,6 @@ Color _scaleAlpha(Color a, double factor) {
   return a.withAlpha((a.alpha * factor).round().clamp(0, 255));
 }
 
-// If we actually run on big endian machines, we'll need to do something smarter
-// here. We don't use [Endian.Host] because it's not a compile-time
-// constant and can't propagate into the set/get calls.
-const Endian _kFakeHostEndian = Endian.little;
-
 /// An immutable 32 bit color value in ARGB
 class Color {
   /// Construct a color from the lower 32 bits of an int.
@@ -1284,7 +1279,7 @@ abstract class Image {
   /// Returns a future that completes with the binary image data or an error
   /// if encoding fails.
   Future<ByteData> toByteData(
-      {ImageByteFormat format: ImageByteFormat.rawRgba});
+      {ImageByteFormat format = ImageByteFormat.rawRgba});
 
   /// Release the resources used by this object. The object is no longer usable
   /// after this method is called.
@@ -1659,12 +1654,6 @@ class Shadow {
             'Text shadow blur radius should be non-negative.');
 
   static const int _kColorDefault = 0xFF000000;
-  // Constants for shadow encoding.
-  static const int _kBytesPerShadow = 16;
-  static const int _kColorOffset = 0 << 2;
-  static const int _kXOffset = 1 << 2;
-  static const int _kYOffset = 2 << 2;
-  static const int _kBlurOffset = 3 << 2;
 
   /// Color that the shadow will be drawn with.
   ///
@@ -1785,37 +1774,6 @@ class Shadow {
 
   @override
   int get hashCode => hashValues(color, offset, blurRadius);
-
-  // Serialize [shadows] into ByteData. The format is a single uint_32_t at
-  // the beginning indicating the number of shadows, followed by _kBytesPerShadow
-  // bytes for each shadow.
-  static ByteData _encodeShadows(List<Shadow> shadows) {
-    if (shadows == null) return ByteData(0);
-
-    final int byteCount = shadows.length * _kBytesPerShadow;
-    final ByteData shadowsData = ByteData(byteCount);
-
-    int shadowOffset = 0;
-    for (int shadowIndex = 0; shadowIndex < shadows.length; ++shadowIndex) {
-      final Shadow shadow = shadows[shadowIndex];
-      if (shadow == null) continue;
-      shadowOffset = shadowIndex * _kBytesPerShadow;
-
-      shadowsData.setInt32(_kColorOffset + shadowOffset,
-          shadow.color.value ^ Shadow._kColorDefault, _kFakeHostEndian);
-
-      shadowsData.setFloat32(
-          _kXOffset + shadowOffset, shadow.offset.dx, _kFakeHostEndian);
-
-      shadowsData.setFloat32(
-          _kYOffset + shadowOffset, shadow.offset.dy, _kFakeHostEndian);
-
-      shadowsData.setFloat32(
-          _kBlurOffset + shadowOffset, shadow.blurRadius, _kFakeHostEndian);
-    }
-
-    return shadowsData;
-  }
 
   @override
   String toString() => 'TextShadow($color, $offset, $blurRadius)';

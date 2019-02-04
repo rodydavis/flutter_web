@@ -313,7 +313,7 @@ class PhysicalShapeLayer extends ContainerLayer {
 
   @override
   void preroll(PrerollContext context, Matrix4 matrix) {
-    final childPaintBounds = prerollChildren(context, matrix);
+    prerollChildren(context, matrix);
     paintBounds =
         ElevationShadow.computeShadowRect(_path.getBounds(), _elevation);
   }

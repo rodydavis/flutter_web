@@ -696,7 +696,7 @@ class SemanticsUpdateBuilder {
   }
 
   void updateCustomAction(
-      {int id, String label, String hint, int overrideId: -1}) {
+      {int id, String label, String hint, int overrideId = -1}) {
     // TODO(yjbanov): implement.
   }
 

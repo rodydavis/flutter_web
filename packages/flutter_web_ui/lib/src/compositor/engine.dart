@@ -43,7 +43,7 @@ class Engine extends RuntimeDelegate {
     }
   }
 
-  void scheduleFrame({bool regenerateLayerTree: true}) {
+  void scheduleFrame({bool regenerateLayerTree = true}) {
     _animator.requestFrame(regenerateLayerTree);
   }
 
