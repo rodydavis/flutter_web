@@ -112,7 +112,7 @@ class TestRecordingPaintingContext extends ClipContext
   @override
   void pushClipRect(bool needsCompositing, Offset offset, Rect clipRect,
       PaintingContextCallback painter,
-      {Clip clipBehavior = Clip.antiAlias}) {
+      {Clip clipBehavior = Clip.hardEdge}) {
     clipRectAndPaint(clipRect.shift(offset), clipBehavior,
         clipRect.shift(offset), () => painter(this, offset));
   }

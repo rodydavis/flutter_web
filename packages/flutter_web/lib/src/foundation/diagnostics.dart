@@ -5,6 +5,7 @@
 import 'package:meta/meta.dart';
 
 import 'print.dart';
+import '../util.dart';
 
 /// The various priority levels used to filter which diagnostics are shown and
 /// omitted.
@@ -1973,7 +1974,11 @@ class DiagnosticableNode<T extends Diagnosticable> extends DiagnosticsNode {
   DiagnosticPropertiesBuilder get _builder {
     if (_cachedBuilder == null) {
       _cachedBuilder = new DiagnosticPropertiesBuilder();
-      value?.debugFillProperties(_cachedBuilder);
+      // TODO(flutter_web): Upstream to flutter repo to enable
+      // treeshaking.
+      if (assertionsEnabled) {
+        value?.debugFillProperties(_cachedBuilder);
+      }
     }
     return _cachedBuilder;
   }
@@ -2395,7 +2400,11 @@ abstract class DiagnosticableTree extends Diagnosticable {
     result.write(joiner);
     final DiagnosticPropertiesBuilder builder =
         new DiagnosticPropertiesBuilder();
-    debugFillProperties(builder);
+
+    /// TODO(flutter_web): upstream to Flutter.
+    if (assertionsEnabled) {
+      debugFillProperties(builder);
+    }
     result.write(
       builder.properties
           .where((DiagnosticsNode n) => !n.isFiltered(minLevel))
@@ -2488,7 +2497,11 @@ mixin DiagnosticableTreeMixin implements DiagnosticableTree {
     result.write(joiner);
     final DiagnosticPropertiesBuilder builder =
         new DiagnosticPropertiesBuilder();
-    debugFillProperties(builder);
+
+    /// TODO(flutter_web): upstream to Flutter.
+    if (assertionsEnabled) {
+      debugFillProperties(builder);
+    }
     result.write(
       builder.properties
           .where((DiagnosticsNode n) => !n.isFiltered(minLevel))

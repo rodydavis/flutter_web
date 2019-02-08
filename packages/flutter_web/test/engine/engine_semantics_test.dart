@@ -39,6 +39,9 @@ void main() {
   group('horizontal scrolling', () {
     _testHorizontalScrolling();
   });
+  group('incrementable', () {
+    _testIncrementables();
+  });
 }
 
 void _testEngineSemanticsOwner() {
@@ -69,7 +72,7 @@ void _testEngineSemanticsOwner() {
     expect(tree[0].element.tagName.toLowerCase(), 'flt-semantics');
 
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0)">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem aria-label="Hello"></sem>
   </sem-c>
@@ -81,7 +84,7 @@ void _testEngineSemanticsOwner() {
     );
 
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0)">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem aria-label="World"></sem>
   </sem-c>
@@ -93,7 +96,7 @@ void _testEngineSemanticsOwner() {
     );
 
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0)">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -203,7 +206,7 @@ void _testContainer() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0)">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -239,7 +242,7 @@ void _testContainer() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0)">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -275,7 +278,7 @@ void _testVerticalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
 </sem>''');
 
     semantics().semanticsEnabled = false;
@@ -299,7 +302,7 @@ void _testVerticalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -362,7 +365,7 @@ void _testVerticalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
   <sem-c>
     <sem></sem>
     <sem></sem>
@@ -411,7 +414,7 @@ void _testHorizontalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
 </sem>''');
 
     semantics().semanticsEnabled = false;
@@ -435,7 +438,7 @@ void _testHorizontalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -452,26 +455,7 @@ void _testHorizontalScrolling() {
   });
 
   test('scrollable node dispatches scroll events', () async {
-    final StreamController<int> idLogController = StreamController<int>();
-    final StreamController<SemanticsAction> actionLogController =
-        StreamController<SemanticsAction>();
-    final Stream<int> idLog = idLogController.stream.asBroadcastStream();
-    final Stream<SemanticsAction> actionLog =
-        actionLogController.stream.asBroadcastStream();
-
-    // The browser kicks us out of the test zone when the scroll event happens.
-    // We memorize the test zone so we can call expect when the callback is
-    // fired.
-    var testZone = Zone.current;
-
-    ui.window.onSemanticsAction =
-        (int id, SemanticsAction action, ByteData args) {
-      idLogController.add(id);
-      actionLogController.add(action);
-      testZone.run(() {
-        expect(args, null);
-      });
-    };
+    final SemanticsActionLogger logger = SemanticsActionLogger();
     semantics()
       ..debugOverrideTimestampFunction(() => _testTime)
       ..semanticsEnabled = true;
@@ -499,7 +483,7 @@ void _testHorizontalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
   <sem-c>
     <sem></sem>
     <sem></sem>
@@ -516,17 +500,134 @@ void _testHorizontalScrolling() {
 
     scrollable.scrollLeft = 20;
     expect(scrollable.scrollLeft, 20);
-    expect(await idLog.first, 0);
-    expect(await actionLog.first, SemanticsAction.scrollLeft);
+    expect(await logger.idLog.first, 0);
+    expect(await logger.actionLog.first, SemanticsAction.scrollLeft);
     // Engine semantics returns scroll position back to neutral.
     expect(scrollable.scrollLeft, 10);
 
     scrollable.scrollLeft = 5;
     expect(scrollable.scrollLeft, 5);
-    expect(await idLog.first, 0);
-    expect(await actionLog.first, SemanticsAction.scrollRight);
+    expect(await logger.idLog.first, 0);
+    expect(await logger.actionLog.first, SemanticsAction.scrollRight);
     // Engine semantics returns scroll top back to neutral.
     expect(scrollable.scrollLeft, 10);
+
+    semantics().semanticsEnabled = false;
+  });
+}
+
+void _testIncrementables() {
+  testWidgets('renders a trivial incrementable node',
+      (WidgetTester tester) async {
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.increase.index,
+      value: 'd',
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+  <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="1" aria-valuemin="1">
+</sem>''');
+
+    semantics().semanticsEnabled = false;
+  });
+
+  testWidgets('increments', (WidgetTester tester) async {
+    final SemanticsActionLogger logger = SemanticsActionLogger();
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.increase.index,
+      value: 'd',
+      increasedValue: 'e',
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+  <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="2" aria-valuemin="1">
+</sem>''');
+
+    html.InputElement input = html.document.querySelectorAll('input').single;
+    input.value = '2';
+    input.dispatchEvent(html.Event('change'));
+
+    expect(await logger.idLog.first, 0);
+    expect(await logger.actionLog.first, SemanticsAction.increase);
+
+    semantics().semanticsEnabled = false;
+  });
+
+  testWidgets('decrements', (WidgetTester tester) async {
+    final SemanticsActionLogger logger = SemanticsActionLogger();
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.decrease.index,
+      value: 'd',
+      decreasedValue: 'c',
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+  <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="1" aria-valuemin="0">
+</sem>''');
+
+    html.InputElement input = html.document.querySelectorAll('input').single;
+    input.value = '0';
+    input.dispatchEvent(html.Event('change'));
+
+    expect(await logger.idLog.first, 0);
+    expect(await logger.actionLog.first, SemanticsAction.decrease);
+
+    semantics().semanticsEnabled = false;
+  });
+
+  testWidgets('renders a node that can both increment and decrement',
+      (WidgetTester tester) async {
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions:
+          0 | SemanticsAction.decrease.index | SemanticsAction.increase.index,
+      value: 'd',
+      increasedValue: 'e',
+      decreasedValue: 'c',
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+  <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="2" aria-valuemin="0">
+</sem>''');
 
     semantics().semanticsEnabled = false;
   });
@@ -547,4 +648,32 @@ html.Element findScrollable() {
             element.style.overflowX == 'scroll',
         orElse: () => null,
       );
+}
+
+class SemanticsActionLogger {
+  StreamController<int> idLogController;
+  StreamController<SemanticsAction> actionLogController;
+  Stream<int> idLog;
+  Stream<SemanticsAction> actionLog;
+
+  SemanticsActionLogger() {
+    idLogController = StreamController<int>();
+    actionLogController = StreamController<SemanticsAction>();
+    idLog = idLogController.stream.asBroadcastStream();
+    actionLog = actionLogController.stream.asBroadcastStream();
+
+    // The browser kicks us out of the test zone when the browser event happens.
+    // We memorize the test zone so we can call expect when the callback is
+    // fired.
+    var testZone = Zone.current;
+
+    ui.window.onSemanticsAction =
+        (int id, SemanticsAction action, ByteData args) {
+      idLogController.add(id);
+      actionLogController.add(action);
+      testZone.run(() {
+        expect(args, null);
+      });
+    };
+  }
 }

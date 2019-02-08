@@ -865,7 +865,8 @@ class TestImage implements ui.Image {
   void dispose() {}
 
   @override
-  Future<ByteData> toByteData({ui.ImageByteFormat format}) async {
+  Future<ByteData> toByteData(
+      {ui.ImageByteFormat format = ui.ImageByteFormat.rawRgba}) async {
     throw UnsupportedError('Cannot encode test image');
   }
 

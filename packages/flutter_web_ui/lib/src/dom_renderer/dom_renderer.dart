@@ -150,9 +150,54 @@ class DomRenderer {
     html.StyleElement styleElement = new html.StyleElement();
     html.document.head.append(styleElement);
     html.CssStyleSheet sheet = styleElement.sheet;
-    final rule1 = 'p { -webkit-margin-before: 0; -webkit-margin-after: 0; '
-        'margin-block-start: 0; margin-block-end: 0; }';
-    sheet.insertRule(rule1, sheet.cssRules.length);
+
+    // TODO(butterfly): use more efficient CSS selectors; descendant selectors
+    //                  are slow. More info:
+    //
+    //                  https://csswizardry.com/2011/09/writing-efficient-css-selectors/
+
+    // This undoes browser's default layout attributes for paragraphs. We
+    // compute paragraph layout ourselves.
+    sheet.insertRule('''
+flt-ruler-host p, flt-scene p {
+  -webkit-margin-before: 0;
+  -webkit-margin-after: 0;
+  margin-block-start: 0;
+  margin-block-end: 0;
+}''', sheet.cssRules.length);
+
+    // This undoes browser's default painting and layout attributes of range
+    // input, which is used in semantics.
+    sheet.insertRule('''
+flt-semantics input[type=range] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  position: absolute;
+  border: none;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}''', sheet.cssRules.length);
+
+    sheet.insertRule('''
+flt-semantics input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+}
+''', sheet.cssRules.length);
+
+    sheet.insertRule('''
+flt-semantics input[type=range]::-webkit-slider-runnable-track {
+  border: none;
+}
+''', sheet.cssRules.length);
+
+    sheet.insertRule('''
+flt-semantics input[type=range]:focus::-webkit-slider-runnable-track {
+  border: none;
+}
+''', sheet.cssRules.length);
 
     final bodyElement = html.document.body;
     setElementStyle(bodyElement, 'position', 'fixed');

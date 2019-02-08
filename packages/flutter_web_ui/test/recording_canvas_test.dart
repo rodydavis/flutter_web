@@ -225,7 +225,8 @@ class TestImage implements Image {
   int get height => 10;
 
   @override
-  Future<ByteData> toByteData({ImageByteFormat format}) async {
+  Future<ByteData> toByteData(
+      {ImageByteFormat format = ImageByteFormat.rawRgba}) async {
     throw UnsupportedError('Cannot encode test image');
   }
 

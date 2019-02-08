@@ -149,10 +149,17 @@ class SemanticsObject {
     // transforms. We use a transparent color instead of "visibility:hidden" or
     // "display:none" so that a screen reader does not ignore these elements.
     element.style.position = 'absolute';
+
+    // The root node has some properties that other nodes do not.
     if (id == 0) {
-      // Root node.
-      element.style.color = 'rgba(0,0,0,0)'; // transparent text
+      // Make all semantics transparent
+      element.style.opacity = '0';
+
+      // Make text explicitly transparent to signal to the browser that no
+      // rasterization needs to be done.
+      element.style.color = 'rgba(0,0,0,0)';
     }
+
     if (_debugShowSemanticsNodes) {
       element.style.outline = '1px solid green';
       element.style.color = 'purple';
@@ -339,7 +346,34 @@ class SemanticsObject {
   /// This method creates [SemanticsObject]s for the direct children of this
   /// object. However, it does not recursively populate them.
   void updateWith(SemanticsNodeUpdate update) {
-    final html.CssStyleDeclaration style = element.style;
+    // TODO(yjbanov): implement all flags.
+    if (_flags != update.flags) {
+      _flags = update.flags;
+
+      if (hasFlag(ui.SemanticsFlag.isButton)) {
+        element.setAttribute('role', 'button');
+      } else if (hasFlag(ui.SemanticsFlag.isImage)) {
+        element.setAttribute('role', 'img');
+      } else {
+        element.attributes.remove('role');
+      }
+    }
+
+    // Update value early because some controls, such as incrementables, depend
+    // on it.
+    bool valueChanged = false;
+    if (_value != update.value) {
+      _value = update.value;
+      valueChanged = true;
+    }
+
+    // TODO(yjbanov): implement all actions.
+    if (_actions != update.actions) {
+      _actions = update.actions;
+      _updateTapHandling();
+      _updateScrollHandling();
+      _updateIncrementHandling();
+    }
 
     if (_label != update.label) {
       _label = update.label;
@@ -358,9 +392,12 @@ class SemanticsObject {
       }
     }
 
-    if (_value != update.value) {
-      _value = update.value;
-      if (_value != null && _value.isNotEmpty) {
+    if (valueChanged) {
+      final bool hasValue = _value != null && _value.isNotEmpty;
+      // If the node is incrementable the value is reported to the browser via
+      // the <input> tag, so we do not need to also render it again here.
+      final bool shouldDisplayValue = hasValue && !isIncrementable;
+      if (shouldDisplayValue) {
         if (_valueElement == null) {
           _valueElement = html.Element.tag('flt-semantics-value');
           _valueElement.style
@@ -374,76 +411,6 @@ class SemanticsObject {
         _valueElement.text = _value;
       } else {
         _valueElement?.remove();
-      }
-    }
-
-    // TODO(yjbanov): implement all flags.
-    if (_flags != update.flags) {
-      _flags = update.flags;
-
-      if (hasFlag(ui.SemanticsFlag.isButton)) {
-        element.setAttribute('role', 'button');
-      } else if (hasFlag(ui.SemanticsFlag.isImage)) {
-        element.setAttribute('role', 'img');
-      } else {
-        element.attributes.remove('role');
-      }
-    }
-
-    // TODO(yjbanov): implement all actions.
-    if (_actions != update.actions) {
-      _actions = update.actions;
-
-      if (_clickListener != null) {
-        element.removeEventListener('click', _clickListener);
-        _clickListener = null;
-      }
-
-      if (hasAction(ui.SemanticsAction.tap)) {
-        _clickListener = (_) {
-          if (!owner.shouldAcceptBrowserGesture('click')) {
-            return;
-          }
-          ui.window.onSemanticsAction(id, ui.SemanticsAction.tap, null);
-        };
-        element.addEventListener('click', _clickListener);
-      }
-
-      if (isVerticalScrollContainer || isHorizontalScrollContainer) {
-        if (_scrollListener == null) {
-          // We need to set touch-action:none explicitly here, despite the fact
-          // that we already have it on the <body> tag because overflow:scroll
-          // still causes the browser to take over pointer events in order to
-          // process scrolling. We don't want that when scrolling is handled by
-          // the framework.
-          //
-          // This is effective only in Chrome. Safari does not implement this
-          // CSS property. In Safari the `PointerBinding` uses `preventDefault`
-          // to prevent browser scrolling.
-          style.touchAction = 'none';
-          _gestureModeDidChange(owner._gestureMode);
-
-          // We neutralize the scroll position after all children have been
-          // updated. Otherwise the browser does not yet have the sizes of the
-          // child nodes and resets the scrollTop value back to zero.
-          owner._addOneTimePostUpdateCallback(() {
-            _neutralizeDomScrollPosition();
-          });
-
-          owner._addGestureModeListener(_gestureModeDidChange);
-
-          _scrollListener = (_) {
-            _recomputeScrollPosition();
-          };
-          element.addEventListener('scroll', _scrollListener);
-        }
-      } else {
-        style.removeProperty('overflowY');
-        style.removeProperty('overflowX');
-        style.removeProperty('touch-action');
-        if (_scrollListener != null) {
-          element.removeEventListener('scroll', _scrollListener);
-        }
       }
     }
 
@@ -482,14 +449,11 @@ class SemanticsObject {
       // TODO(yjbanov): implement hint.
     }
 
-    if (_increasedValue != update.increasedValue) {
+    if (_increasedValue != update.increasedValue ||
+        _decreasedValue != update.decreasedValue) {
       _increasedValue = update.increasedValue;
-      // TODO(yjbanov): implement increasedValue.
-    }
-
-    if (_decreasedValue != update.decreasedValue) {
       _decreasedValue = update.decreasedValue;
-      // TODO(yjbanov): implement decreasedValue.
+      _updateIncrementHandling();
     }
 
     if (_textDirection != update.textDirection) {
@@ -525,6 +489,95 @@ class SemanticsObject {
     // Make sure we create a child container only when there are children.
     assert(_childContainerElement == null || hasChildren);
   }
+
+  void _updateTapHandling() {
+    if (_clickListener != null) {
+      element.removeEventListener('click', _clickListener);
+      _clickListener = null;
+    }
+
+    if (hasAction(ui.SemanticsAction.tap)) {
+      _clickListener = (_) {
+        if (!owner.shouldAcceptBrowserGesture('click')) {
+          return;
+        }
+        ui.window.onSemanticsAction(id, ui.SemanticsAction.tap, null);
+      };
+      element.addEventListener('click', _clickListener);
+    }
+  }
+
+  void _updateScrollHandling() {
+    final html.CssStyleDeclaration style = element.style;
+    if (isVerticalScrollContainer || isHorizontalScrollContainer) {
+      if (_scrollListener == null) {
+        // We need to set touch-action:none explicitly here, despite the fact
+        // that we already have it on the <body> tag because overflow:scroll
+        // still causes the browser to take over pointer events in order to
+        // process scrolling. We don't want that when scrolling is handled by
+        // the framework.
+        //
+        // This is effective only in Chrome. Safari does not implement this
+        // CSS property. In Safari the `PointerBinding` uses `preventDefault`
+        // to prevent browser scrolling.
+        style.touchAction = 'none';
+        _gestureModeDidChange(owner._gestureMode);
+
+        // We neutralize the scroll position after all children have been
+        // updated. Otherwise the browser does not yet have the sizes of the
+        // child nodes and resets the scrollTop value back to zero.
+        owner._addOneTimePostUpdateCallback(() {
+          _neutralizeDomScrollPosition();
+        });
+
+        // Memoize the tear-off because Dart does not guarantee that two
+        // tear-offs of a method on the same instance will produce the same
+        // object.
+        _gestureModeListener = _gestureModeDidChange;
+        owner._addGestureModeListener(_gestureModeListener);
+
+        _scrollListener = (_) {
+          _recomputeScrollPosition();
+        };
+        element.addEventListener('scroll', _scrollListener);
+      }
+    } else {
+      style.removeProperty('overflowY');
+      style.removeProperty('overflowX');
+      style.removeProperty('touch-action');
+      if (_scrollListener != null) {
+        element.removeEventListener('scroll', _scrollListener);
+      }
+      if (_gestureModeListener != null) {
+        owner._removeGestureModeListener(_gestureModeListener);
+        _gestureModeListener = null;
+      }
+    }
+  }
+
+  IncrementHandler _incrementHandler;
+
+  /// Whether the object represents an UI element with "increase" or "decrease"
+  /// controls, e.g. a slider.
+  ///
+  /// Such objects are expressed in HTML using `<input type="range">`.
+  bool get isIncrementable =>
+      hasAction(ui.SemanticsAction.increase) ||
+      hasAction(ui.SemanticsAction.decrease);
+
+  void _updateIncrementHandling() {
+    if (isIncrementable) {
+      if (_incrementHandler == null) {
+        _incrementHandler = IncrementHandler(this);
+      }
+      _incrementHandler.update();
+    } else if (_incrementHandler != null) {
+      _incrementHandler.dispose();
+      _incrementHandler = null;
+    }
+  }
+
+  GestureModeCallback _gestureModeListener;
 
   void _gestureModeDidChange(GestureMode mode) {
     switch (mode) {
@@ -817,6 +870,130 @@ class SemanticsObject {
     } else {
       return super.toString();
     }
+  }
+}
+
+/// Adds increment/decrement event handling to a semantics object.
+///
+/// The implementation uses a hidden `<input type="range">` element with ARIA
+/// attributes to cause the browser to render increment/decrement controls to
+/// the assistive technology.
+///
+/// The input element is disabled whenever the gesture mode switches to pointer
+/// events. This is to prevent the browser from taking over drag gestures. Drag
+/// gestures must be interpreted by the Flutter framework.
+class IncrementHandler {
+  /// The semantics object managed by this handler.
+  final SemanticsObject _semanticsObject;
+
+  /// The HTML element used to render semantics to the browser.
+  final html.InputElement _element = html.InputElement();
+
+  /// The value used by the input element.
+  ///
+  /// Flutter values are strings, and are not necessarily numbers. In order to
+  /// convey to the browser what the available "range" of values is we
+  /// substitute the framework value with a generated `int` surrogate.
+  /// "aria-valuetext" attribute is used to cause the browser to announce the
+  /// framework value to the user.
+  int _currentSurrogateValue = 1;
+
+  /// Disables the input [_element] when the gesture mode switches to
+  /// [GestureMode.pointerEvents], and enables it when the mode switches back to
+  /// [GestureMode.browserGestures].
+  GestureModeCallback _gestureModeListener;
+
+  IncrementHandler(this._semanticsObject) : assert(_semanticsObject != null) {
+    _semanticsObject.element.append(_element);
+    _element.type = 'range';
+    _element.setAttribute('role', 'slider');
+
+    _element.addEventListener('change', (_) {
+      if (_element.disabled) {
+        return;
+      }
+      final int newInputValue = int.parse(_element.value);
+      if (newInputValue > _currentSurrogateValue) {
+        _currentSurrogateValue += 1;
+        ui.window.onSemanticsAction(
+            _semanticsObject.id, ui.SemanticsAction.increase, null);
+      } else if (newInputValue < _currentSurrogateValue) {
+        _currentSurrogateValue -= 1;
+        ui.window.onSemanticsAction(
+            _semanticsObject.id, ui.SemanticsAction.decrease, null);
+      }
+    });
+
+    // Update the DOM node once immediately so it reflects the current state of
+    // the semantics object.
+    update();
+
+    // Store the callback as a closure because Dart does not guarantee that
+    // tear-offs produce the same function object.
+    _gestureModeListener = (GestureMode mode) {
+      update();
+    };
+    _semanticsObject.owner._addGestureModeListener(_gestureModeListener);
+  }
+
+  /// Updates the DOM [_element] based on the current state of the
+  /// [_semanticsObject] and current gesture mode.
+  void update() {
+    switch (_semanticsObject.owner._gestureMode) {
+      case GestureMode.browserGestures:
+        _enableBrowserGestureHandling();
+        _updateInputValues();
+        break;
+      case GestureMode.pointerEvents:
+        _disableBrowserGestureHandling();
+        break;
+    }
+  }
+
+  void _enableBrowserGestureHandling() {
+    assert(_semanticsObject.owner._gestureMode == GestureMode.browserGestures);
+    if (!_element.disabled) {
+      return;
+    }
+    _element.disabled = false;
+  }
+
+  void _updateInputValues() {
+    assert(_semanticsObject.owner._gestureMode == GestureMode.browserGestures);
+    final String surrogateTextValue = '$_currentSurrogateValue';
+    _element.value = surrogateTextValue;
+    _element.setAttribute('aria-valuenow', surrogateTextValue);
+    _element.setAttribute('aria-valuetext', _semanticsObject._value);
+
+    final bool canIncrease = _semanticsObject._increasedValue != null;
+    final String surrogateMaxTextValue =
+        canIncrease ? '${_currentSurrogateValue + 1}' : surrogateTextValue;
+    _element.max = surrogateMaxTextValue;
+    _element.setAttribute('aria-valuemax', surrogateMaxTextValue);
+
+    final bool canDecrease = _semanticsObject._decreasedValue != null;
+    final String surrogateMinTextValue =
+        canDecrease ? '${_currentSurrogateValue - 1}' : surrogateTextValue;
+    _element.min = surrogateMinTextValue;
+    _element.setAttribute('aria-valuemin', surrogateMinTextValue);
+  }
+
+  void _disableBrowserGestureHandling() {
+    if (_element.disabled) {
+      return;
+    }
+    _element.disabled = true;
+  }
+
+  /// Cleans up the DOM.
+  ///
+  /// This object is not usable after calling this method.
+  void dispose() {
+    assert(_gestureModeListener != null);
+    _semanticsObject.owner._removeGestureModeListener(_gestureModeListener);
+    _gestureModeListener = null;
+    _disableBrowserGestureHandling();
+    _element.remove();
   }
 }
 
@@ -1114,6 +1291,15 @@ class EngineSemanticsOwner {
   /// message loop event.
   void _addGestureModeListener(GestureModeCallback callback) {
     _gestureModeListeners.add(callback);
+  }
+
+  /// Stops calling the [callback] when the [GestureMode] changes.
+  ///
+  /// The passed [callback] must be the exact same object as the one passed to
+  /// [_addGestureModeListener].
+  void _removeGestureModeListener(GestureModeCallback callback) {
+    assert(_gestureModeListeners.contains(callback));
+    _gestureModeListeners.remove(callback);
   }
 
   void _notifyGestureModeListeners() {
