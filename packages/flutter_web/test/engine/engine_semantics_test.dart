@@ -74,7 +74,9 @@ void _testEngineSemanticsOwner() {
     expectSemanticsTree('''
 <sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
   <sem-c>
-    <sem aria-label="Hello"></sem>
+    <sem aria-label="Hello">
+      <sem-v>Hello</sem-v>
+    </sem>
   </sem-c>
 </sem>''');
 
@@ -86,7 +88,9 @@ void _testEngineSemanticsOwner() {
     expectSemanticsTree('''
 <sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
   <sem-c>
-    <sem aria-label="World"></sem>
+    <sem aria-label="World">
+      <sem-v>World</sem-v>
+    </sem>
   </sem-c>
 </sem>''');
 

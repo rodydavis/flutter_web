@@ -131,6 +131,9 @@ String canonicalizeHtml(String html,
       case 'flt-semantics-container':
         replacementTag = 'sem-c';
         break;
+      case 'flt-semantics-value':
+        replacementTag = 'sem-v';
+        break;
     }
 
     html_package.Element replacement = html_package.Element.tag(replacementTag);

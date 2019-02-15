@@ -161,8 +161,10 @@ class SemanticsObject {
     }
 
     if (_debugShowSemanticsNodes) {
-      element.style.outline = '1px solid green';
-      element.style.color = 'purple';
+      element.style
+        ..opacity = '1'
+        ..outline = '1px solid green'
+        ..color = 'purple';
     }
   }
 
@@ -198,12 +200,18 @@ class SemanticsObject {
   /// when there are non-zero children (i.e. when [hasChildren] is `true`).
   html.Element _childContainerElement;
 
-  /// This element renders the [value] to semantics as text content.
-  html.Element _valueElement;
-
-  /// Displays the value of [_label] as its text content when
-  /// [_debugShowSemanticsNodes] is true.
-  html.Element _debugLabelElement;
+  /// Supplements the "aria-label" that renders the combination of [_label] and
+  /// [_value] to semantics as text content.
+  ///
+  /// This extra element is needed for the following reasons:
+  ///
+  /// - VoiceOver on iOS Safari does not recognize standalone "aria-label". It
+  ///   only works for specific roles.
+  /// - TalkBack does support "aria-label". However, if an element has children
+  ///   its label is not reachable via accessibility focus. This happens, for
+  ///   example in popup dialogs, such as the alert dialog. The text of the
+  ///   alert is supplied as a label on the parent node.
+  html.Element _auxiliaryValueElement;
 
   /// Listens to HTML "click" gestures detected by the browser.
   ///
@@ -359,59 +367,41 @@ class SemanticsObject {
       }
     }
 
-    // Update value early because some controls, such as incrementables, depend
-    // on it.
+    // Some fields are updated early because some controls, such as
+    // incrementables, use them.
     bool valueChanged = false;
     if (_value != update.value) {
       _value = update.value;
       valueChanged = true;
     }
 
-    // TODO(yjbanov): implement all actions.
+    bool labelChanged = false;
+    if (_label != update.label) {
+      _label = update.label;
+      labelChanged = true;
+    }
+
+    bool rectChanged = false;
+    if (_rect != update.rect) {
+      _rect = update.rect;
+      rectChanged = true;
+    }
+
+    bool actionsChanged = false;
     if (_actions != update.actions) {
       _actions = update.actions;
+      actionsChanged = true;
+    }
+
+    if (valueChanged || labelChanged) {
+      _renderLabelAndValue(update);
+    }
+
+    // TODO(yjbanov): implement all actions.
+    if (actionsChanged) {
       _updateTapHandling();
       _updateScrollHandling();
       _updateIncrementHandling();
-    }
-
-    if (_label != update.label) {
-      _label = update.label;
-      if (update.label != null && update.label.isNotEmpty) {
-        element.setAttribute('aria-label', _label);
-        if (_debugShowSemanticsNodes) {
-          _debugLabelElement ??= html.Element.tag('flt-debug-label');
-          _debugLabelElement.text = _label;
-          element.append(_debugLabelElement);
-        }
-      } else {
-        element.attributes.remove('aria-label');
-        if (_debugShowSemanticsNodes) {
-          _debugLabelElement?.remove();
-        }
-      }
-    }
-
-    if (valueChanged) {
-      final bool hasValue = _value != null && _value.isNotEmpty;
-      // If the node is incrementable the value is reported to the browser via
-      // the <input> tag, so we do not need to also render it again here.
-      final bool shouldDisplayValue = hasValue && !isIncrementable;
-      if (shouldDisplayValue) {
-        if (_valueElement == null) {
-          _valueElement = html.Element.tag('flt-semantics-value');
-          _valueElement.style
-            ..position = 'absolute'
-            ..top = '0'
-            ..right = '0'
-            ..bottom = '0'
-            ..left = '0';
-          element.append(_valueElement);
-        }
-        _valueElement.text = _value;
-      } else {
-        _valueElement?.remove();
-      }
     }
 
     if (_textSelectionBase != update.textSelectionBase) {
@@ -477,17 +467,90 @@ class SemanticsObject {
     // any one of them triggers position and size recomputation.
     // Positioning and sizing must take place after child list update because
     // they depend on the presence of children.
-    if (_rect != update.rect ||
+    if (rectChanged ||
         _transform != update.transform ||
         _scrollPosition != update.scrollPosition) {
       _transform = update.transform;
-      _rect = update.rect;
       _scrollPosition = update.scrollPosition;
       _recomputePositionAndSize();
     }
 
     // Make sure we create a child container only when there are children.
     assert(_childContainerElement == null || hasChildren);
+  }
+
+  /// Renders [_label] and [_value] to the semantics DOM.
+  ///
+  /// The rendering method is browser-dependent. There is no explicit ARIA
+  /// attribute to express "value". Instead, you are expected to render the
+  /// value as text content of HTML.
+  ///
+  /// VoiceOver only supports "aria-label" for certain ARIA roles. For plain
+  /// text it expects that the label is part of the text content of the element.
+  /// The strategy for VoiceOver is to combine [_label] and [_value] and stamp
+  /// out a single child element that contains the value.
+  ///
+  /// TalkBack supports the "aria-label" attribute. However, when present,
+  /// TalkBack ignores the text content. Therefore, we cannot split [_label]
+  /// and [_value] between "aria-label" and text content. The strategy for
+  /// TalkBack is to combine [_label] and [_value] into a single "aria-label".
+  ///
+  /// The [_value] is not always rendered. Some semantics nodes correspond to
+  /// interactive controls, such as an `<input>` element. In such case the value
+  /// is reported via that element's `value` attribute rather than rendering it
+  /// separately.
+  void _renderLabelAndValue(SemanticsNodeUpdate update) {
+    final bool hasLabel = _label != null && _label.isNotEmpty;
+    final bool hasValue = _value != null && _value.isNotEmpty;
+
+    // If the node is incrementable the value is reported to the browser via
+    // the <input> tag, so we do not need to also render it again here.
+    final bool shouldDisplayValue = hasValue && !isIncrementable;
+
+    if (!hasLabel && !shouldDisplayValue) {
+      if (_auxiliaryValueElement != null) {
+        _auxiliaryValueElement.remove();
+        _auxiliaryValueElement = null;
+      }
+      element.attributes.remove('aria-label');
+      return;
+    }
+
+    final StringBuffer combinedValue = StringBuffer();
+    if (hasLabel) {
+      combinedValue.write(_label);
+      if (shouldDisplayValue) {
+        combinedValue.write(' ');
+      }
+    }
+
+    if (shouldDisplayValue) {
+      combinedValue.write(_value);
+    }
+
+    element.setAttribute('aria-label', combinedValue.toString());
+
+    if (_auxiliaryValueElement == null) {
+      _auxiliaryValueElement = html.Element.tag('flt-semantics-value');
+      final bool isParentNode = update.childrenInTraversalOrder != null &&
+          update.childrenInTraversalOrder.isNotEmpty;
+      // Absolute positioning and sizing of leaf text elements confuses
+      // VoiceOver. So we let the browser size the value node. The node will
+      // still have a bigger tap area. However, if the node is a parent to other
+      // nodes, then VoiceOver behaves as expected with absolute positioning and
+      // sizing.
+      if (isParentNode) {
+        _auxiliaryValueElement.style
+          ..position = 'absolute'
+          ..top = '0'
+          ..left = '0'
+          ..width = '${_rect.width}px'
+          ..height = '${_rect.height}px';
+      }
+      _auxiliaryValueElement.style.fontSize = '6px';
+      element.append(_auxiliaryValueElement);
+    }
+    _auxiliaryValueElement.text = combinedValue.toString();
   }
 
   void _updateTapHandling() {
