@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter_web_ui/ui.dart' show isWeb;
 import 'basic_types.dart';
 import 'print.dart';
 
 /// Signature for [FlutterError.onError] handler.
-typedef void FlutterExceptionHandler(FlutterErrorDetails details);
+typedef FlutterExceptionHandler = void Function(FlutterErrorDetails details);
 
 /// Signature for [FlutterErrorDetails.informationCollector] callback
 /// and other callbacks that collect information into a string buffer.
-typedef void InformationCollector(StringBuffer information);
+typedef InformationCollector = void Function(StringBuffer information);
 
 /// Class for information provided to [FlutterExceptionHandler] callbacks.
 ///
@@ -58,6 +59,11 @@ class FlutterErrorDetails {
 
   /// A human-readable description of where the error was caught (as opposed to
   /// where it was thrown).
+  ///
+  /// The string should be in a form that will make sense in English when
+  /// following the word "thrown", as in "thrown while obtaining the image from
+  /// the network" (for the context "while obtaining the image from the
+  /// network").
   final String context;
 
   /// A callback which filters the [stack] trace. Receives an iterable of
@@ -76,15 +82,14 @@ class FlutterErrorDetails {
   /// This won't be called if [stack] is null.
   final IterableFilter<String> stackFilter;
 
-  /// A callback which, when called with a [StringBuffer] will write to that
-  /// buffer information that could help with debugging the problem.
+  /// A callback which, when called with a [StringBuffer] will write to that buffer
+  /// information that could help with debugging the problem.
   ///
-  /// Information collector callbacks can be expensive, so the generated
-  /// information should be cached, rather than the callback being called
-  /// multiple times.
+  /// Information collector callbacks can be expensive, so the generated information
+  /// should be cached, rather than the callback being called multiple times.
   ///
-  /// The text written to the information argument may contain newlines but
-  /// should not end with a newline.
+  /// The text written to the information argument may contain newlines but should
+  /// not end with a newline.
   final InformationCollector informationCollector;
 
   /// Whether this error should be ignored by the default error reporting
@@ -123,8 +128,8 @@ class FlutterErrorDetails {
           if (position == fullMessage.length - message.length &&
               position > 2 &&
               fullMessage.substring(position - 2, position) == ': ') {
-            longMessage = '${message.trimRight()}\n'
-                '${fullMessage.substring(0, position - 2)}';
+            longMessage =
+                '${message.trimRight()}\n${fullMessage.substring(0, position - 2)}';
           }
         }
       }
@@ -143,7 +148,7 @@ class FlutterErrorDetails {
 
   @override
   String toString() {
-    final StringBuffer buffer = new StringBuffer();
+    final StringBuffer buffer = StringBuffer();
     if ((library != null && library != '') ||
         (context != null && context != '')) {
       if (library != null && library != '') {
@@ -303,18 +308,16 @@ class FlutterError extends AssertionError {
         if (stackLines != null) {
           final List<String> stackList = stackLines.take(2).toList();
           if (stackList.length >= 2) {
-            // TODO(ianh): This has bitrotted and is no longer matching.
-            //             https://github.com/flutter/flutter/issues/4021
+            // TODO(ianh): This has bitrotted and is no longer matching. https://github.com/flutter/flutter/issues/4021
             final RegExp throwPattern =
-                new RegExp(r'^#0 +_AssertionError._throwNew \(dart:.+\)$');
+                RegExp(r'^#0 +_AssertionError._throwNew \(dart:.+\)$');
             final RegExp assertPattern =
-                new RegExp(r'^#1 +[^(]+ \((.+?):([0-9]+)(?::[0-9]+)?\)$');
+                RegExp(r'^#1 +[^(]+ \((.+?):([0-9]+)(?::[0-9]+)?\)$');
             if (throwPattern.hasMatch(stackList[0])) {
               final Match assertMatch = assertPattern.firstMatch(stackList[1]);
               if (assertMatch != null) {
                 assert(assertMatch.groupCount == 2);
-                final RegExp ourLibraryPattern =
-                    new RegExp(r'^package:flutter_web/');
+                final RegExp ourLibraryPattern = RegExp(r'^package:flutter/');
                 ourFault = ourLibraryPattern.hasMatch(assertMatch.group(1));
               }
             }
@@ -322,16 +325,15 @@ class FlutterError extends AssertionError {
         }
         if (ourFault) {
           debugPrint(
-              '\nEither the assertion indicates an error in the framework'
-              ' itself, or we should provide substantially more information '
-              'in this error message to help you determine and fix the '
-              'underlying cause.',
+              '\nEither the assertion indicates an error in the framework itself, or we should '
+              'provide substantially more information in this error message to help you determine '
+              'and fix the underlying cause.',
               wrapWidth: wrapWidth);
           debugPrint(
-              'In either case, please report this assertion by filing a bug on '
-              'GitHub:',
+              'In either case, please report this assertion by filing a bug on GitHub:',
               wrapWidth: wrapWidth);
-          debugPrint('  https://github.com/flutter/flutter/issues/new');
+          debugPrint(
+              '  https://github.com/flutter/flutter/issues/new?template=BUG.md');
         }
       }
       if (details.stack != null) {
@@ -345,15 +347,15 @@ class FlutterError extends AssertionError {
         for (String line in stackLines) debugPrint(line, wrapWidth: wrapWidth);
       }
       if (details.informationCollector != null) {
-        final StringBuffer information = new StringBuffer();
+        final StringBuffer information = StringBuffer();
         details.informationCollector(information);
         debugPrint('\n${information.toString().trimRight()}',
             wrapWidth: wrapWidth);
       }
       debugPrint(footer);
     } else {
-      debugPrint('Another exception was thrown: '
-          '${details.exceptionAsString().split("\n")[0].trimLeft()}');
+      debugPrint(
+          'Another exception was thrown: ${details.exceptionAsString().split("\n")[0].trimLeft()}');
     }
     _errorCount += 1;
   }
@@ -370,19 +372,19 @@ class FlutterError extends AssertionError {
   /// format but the frame numbers will not be consecutive (frames are elided)
   /// and the final line may be prose rather than a stack frame.
   static Iterable<String> defaultStackFilter(Iterable<String> frames) {
-    const List<String> filteredPackages = const <String>[
+    const List<String> filteredPackages = <String>[
       'dart:async-patch',
       'dart:async',
       'package:stack_trace',
     ];
-    const List<String> filteredClasses = const <String>[
+    const List<String> filteredClasses = <String>[
       '_AssertionError',
       '_FakeAsync',
       '_FrameCallbackEntry',
     ];
-    final RegExp stackParser = new RegExp(
-        r'^#[0-9]+ +([^.]+).* \(([^/\\]*)[/\\].+:[0-9]+(?::[0-9]+)?\)$');
-    final RegExp packageParser = new RegExp(r'^([^:]+):(.+)$');
+    final RegExp stackParser =
+        RegExp(r'^#[0-9]+ +([^.]+).* \(([^/\\]*)[/\\].+:[0-9]+(?::[0-9]+)?\)$');
+    final RegExp packageParser = RegExp(r'^([^:]+):(.+)$');
     final List<String> result = <String>[];
     final List<String> skipped = <String>[];
     for (String line in frames) {
@@ -392,8 +394,8 @@ class FlutterError extends AssertionError {
         if (filteredPackages.contains(match.group(2))) {
           final Match packageMatch = packageParser.firstMatch(match.group(2));
           if (packageMatch != null && packageMatch.group(1) == 'package') {
-            // avoid "package package:foo"
-            skipped.add('package ${packageMatch.group(2)}');
+            skipped.add(
+                'package ${packageMatch.group(2)}'); // avoid "package package:foo"
           } else {
             skipped.add('package ${match.group(2)}');
           }
@@ -409,7 +411,7 @@ class FlutterError extends AssertionError {
     if (skipped.length == 1) {
       result.add('(elided one frame from ${skipped.single})');
     } else if (skipped.length > 1) {
-      final List<String> where = new Set<String>.from(skipped).toList()..sort();
+      final List<String> where = Set<String>.from(skipped).toList()..sort();
       if (where.length > 1) where[where.length - 1] = 'and ${where.last}';
       if (where.length > 2) {
         result
@@ -442,6 +444,10 @@ void debugPrintStack({String label, int maxFrames}) {
   if (label != null) debugPrint(label);
   Iterable<String> lines =
       StackTrace.current.toString().trimRight().split('\n');
+  // TODO(flutter_web) , upstream or remove when b:/125389999 is fixed
+  if (isWeb) {
+    lines = lines.skip(1);
+  }
   if (maxFrames != null) lines = lines.take(maxFrames);
   debugPrint(FlutterError.defaultStackFilter(lines).join('\n'));
 }

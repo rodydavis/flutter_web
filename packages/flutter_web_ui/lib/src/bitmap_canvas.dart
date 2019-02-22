@@ -624,7 +624,8 @@ class BitmapCanvas implements EngineCanvas {
         paragraph.webOnlyGetParagraphElement().clone(true);
     paragraphElement.style
       ..position = 'absolute'
-      ..transform = 'translate(${offset.dx}px, ${offset.dy}px)'
+      ..transform =
+          'translate(${offset.dx - bounds.left}px, ${offset.dy - bounds.top}px)'
       ..whiteSpace = 'pre-wrap'
       ..width = '${paragraph.width}px'
       ..height = '${paragraph.height}px';

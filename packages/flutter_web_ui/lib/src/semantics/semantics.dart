@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:collection' show LinkedHashMap;
 import 'dart:html' as html;
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -11,8 +12,12 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:flutter_web_ui/ui.dart' as ui;
 
 import '../util.dart' as util;
+import '../alarm_clock.dart';
 
-import 'alarm_clock.dart';
+import 'incrementable.dart';
+import 'label_and_value.dart';
+import 'scrollable.dart';
+import 'tappable.dart';
 
 /// Set this flag to `true` to cause the engine to visualize the semantics tree
 /// on the screen.
@@ -137,6 +142,71 @@ class SemanticsNodeUpdate {
   final double thickness;
 }
 
+/// Identified one of the roles a [SemanticsObject] plays.
+enum Role {
+  /// A semantic element that supports incrementing and/or decrementing its
+  /// value.
+  incrementable,
+
+  /// Indicates that a semantic element can scroll its contents vertically or
+  /// horizontally.
+  scrollable,
+
+  /// Marks a node that contains a label or a value.
+  ///
+  /// The two are combined into the same role because they interact with each
+  /// other.
+  labelAndValue,
+
+  /// Indicates that a semantic object accepts tap or click gestures.
+  tappable,
+}
+
+/// A function that creates a [RoleManager] for a [SemanticsObject].
+typedef RoleManagerFactory = RoleManager Function(SemanticsObject object);
+
+final Map<Role, RoleManagerFactory> _roleFactories = <Role, RoleManagerFactory>{
+  Role.incrementable: (SemanticsObject object) => Incrementable(object),
+  Role.scrollable: (SemanticsObject object) => Scrollable(object),
+  Role.labelAndValue: (SemanticsObject object) => LabelAndValue(object),
+  Role.tappable: (SemanticsObject object) => Tappable(object),
+};
+
+/// Provides the functionality associated with the role of the given
+/// [semanticsObject].
+///
+/// The role is determined by [ui.SemanticsFlag]s and [ui.SemanticsAction]s set
+/// on the object.
+abstract class RoleManager {
+  /// Initializes a role for [semanticsObject].
+  ///
+  /// A single role object manages exactly one [SemanticsObject].
+  RoleManager(this.role, this.semanticsObject)
+      : assert(semanticsObject != null);
+
+  /// Role identifier.
+  final Role role;
+
+  /// The semantics object managed by this role.
+  final SemanticsObject semanticsObject;
+
+  /// Called immediately after the [semanticsObject] updates some of its fields.
+  ///
+  /// A concrete implementation of this method would typically use some of the
+  /// "is*Dirty" getters to find out exactly what's changed and apply the
+  /// minimum DOM updates.
+  void update();
+
+  /// Called when [semanticsObject] is removed, or when it changes its role such
+  /// that this role is no longer relevant.
+  ///
+  /// This method is expected to remove role-specific functionality from the
+  /// DOM. In particular, this method is the appropriate place to call
+  /// [EngineSemanticsOwner.removeGestureModeListener] if this role reponds to
+  /// gesture mode changes.
+  void dispose();
+}
+
 /// Instantiation of a framework-side semantics node in the DOM.
 ///
 /// Instances of this class are retained from frame to frame. Each instance is
@@ -162,10 +232,277 @@ class SemanticsObject {
 
     if (_debugShowSemanticsNodes) {
       element.style
-        ..opacity = '1'
+        ..opacity = '0.7'
         ..outline = '1px solid green'
         ..color = 'purple';
     }
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  int get flags => _flags;
+  int _flags;
+
+  /// Whether the [flags] field has been updated but has not been applied to the
+  /// DOM yet.
+  bool get isFlagsDirty => _isDirty(_flagsIndex);
+  static const int _flagsIndex = 1 << 0;
+  void _markFlagsDirty() {
+    _dirtyFields |= _flagsIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  int get actions => _actions;
+  int _actions;
+
+  static const int _actionsIndex = 1 << 1;
+
+  /// Whether the [actions] field has been updated but has not been applied to
+  /// the DOM yet.
+  bool get isActionsDirty => _isDirty(_actionsIndex);
+  void _markActionsDirty() {
+    _dirtyFields |= _actionsIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  int get textSelectionBase => _textSelectionBase;
+  int _textSelectionBase;
+
+  static const int _textSelectionBaseIndex = 1 << 2;
+
+  /// Whether the [textSelectionBase] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isTextSelectionBaseDirty => _isDirty(_textSelectionBaseIndex);
+  void _markTextSelectionBaseDirty() {
+    _dirtyFields |= _textSelectionBaseIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  int get textSelectionExtent => _textSelectionExtent;
+  int _textSelectionExtent;
+
+  static const int _textSelectionExtentIndex = 1 << 3;
+
+  /// Whether the [textSelectionExtent] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isTextSelectionExtentDirty => _isDirty(_textSelectionExtentIndex);
+  void _markTextSelectionExtentDirty() {
+    _dirtyFields |= _textSelectionExtentIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  int get scrollChildren => _scrollChildren;
+  int _scrollChildren;
+
+  static const int _scrollChildrenIndex = 1 << 4;
+
+  /// Whether the [scrollChildren] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isScrollChildrenDirty => _isDirty(_scrollChildrenIndex);
+  void _markScrollChildrenDirty() {
+    _dirtyFields |= _scrollChildrenIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  int get scrollIndex => _scrollIndex;
+  int _scrollIndex;
+
+  static const int _scrollIndexIndex = 1 << 5;
+
+  /// Whether the [scrollIndex] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isScrollIndexDirty => _isDirty(_scrollIndexIndex);
+  void _markScrollIndexDirty() {
+    _dirtyFields |= _scrollIndexIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  double get scrollPosition => _scrollPosition;
+  double _scrollPosition;
+
+  static const int _scrollPositionIndex = 1 << 6;
+
+  /// Whether the [scrollPosition] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isScrollPositionDirty => _isDirty(_scrollPositionIndex);
+  void _markScrollPositionDirty() {
+    _dirtyFields |= _scrollPositionIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  double get scrollExtentMax => _scrollExtentMax;
+  double _scrollExtentMax;
+
+  static const int _scrollExtentMaxIndex = 1 << 7;
+
+  /// Whether the [scrollExtentMax] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isScrollExtentMaxDirty => _isDirty(_scrollExtentMaxIndex);
+  void _markScrollExtentMaxDirty() {
+    _dirtyFields |= _scrollExtentMaxIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  double get scrollExtentMin => _scrollExtentMin;
+  double _scrollExtentMin;
+
+  static const int _scrollExtentMinIndex = 1 << 8;
+
+  /// Whether the [scrollExtentMin] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isScrollExtentMinDirty => _isDirty(_scrollExtentMinIndex);
+  void _markScrollExtentMinDirty() {
+    _dirtyFields |= _scrollExtentMinIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  ui.Rect get rect => _rect;
+  ui.Rect _rect;
+
+  static const int _rectIndex = 1 << 9;
+
+  /// Whether the [rect] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isRectDirty => _isDirty(_rectIndex);
+  void _markRectDirty() {
+    _dirtyFields |= _rectIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  String get label => _label;
+  String _label;
+
+  /// Whether this object contains a non-empty label.
+  bool get hasLabel => _label != null && _label.isNotEmpty;
+
+  static const int _labelIndex = 1 << 10;
+
+  /// Whether the [label] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isLabelDirty => _isDirty(_labelIndex);
+  void _markLabelDirty() {
+    _dirtyFields |= _labelIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  String get hint => _hint;
+  String _hint;
+
+  static const int _hintIndex = 1 << 11;
+
+  /// Whether the [hint] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isHintDirty => _isDirty(_hintIndex);
+  void _markHintDirty() {
+    _dirtyFields |= _hintIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  String get value => _value;
+  String _value;
+
+  /// Whether this object contains a non-empty value.
+  bool get hasValue => _value != null && _value.isNotEmpty;
+
+  static const int _valueIndex = 1 << 12;
+
+  /// Whether the [value] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isValueDirty => _isDirty(_valueIndex);
+  void _markValueDirty() {
+    _dirtyFields |= _valueIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  String get increasedValue => _increasedValue;
+  String _increasedValue;
+
+  static const int _increasedValueIndex = 1 << 13;
+
+  /// Whether the [increasedValue] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isIncreasedValueDirty => _isDirty(_increasedValueIndex);
+  void _markIncreasedValueDirty() {
+    _dirtyFields |= _increasedValueIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  String get decreasedValue => _decreasedValue;
+  String _decreasedValue;
+
+  static const int _decreasedValueIndex = 1 << 14;
+
+  /// Whether the [decreasedValue] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isDecreasedValueDirty => _isDirty(_decreasedValueIndex);
+  void _markDecreasedValueDirty() {
+    _dirtyFields |= _decreasedValueIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  ui.TextDirection get textDirection => _textDirection;
+  ui.TextDirection _textDirection;
+
+  static const int _textDirectionIndex = 1 << 15;
+
+  /// Whether the [textDirection] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isTextDirectionDirty => _isDirty(_textDirectionIndex);
+  void _markTextDirectionDirty() {
+    _dirtyFields |= _textDirectionIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  Float64List get transform => _transform;
+  Float64List _transform;
+
+  static const int _transformIndex = 1 << 16;
+
+  /// Whether the [transform] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isTransformDirty => _isDirty(_transformIndex);
+  void _markTransformDirty() {
+    _dirtyFields |= _transformIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  Int32List get childrenInTraversalOrder => _childrenInTraversalOrder;
+  Int32List _childrenInTraversalOrder;
+
+  static const int _childrenInTraversalOrderIndex = 1 << 19;
+
+  /// Whether the [childrenInTraversalOrder] field has been updated but has not
+  /// been applied to the DOM yet.
+  bool get isChildrenInTraversalOrderDirty =>
+      _isDirty(_childrenInTraversalOrderIndex);
+  void _markChildrenInTraversalOrderDirty() {
+    _dirtyFields |= _childrenInTraversalOrderIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  Int32List get childrenInHitTestOrder => _childrenInHitTestOrder;
+  Int32List _childrenInHitTestOrder;
+
+  static const int _childrenInHitTestOrderIndex = 1 << 20;
+
+  /// Whether the [childrenInHitTestOrder] field has been updated but has not
+  /// been applied to the DOM yet.
+  bool get isChildrenInHitTestOrderDirty =>
+      _isDirty(_childrenInHitTestOrderIndex);
+  void _markChildrenInHitTestOrderDirty() {
+    _dirtyFields |= _childrenInHitTestOrderIndex;
+  }
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  Int32List get additionalActions => _additionalActions;
+  Int32List _additionalActions;
+
+  static const int _additionalActionsIndex = 1 << 21;
+
+  /// Whether the [additionalActions] field has been updated but has not been
+  /// applied to the DOM yet.
+  bool get isAdditionalActionsDirty => _isDirty(_additionalActionsIndex);
+  void _markAdditionalActionsDirty() {
+    _dirtyFields |= _additionalActionsIndex;
   }
 
   /// A unique permanent identifier of the semantics node in the tree.
@@ -176,6 +513,18 @@ class SemanticsObject {
 
   /// The DOM element used to convey semantics information to the browser.
   final html.Element element = html.Element.tag('flt-semantics');
+
+  /// Bitfield showing which fields have been updated but have not yet been
+  /// applied to the DOM.
+  ///
+  /// Instead of use this field directly, prefer using one of the "is*Dirty"
+  /// getters, e.g. [isFlagsDirty].
+  ///
+  /// The bitfield supports up to 31 bits.
+  int _dirtyFields = -1; // initial value is when all relevant bits are set
+
+  /// Whether the field corresponding to the [fieldIndex] has been updated.
+  bool _isDirty(int fieldIndex) => (_dirtyFields & fieldIndex) != 0;
 
   /// Returns the HTML element that contains the HTML elements of direct
   /// children of this object.
@@ -200,95 +549,8 @@ class SemanticsObject {
   /// when there are non-zero children (i.e. when [hasChildren] is `true`).
   html.Element _childContainerElement;
 
-  /// Supplements the "aria-label" that renders the combination of [_label] and
-  /// [_value] to semantics as text content.
-  ///
-  /// This extra element is needed for the following reasons:
-  ///
-  /// - VoiceOver on iOS Safari does not recognize standalone "aria-label". It
-  ///   only works for specific roles.
-  /// - TalkBack does support "aria-label". However, if an element has children
-  ///   its label is not reachable via accessibility focus. This happens, for
-  ///   example in popup dialogs, such as the alert dialog. The text of the
-  ///   alert is supplied as a label on the parent node.
-  html.Element _auxiliaryValueElement;
-
-  /// Listens to HTML "click" gestures detected by the browser.
-  ///
-  /// This gestures is different from the click and tap gestures detected by the
-  /// framework from raw pointer events. When an assistive technology is enabled
-  /// the browser may not send us pointer events. In that mode we forward HTML
-  /// click as [ui.SemanticsAction.tap].
-  html.EventListener _clickListener;
-
-  /// Listens to HTML "scroll" gestures detected by the browser.
-  ///
-  /// This gesture is converted to [ui.SemanticsAction.scrollUp] or
-  /// [ui.SemanticsAction.scrollDown], depending on the direction.
-  html.EventListener _scrollListener;
-
   /// The parent of this semantics object.
   SemanticsObject _parent;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  int _flags;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  int _actions;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  int _textSelectionBase;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  int _textSelectionExtent;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  int _scrollChildren;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  int _scrollIndex;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  double _scrollPosition;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  double _scrollExtentMax;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  double _scrollExtentMin;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  ui.Rect _rect;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  String _label;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  String _hint;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  String _value;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  String _increasedValue;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  String _decreasedValue;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  ui.TextDirection _textDirection;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  Float64List _transform;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  Int32List _childrenInTraversalOrder;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  Int32List _childrenInHitTestOrder;
-
-  /// See [ui.SemanticsUpdateBuilder.updateNode].
-  Int32List _additionalActions;
 
   /// Whether this node currently has a given [SemanticsFlag].
   bool hasFlag(ui.SemanticsFlag flag) => _flags & flag.index != 0;
@@ -310,315 +572,182 @@ class SemanticsObject {
   bool get hasChildren =>
       _childrenInTraversalOrder != null && _childrenInTraversalOrder.isNotEmpty;
 
-  /// The value of the "scrollTop" or "scrollLeft" property of this object's
-  /// [element] that has zero offset relative to the [scrollPosition].
-  int _effectiveNeutralScrollPosition = 0;
-
-  /// The value of "scrollTop" or "scrollLeft", depending on the scroll axis.
-  int get _domScrollPosition {
-    if (isVerticalScrollContainer) {
-      return element.scrollTop;
-    } else {
-      assert(isHorizontalScrollContainer);
-      return element.scrollLeft;
-    }
-  }
-
-  /// Resets the scroll position (top or left) to the neutral value.
-  ///
-  /// The scroll position of the scrollable HTML node that's considered to
-  /// have zero offset relative to Flutter's notion of scroll position is
-  /// referred to as "neutral scroll position".
-  ///
-  /// We always set the the scroll position to a non-zero value in order to
-  /// be able to scroll in the negative direction. When scrollTop/scrollLeft is
-  /// zero the browser will refuse to scroll back even when there is more
-  /// content available.
-  void _neutralizeDomScrollPosition() {
-    // This value is arbitrary.
-    const int _canonicalNeutralScrollPosition = 10;
-
-    if (isVerticalScrollContainer) {
-      element.scrollTop = _canonicalNeutralScrollPosition;
-      // Read back because the effective value depends on the amount of content.
-      _effectiveNeutralScrollPosition = element.scrollTop;
-    } else {
-      element.scrollLeft = _canonicalNeutralScrollPosition;
-      // Read back because the effective value depends on the amount of content.
-      _effectiveNeutralScrollPosition = element.scrollLeft;
-    }
-  }
-
   /// Updates this object from data received from a semantics [update].
   ///
   /// This method creates [SemanticsObject]s for the direct children of this
   /// object. However, it does not recursively populate them.
   void updateWith(SemanticsNodeUpdate update) {
-    // TODO(yjbanov): implement all flags.
+    // Update all field values and their corresponding dirty flags before
+    // applying the updates to the DOM.
+    assert(update.flags != null);
     if (_flags != update.flags) {
       _flags = update.flags;
-
-      if (hasFlag(ui.SemanticsFlag.isButton)) {
-        element.setAttribute('role', 'button');
-      } else if (hasFlag(ui.SemanticsFlag.isImage)) {
-        element.setAttribute('role', 'img');
-      } else {
-        element.attributes.remove('role');
-      }
+      _markFlagsDirty();
     }
 
-    // Some fields are updated early because some controls, such as
-    // incrementables, use them.
-    bool valueChanged = false;
     if (_value != update.value) {
       _value = update.value;
-      valueChanged = true;
+      _markValueDirty();
     }
 
-    bool labelChanged = false;
     if (_label != update.label) {
       _label = update.label;
-      labelChanged = true;
+      _markLabelDirty();
     }
 
-    bool rectChanged = false;
     if (_rect != update.rect) {
       _rect = update.rect;
-      rectChanged = true;
+      _markRectDirty();
     }
 
-    bool actionsChanged = false;
+    if (_transform != update.transform) {
+      _transform = update.transform;
+      _markTransformDirty();
+    }
+
+    if (_scrollPosition != update.scrollPosition) {
+      _scrollPosition = update.scrollPosition;
+      _markScrollPositionDirty();
+    }
+
     if (_actions != update.actions) {
       _actions = update.actions;
-      actionsChanged = true;
-    }
-
-    if (valueChanged || labelChanged) {
-      _renderLabelAndValue(update);
-    }
-
-    // TODO(yjbanov): implement all actions.
-    if (actionsChanged) {
-      _updateTapHandling();
-      _updateScrollHandling();
-      _updateIncrementHandling();
+      _markActionsDirty();
     }
 
     if (_textSelectionBase != update.textSelectionBase) {
       _textSelectionBase = update.textSelectionBase;
-      // TODO(yjbanov): implement textSelectionBase.
+      _markTextSelectionBaseDirty();
     }
 
     if (_textSelectionExtent != update.textSelectionExtent) {
       _textSelectionExtent = update.textSelectionExtent;
-      // TODO(yjbanov): implement textSelectionExtent.
+      _markTextSelectionExtentDirty();
     }
 
     if (_scrollChildren != update.scrollChildren) {
       _scrollChildren = update.scrollChildren;
-      // TODO(yjbanov): implement scrollChildren.
+      _markScrollChildrenDirty();
     }
 
     if (_scrollIndex != update.scrollIndex) {
       _scrollIndex = update.scrollIndex;
-      // TODO(yjbanov): implement scrollIndex.
+      _markScrollIndexDirty();
     }
 
     if (_scrollExtentMax != update.scrollExtentMax) {
       _scrollExtentMax = update.scrollExtentMax;
-      // TODO(yjbanov): implement scrollExtentMax.
+      _markScrollExtentMaxDirty();
     }
 
     if (_scrollExtentMin != update.scrollExtentMin) {
       _scrollExtentMin = update.scrollExtentMin;
-      // TODO(yjbanov): implement scrollExtentMin.
+      _markScrollExtentMinDirty();
     }
 
     if (_hint != update.hint) {
       _hint = update.hint;
-      // TODO(yjbanov): implement hint.
+      _markHintDirty();
     }
 
-    if (_increasedValue != update.increasedValue ||
-        _decreasedValue != update.decreasedValue) {
+    if (_increasedValue != update.increasedValue) {
       _increasedValue = update.increasedValue;
+      _markIncreasedValueDirty();
+    }
+
+    if (_decreasedValue != update.decreasedValue) {
       _decreasedValue = update.decreasedValue;
-      _updateIncrementHandling();
+      _markDecreasedValueDirty();
     }
 
     if (_textDirection != update.textDirection) {
       _textDirection = update.textDirection;
-      // TODO(yjbanov): implement textDirection.
+      _markTextDirectionDirty();
     }
 
     if (_childrenInHitTestOrder != update.childrenInHitTestOrder) {
       _childrenInHitTestOrder = update.childrenInHitTestOrder;
-      // TODO(yjbanov): implement childrenInHitTestOrder.
+      _markChildrenInHitTestOrderDirty();
+    }
+
+    if (_childrenInTraversalOrder != update.childrenInTraversalOrder) {
+      _childrenInTraversalOrder = update.childrenInTraversalOrder;
+      _markChildrenInTraversalOrderDirty();
     }
 
     if (_additionalActions != update.additionalActions) {
       _additionalActions = update.additionalActions;
-      // TODO(yjbanov): implement additionalActions.
+      _markAdditionalActionsDirty();
     }
 
-    _updateChildrenInTraversalOrder(update);
+    // Apply updates to the DOM.
+    _updateRoles();
+    _updateChildrenInTraversalOrder();
 
     // All properties that affect positioning and sizing are checked together
     // any one of them triggers position and size recomputation.
-    // Positioning and sizing must take place after child list update because
-    // they depend on the presence of children.
-    if (rectChanged ||
-        _transform != update.transform ||
-        _scrollPosition != update.scrollPosition) {
-      _transform = update.transform;
-      _scrollPosition = update.scrollPosition;
-      _recomputePositionAndSize();
+    if (isRectDirty || isTransformDirty || isScrollPositionDirty) {
+      recomputePositionAndSize();
     }
 
     // Make sure we create a child container only when there are children.
     assert(_childContainerElement == null || hasChildren);
+    _dirtyFields = 0;
   }
 
-  /// Renders [_label] and [_value] to the semantics DOM.
+  /// Populates the HTML "role" attribute based on a [condition].
   ///
-  /// The rendering method is browser-dependent. There is no explicit ARIA
-  /// attribute to express "value". Instead, you are expected to render the
-  /// value as text content of HTML.
+  /// If [condition] is true, sets the value to [ariaRoleName].
   ///
-  /// VoiceOver only supports "aria-label" for certain ARIA roles. For plain
-  /// text it expects that the label is part of the text content of the element.
-  /// The strategy for VoiceOver is to combine [_label] and [_value] and stamp
-  /// out a single child element that contains the value.
-  ///
-  /// TalkBack supports the "aria-label" attribute. However, when present,
-  /// TalkBack ignores the text content. Therefore, we cannot split [_label]
-  /// and [_value] between "aria-label" and text content. The strategy for
-  /// TalkBack is to combine [_label] and [_value] into a single "aria-label".
-  ///
-  /// The [_value] is not always rendered. Some semantics nodes correspond to
-  /// interactive controls, such as an `<input>` element. In such case the value
-  /// is reported via that element's `value` attribute rather than rendering it
-  /// separately.
-  void _renderLabelAndValue(SemanticsNodeUpdate update) {
-    final bool hasLabel = _label != null && _label.isNotEmpty;
-    final bool hasValue = _value != null && _value.isNotEmpty;
-
-    // If the node is incrementable the value is reported to the browser via
-    // the <input> tag, so we do not need to also render it again here.
-    final bool shouldDisplayValue = hasValue && !isIncrementable;
-
-    if (!hasLabel && !shouldDisplayValue) {
-      if (_auxiliaryValueElement != null) {
-        _auxiliaryValueElement.remove();
-        _auxiliaryValueElement = null;
-      }
-      element.attributes.remove('aria-label');
-      return;
-    }
-
-    final StringBuffer combinedValue = StringBuffer();
-    if (hasLabel) {
-      combinedValue.write(_label);
-      if (shouldDisplayValue) {
-        combinedValue.write(' ');
-      }
-    }
-
-    if (shouldDisplayValue) {
-      combinedValue.write(_value);
-    }
-
-    element.setAttribute('aria-label', combinedValue.toString());
-
-    if (_auxiliaryValueElement == null) {
-      _auxiliaryValueElement = html.Element.tag('flt-semantics-value');
-      final bool isParentNode = update.childrenInTraversalOrder != null &&
-          update.childrenInTraversalOrder.isNotEmpty;
-      // Absolute positioning and sizing of leaf text elements confuses
-      // VoiceOver. So we let the browser size the value node. The node will
-      // still have a bigger tap area. However, if the node is a parent to other
-      // nodes, then VoiceOver behaves as expected with absolute positioning and
-      // sizing.
-      if (isParentNode) {
-        _auxiliaryValueElement.style
-          ..position = 'absolute'
-          ..top = '0'
-          ..left = '0'
-          ..width = '${_rect.width}px'
-          ..height = '${_rect.height}px';
-      }
-      _auxiliaryValueElement.style.fontSize = '6px';
-      element.append(_auxiliaryValueElement);
-    }
-    _auxiliaryValueElement.text = combinedValue.toString();
-  }
-
-  void _updateTapHandling() {
-    if (_clickListener != null) {
-      element.removeEventListener('click', _clickListener);
-      _clickListener = null;
-    }
-
-    if (hasAction(ui.SemanticsAction.tap)) {
-      _clickListener = (_) {
-        if (!owner.shouldAcceptBrowserGesture('click')) {
-          return;
-        }
-        ui.window.onSemanticsAction(id, ui.SemanticsAction.tap, null);
-      };
-      element.addEventListener('click', _clickListener);
+  /// If [condition] is false, removes the HTML "role" attribute from [element]
+  /// if the current role is set to [ariaRoleName]. Otherwise, leaves the value
+  /// unchanged. This is done so we gracefully handle multiple competing roles.
+  /// For example, if the role changes from "button" to "img" and tappable role
+  /// manager attempts to clean up after the image role manager applied the new
+  /// role, we do not want it to erase the new role.
+  void setAriaRole(String ariaRoleName, bool condition) {
+    if (condition) {
+      element.setAttribute('role', ariaRoleName);
+    } else if (element.getAttribute('role') == ariaRoleName) {
+      element.attributes.remove('role');
     }
   }
 
-  void _updateScrollHandling() {
-    final html.CssStyleDeclaration style = element.style;
-    if (isVerticalScrollContainer || isHorizontalScrollContainer) {
-      if (_scrollListener == null) {
-        // We need to set touch-action:none explicitly here, despite the fact
-        // that we already have it on the <body> tag because overflow:scroll
-        // still causes the browser to take over pointer events in order to
-        // process scrolling. We don't want that when scrolling is handled by
-        // the framework.
-        //
-        // This is effective only in Chrome. Safari does not implement this
-        // CSS property. In Safari the `PointerBinding` uses `preventDefault`
-        // to prevent browser scrolling.
-        style.touchAction = 'none';
-        _gestureModeDidChange(owner._gestureMode);
+  /// Role managers.
+  ///
+  /// [LinkedHashMap] is used to guarantee a stable order for easier debugging
+  /// and testing.
+  final LinkedHashMap<Role, RoleManager> _roleManagers =
+      LinkedHashMap<Role, RoleManager>();
 
-        // We neutralize the scroll position after all children have been
-        // updated. Otherwise the browser does not yet have the sizes of the
-        // child nodes and resets the scrollTop value back to zero.
-        owner._addOneTimePostUpdateCallback(() {
-          _neutralizeDomScrollPosition();
-        });
-
-        // Memoize the tear-off because Dart does not guarantee that two
-        // tear-offs of a method on the same instance will produce the same
-        // object.
-        _gestureModeListener = _gestureModeDidChange;
-        owner._addGestureModeListener(_gestureModeListener);
-
-        _scrollListener = (_) {
-          _recomputeScrollPosition();
-        };
-        element.addEventListener('scroll', _scrollListener);
-      }
-    } else {
-      style.removeProperty('overflowY');
-      style.removeProperty('overflowX');
-      style.removeProperty('touch-action');
-      if (_scrollListener != null) {
-        element.removeEventListener('scroll', _scrollListener);
-      }
-      if (_gestureModeListener != null) {
-        owner._removeGestureModeListener(_gestureModeListener);
-        _gestureModeListener = null;
-      }
-    }
+  /// Detects the roles that this semantics object corresponds to and manages
+  /// the lifecycles of [SemanticsObjectRole] objects.
+  void _updateRoles() {
+    _updateRole(Role.labelAndValue, hasLabel || hasValue);
+    _updateRole(
+        Role.tappable,
+        hasAction(ui.SemanticsAction.tap) ||
+            hasFlag(ui.SemanticsFlag.isButton));
+    _updateRole(Role.incrementable, isIncrementable);
+    _updateRole(Role.scrollable,
+        isVerticalScrollContainer || isHorizontalScrollContainer);
   }
 
-  IncrementHandler _incrementHandler;
+  void _updateRole(Role role, bool enabled) {
+    RoleManager manager = _roleManagers[role];
+    if (enabled) {
+      if (manager == null) {
+        manager = _roleFactories[role](this);
+        _roleManagers[role] = manager;
+      }
+      manager.update();
+    } else if (manager != null) {
+      manager.dispose();
+      _roleManagers.remove(role);
+    }
+    // Nothing to do in the "else case" as it means that we want to disable a
+    // role that we don't currently have in the first place.
+  }
 
   /// Whether the object represents an UI element with "increase" or "decrease"
   /// controls, e.g. a slider.
@@ -628,97 +757,26 @@ class SemanticsObject {
       hasAction(ui.SemanticsAction.increase) ||
       hasAction(ui.SemanticsAction.decrease);
 
-  void _updateIncrementHandling() {
-    if (isIncrementable) {
-      if (_incrementHandler == null) {
-        _incrementHandler = IncrementHandler(this);
-      }
-      _incrementHandler.update();
-    } else if (_incrementHandler != null) {
-      _incrementHandler.dispose();
-      _incrementHandler = null;
-    }
-  }
-
-  GestureModeCallback _gestureModeListener;
-
-  void _gestureModeDidChange(GestureMode mode) {
-    switch (mode) {
-      case GestureMode.browserGestures:
-        // overflow:scroll will cause the browser report "scroll" events when
-        // the accessibility focus shifts outside the visible bounds.
-        //
-        // Note that on Android overflow:hidden also works. However, we prefer
-        // "scroll" because it works both on Android and iOS.
-        if (isVerticalScrollContainer) {
-          element.style.overflowY = 'scroll';
-        } else {
-          assert(isHorizontalScrollContainer);
-          element.style.overflowX = 'scroll';
-        }
-        break;
-      case GestureMode.pointerEvents:
-        // We use "hidden" instead of "scroll" so that the browser does
-        // not "steal" pointer events. Flutter gesture recognizers need
-        // all pointer events in order to recognize gestures correctly.
-        if (isVerticalScrollContainer) {
-          element.style.overflowY = 'hidden';
-        } else {
-          assert(isHorizontalScrollContainer);
-          element.style.overflowX = 'hidden';
-        }
-        break;
-    }
-  }
-
-  /// This method responds to browser-detected "scroll" gestures.
+  /// Role-specific adjustment of the vertical position of the child container.
   ///
-  /// Scrolling is implemented using a "joystick" method. The absolute value of
-  /// "scrollTop" in HTML is not important. We only need to know in whether the
-  /// value changed in the positive or negative direction. If it changes in the
-  /// positive direction we send a [ui.SemanticsAction.scrollUp]. Otherwise, we
-  /// send [ui.SemanticsAction.scrollDown]. The actual scrolling is then handled
-  /// by the framework and we receive a [ui.SemanticsUpdate] containing the new
-  /// [scrollPosition] and child positions.
+  /// This is used, for example, by the [Scrollable] to compensate for the
+  /// `scrollTop` offset in the DOM.
   ///
-  /// "scrollTop" or 'scrollLeft" is always reset to an arbitrarily chosen non-
-  /// zero "neutral" scroll position value. This is done so we have a
-  /// predictable range of DOM scroll position values. When the amount of
-  /// contents is less than the size of the viewport the browser snaps
-  /// "scrollTop" back to zero. If there is more content than available in the
-  /// viewport "scrollTop" may take positive values. We memorize the effective
-  /// neutral "scrollTop" value in [_effectiveNeutralScrollPosition].
-  void _recomputeScrollPosition() {
-    if (_domScrollPosition != _effectiveNeutralScrollPosition) {
-      if (!owner.shouldAcceptBrowserGesture('scroll')) {
-        return;
-      }
-      final bool doScrollForward =
-          _domScrollPosition > _effectiveNeutralScrollPosition;
-      _neutralizeDomScrollPosition();
-      _recomputePositionAndSize();
+  /// This field must not be null.
+  double verticalContainerAdjustment = 0.0;
 
-      if (doScrollForward) {
-        if (isVerticalScrollContainer) {
-          ui.window.onSemanticsAction(id, ui.SemanticsAction.scrollUp, null);
-        } else {
-          assert(isHorizontalScrollContainer);
-          ui.window.onSemanticsAction(id, ui.SemanticsAction.scrollLeft, null);
-        }
-      } else {
-        if (isVerticalScrollContainer) {
-          ui.window.onSemanticsAction(id, ui.SemanticsAction.scrollDown, null);
-        } else {
-          assert(isHorizontalScrollContainer);
-          ui.window.onSemanticsAction(id, ui.SemanticsAction.scrollRight, null);
-        }
-      }
-    }
-  }
+  /// Role-specific adjustment of the horizontal position of the child
+  /// container.
+  ///
+  /// This is used, for example, by the [Scrollable] to compensate for the
+  /// `scrollLeft` offset in the DOM.
+  ///
+  /// This field must not be null.
+  double horizontalContainerAdjustment = 0.0;
 
   /// Computes the size and position of [element] and, if this element
-  /// [hasChildren], of [_childContainerElement].
-  void _recomputePositionAndSize() {
+  /// [hasChildren], of [getOrCreateChildContainer].
+  void recomputePositionAndSize() {
     element.style
       ..width = '${_rect.width}px'
       ..height = '${_rect.height}px';
@@ -732,7 +790,8 @@ class SemanticsObject {
 
     if (hasZeroRectOffset &&
         hasIdentityTransform &&
-        _effectiveNeutralScrollPosition == 0) {
+        verticalContainerAdjustment == 0.0 &&
+        horizontalContainerAdjustment == 0.0) {
       element.style
         ..removeProperty('transform-origin')
         ..removeProperty('transform');
@@ -763,19 +822,11 @@ class SemanticsObject {
     }
 
     if (containerElement != null) {
-      if (!hasZeroRectOffset || _effectiveNeutralScrollPosition != 0) {
-        double translateX = -_rect.left;
-        double translateY = -_rect.top;
-
-        if (_effectiveNeutralScrollPosition != 0) {
-          if (isVerticalScrollContainer) {
-            translateY += _effectiveNeutralScrollPosition;
-          } else {
-            assert(isHorizontalScrollContainer);
-            translateX += _effectiveNeutralScrollPosition;
-          }
-        }
-
+      if (!hasZeroRectOffset ||
+          verticalContainerAdjustment != 0.0 ||
+          horizontalContainerAdjustment != 0.0) {
+        final double translateX = -_rect.left + horizontalContainerAdjustment;
+        final double translateY = -_rect.top + verticalContainerAdjustment;
         containerElement.style
           ..transformOrigin = '0 0 0'
           ..transform = 'translate(${translateX}px, ${translateY}px)';
@@ -787,20 +838,22 @@ class SemanticsObject {
     }
   }
 
+  Int32List _previousChildrenInTraversalOrder;
+
   /// Updates the traversal child list of [object] from the given [update].
   ///
   /// This method does not recursively update child elements' properties or
   /// their grandchildren. This is handled by [updateSemantics] method walking
   /// all the update nodes.
-  void _updateChildrenInTraversalOrder(SemanticsNodeUpdate update) {
+  void _updateChildrenInTraversalOrder() {
     // Remove all children case.
-    if (update.childrenInTraversalOrder == null ||
-        update.childrenInTraversalOrder.isEmpty) {
-      if (_childrenInTraversalOrder == null ||
-          _childrenInTraversalOrder.isEmpty) {
+    if (_childrenInTraversalOrder == null ||
+        _childrenInTraversalOrder.isEmpty) {
+      if (_previousChildrenInTraversalOrder == null ||
+          _previousChildrenInTraversalOrder.isEmpty) {
         // We must not have created a container element when child list is empty.
         assert(_childContainerElement == null);
-        _childrenInTraversalOrder = update.childrenInTraversalOrder;
+        _previousChildrenInTraversalOrder = _childrenInTraversalOrder;
         return;
       }
 
@@ -808,28 +861,28 @@ class SemanticsObject {
       assert(_childContainerElement != null);
 
       // Remove all children from this semantics object.
-      for (int childId in _childrenInTraversalOrder) {
+      for (int childId in _previousChildrenInTraversalOrder) {
         owner._detachObject(childId);
       }
-      _childrenInTraversalOrder = null;
+      _previousChildrenInTraversalOrder = null;
       _childContainerElement.remove();
       _childContainerElement = null;
-      _childrenInTraversalOrder = update.childrenInTraversalOrder;
+      _previousChildrenInTraversalOrder = _childrenInTraversalOrder;
       return;
     }
 
     final html.Element containerElement = getOrCreateChildContainer();
 
     // Empty case.
-    if (_childrenInTraversalOrder == null ||
-        _childrenInTraversalOrder.isEmpty) {
-      _childrenInTraversalOrder = update.childrenInTraversalOrder;
-      for (int id in _childrenInTraversalOrder) {
+    if (_previousChildrenInTraversalOrder == null ||
+        _previousChildrenInTraversalOrder.isEmpty) {
+      _previousChildrenInTraversalOrder = _childrenInTraversalOrder;
+      for (int id in _previousChildrenInTraversalOrder) {
         final SemanticsObject child = owner.getOrCreateObject(id);
         containerElement.append(child.element);
         owner._attachObject(parent: this, child: child);
       }
-      _childrenInTraversalOrder = update.childrenInTraversalOrder;
+      _previousChildrenInTraversalOrder = _childrenInTraversalOrder;
       return;
     }
 
@@ -847,34 +900,34 @@ class SemanticsObject {
 
     // The smallest of the two child list lengths.
     final int minLength = math.min(
+      _previousChildrenInTraversalOrder.length,
       _childrenInTraversalOrder.length,
-      update.childrenInTraversalOrder.length,
     );
 
     // Scan forward until first discrepancy.
     while (newIndex < minLength &&
-        _childrenInTraversalOrder[newIndex] ==
-            update.childrenInTraversalOrder[newIndex]) {
+        _previousChildrenInTraversalOrder[newIndex] ==
+            _childrenInTraversalOrder[newIndex]) {
       intersectionIndicesNew.add(newIndex);
       intersectionIndicesOld.add(newIndex);
       newIndex += 1;
     }
 
     // If child lists are identical, do nothing.
-    if (_childrenInTraversalOrder.length ==
-            update.childrenInTraversalOrder.length &&
-        newIndex == update.childrenInTraversalOrder.length) {
+    if (_previousChildrenInTraversalOrder.length ==
+            _childrenInTraversalOrder.length &&
+        newIndex == _childrenInTraversalOrder.length) {
       return;
     }
 
     // If child lists are not identical, continue computing the intersection
     // between the two lists.
-    while (newIndex < update.childrenInTraversalOrder.length) {
+    while (newIndex < _childrenInTraversalOrder.length) {
       for (int oldIndex = 0;
-          oldIndex < _childrenInTraversalOrder.length;
+          oldIndex < _previousChildrenInTraversalOrder.length;
           oldIndex += 1) {
-        if (_childrenInTraversalOrder[oldIndex] ==
-            update.childrenInTraversalOrder[newIndex]) {
+        if (_previousChildrenInTraversalOrder[oldIndex] ==
+            _childrenInTraversalOrder[newIndex]) {
           intersectionIndicesNew.add(newIndex);
           intersectionIndicesOld.add(oldIndex);
           break;
@@ -889,22 +942,22 @@ class SemanticsObject {
         longestIncreasingSubsequence(intersectionIndicesOld);
     final List<int> stationaryIds = <int>[];
     for (int i = 0; i < longestSequence.length; i += 1) {
-      stationaryIds.add(_childrenInTraversalOrder[
+      stationaryIds.add(_previousChildrenInTraversalOrder[
           intersectionIndicesOld[longestSequence[i]]]);
     }
 
     // Remove children that are no longer in the list.
-    for (int i = 0; i < _childrenInTraversalOrder.length; i++) {
+    for (int i = 0; i < _previousChildrenInTraversalOrder.length; i++) {
       if (!intersectionIndicesOld.contains(i)) {
         // Child not in the intersection. Must be removed.
-        final childId = _childrenInTraversalOrder[i];
+        final childId = _previousChildrenInTraversalOrder[i];
         owner._detachObject(childId);
       }
     }
 
     html.Element refNode;
-    for (int i = update.childrenInTraversalOrder.length - 1; i >= 0; i -= 1) {
-      final int childId = update.childrenInTraversalOrder[i];
+    for (int i = _childrenInTraversalOrder.length - 1; i >= 0; i -= 1) {
+      final int childId = _childrenInTraversalOrder[i];
       final SemanticsObject child = owner.getOrCreateObject(childId);
       if (!stationaryIds.contains(childId)) {
         if (refNode == null) {
@@ -919,7 +972,7 @@ class SemanticsObject {
       refNode = child.element;
     }
 
-    _childrenInTraversalOrder = update.childrenInTraversalOrder;
+    _previousChildrenInTraversalOrder = _childrenInTraversalOrder;
   }
 
   @override
@@ -933,130 +986,6 @@ class SemanticsObject {
     } else {
       return super.toString();
     }
-  }
-}
-
-/// Adds increment/decrement event handling to a semantics object.
-///
-/// The implementation uses a hidden `<input type="range">` element with ARIA
-/// attributes to cause the browser to render increment/decrement controls to
-/// the assistive technology.
-///
-/// The input element is disabled whenever the gesture mode switches to pointer
-/// events. This is to prevent the browser from taking over drag gestures. Drag
-/// gestures must be interpreted by the Flutter framework.
-class IncrementHandler {
-  /// The semantics object managed by this handler.
-  final SemanticsObject _semanticsObject;
-
-  /// The HTML element used to render semantics to the browser.
-  final html.InputElement _element = html.InputElement();
-
-  /// The value used by the input element.
-  ///
-  /// Flutter values are strings, and are not necessarily numbers. In order to
-  /// convey to the browser what the available "range" of values is we
-  /// substitute the framework value with a generated `int` surrogate.
-  /// "aria-valuetext" attribute is used to cause the browser to announce the
-  /// framework value to the user.
-  int _currentSurrogateValue = 1;
-
-  /// Disables the input [_element] when the gesture mode switches to
-  /// [GestureMode.pointerEvents], and enables it when the mode switches back to
-  /// [GestureMode.browserGestures].
-  GestureModeCallback _gestureModeListener;
-
-  IncrementHandler(this._semanticsObject) : assert(_semanticsObject != null) {
-    _semanticsObject.element.append(_element);
-    _element.type = 'range';
-    _element.setAttribute('role', 'slider');
-
-    _element.addEventListener('change', (_) {
-      if (_element.disabled) {
-        return;
-      }
-      final int newInputValue = int.parse(_element.value);
-      if (newInputValue > _currentSurrogateValue) {
-        _currentSurrogateValue += 1;
-        ui.window.onSemanticsAction(
-            _semanticsObject.id, ui.SemanticsAction.increase, null);
-      } else if (newInputValue < _currentSurrogateValue) {
-        _currentSurrogateValue -= 1;
-        ui.window.onSemanticsAction(
-            _semanticsObject.id, ui.SemanticsAction.decrease, null);
-      }
-    });
-
-    // Update the DOM node once immediately so it reflects the current state of
-    // the semantics object.
-    update();
-
-    // Store the callback as a closure because Dart does not guarantee that
-    // tear-offs produce the same function object.
-    _gestureModeListener = (GestureMode mode) {
-      update();
-    };
-    _semanticsObject.owner._addGestureModeListener(_gestureModeListener);
-  }
-
-  /// Updates the DOM [_element] based on the current state of the
-  /// [_semanticsObject] and current gesture mode.
-  void update() {
-    switch (_semanticsObject.owner._gestureMode) {
-      case GestureMode.browserGestures:
-        _enableBrowserGestureHandling();
-        _updateInputValues();
-        break;
-      case GestureMode.pointerEvents:
-        _disableBrowserGestureHandling();
-        break;
-    }
-  }
-
-  void _enableBrowserGestureHandling() {
-    assert(_semanticsObject.owner._gestureMode == GestureMode.browserGestures);
-    if (!_element.disabled) {
-      return;
-    }
-    _element.disabled = false;
-  }
-
-  void _updateInputValues() {
-    assert(_semanticsObject.owner._gestureMode == GestureMode.browserGestures);
-    final String surrogateTextValue = '$_currentSurrogateValue';
-    _element.value = surrogateTextValue;
-    _element.setAttribute('aria-valuenow', surrogateTextValue);
-    _element.setAttribute('aria-valuetext', _semanticsObject._value);
-
-    final bool canIncrease = _semanticsObject._increasedValue != null;
-    final String surrogateMaxTextValue =
-        canIncrease ? '${_currentSurrogateValue + 1}' : surrogateTextValue;
-    _element.max = surrogateMaxTextValue;
-    _element.setAttribute('aria-valuemax', surrogateMaxTextValue);
-
-    final bool canDecrease = _semanticsObject._decreasedValue != null;
-    final String surrogateMinTextValue =
-        canDecrease ? '${_currentSurrogateValue - 1}' : surrogateTextValue;
-    _element.min = surrogateMinTextValue;
-    _element.setAttribute('aria-valuemin', surrogateMinTextValue);
-  }
-
-  void _disableBrowserGestureHandling() {
-    if (_element.disabled) {
-      return;
-    }
-    _element.disabled = true;
-  }
-
-  /// Cleans up the DOM.
-  ///
-  /// This object is not usable after calling this method.
-  void dispose() {
-    assert(_gestureModeListener != null);
-    _semanticsObject.owner._removeGestureModeListener(_gestureModeListener);
-    _gestureModeListener = null;
-    _disableBrowserGestureHandling();
-    _element.remove();
   }
 }
 
@@ -1156,12 +1085,12 @@ class EngineSemanticsOwner {
 
   /// Schedules a one-time callback to be called after all objects in the tree
   /// have their properties populated and their sizes and locations computed.
-  void _addOneTimePostUpdateCallback(ui.VoidCallback callback) {
+  void addOneTimePostUpdateCallback(ui.VoidCallback callback) {
     _oneTimePostUpdateCallbacks.add(callback);
   }
 
   /// Reconciles [_attachments] and [_detachments], and after that calls all
-  /// the one-time callbacks scheduled via the [_addOneTimePostUpdateCallback]
+  /// the one-time callbacks scheduled via the [addOneTimePostUpdateCallback]
   /// method.
   void _finalizeTree() {
     for (SemanticsObject object in _detachments) {
@@ -1262,7 +1191,15 @@ class EngineSemanticsOwner {
 
   AccessibilityMode _mode = AccessibilityMode.unknown;
 
+  /// Currently used [GestureMode].
+  ///
+  /// This value changes automatically depending on the incoming input events.
+  /// Functionality that implements different strategies depending on this mode
+  /// would use [addGestureModeListener] and [removeGestureModeListener] to get
+  /// notifications about when the value of this field changes.
+  GestureMode get gestureMode => _gestureMode;
   GestureMode _gestureMode = GestureMode.browserGestures;
+
   AlarmClock _gestureModeClock;
 
   AlarmClock _getGestureModeClock() {
@@ -1352,15 +1289,15 @@ class EngineSemanticsOwner {
   /// The callback is called synchronously. HTML DOM updates made in the
   /// callback take effect in the current animation frame and/or the current
   /// message loop event.
-  void _addGestureModeListener(GestureModeCallback callback) {
+  void addGestureModeListener(GestureModeCallback callback) {
     _gestureModeListeners.add(callback);
   }
 
   /// Stops calling the [callback] when the [GestureMode] changes.
   ///
   /// The passed [callback] must be the exact same object as the one passed to
-  /// [_addGestureModeListener].
-  void _removeGestureModeListener(GestureModeCallback callback) {
+  /// [addGestureModeListener].
+  void removeGestureModeListener(GestureModeCallback callback) {
     assert(_gestureModeListeners.contains(callback));
     _gestureModeListeners.remove(callback);
   }

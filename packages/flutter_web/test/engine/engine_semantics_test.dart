@@ -10,7 +10,7 @@ import 'package:quiver/testing/async.dart';
 
 import 'package:flutter_web/widgets.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
-import 'package:flutter_web_ui/src/engine/semantics.dart';
+import 'package:flutter_web_ui/src/semantics/semantics.dart';
 import 'package:flutter_web_ui/ui.dart' as ui;
 
 import '../widgets/semantics_tester.dart';
@@ -202,6 +202,7 @@ void _testContainer() {
     builder.updateNode(
       id: 0,
       actions: 0,
+      flags: 0,
       transform: Matrix4.identity().storage,
       rect: zeroOffsetRect,
       childrenInHitTestOrder: Int32List.fromList([1]),
@@ -238,6 +239,7 @@ void _testContainer() {
     builder.updateNode(
       id: 0,
       actions: 0,
+      flags: 0,
       transform: Matrix4.identity().storage,
       rect: ui.Rect.fromLTRB(10, 10, 20, 20),
       childrenInHitTestOrder: Int32List.fromList([1]),
@@ -276,6 +278,7 @@ void _testVerticalScrolling() {
     builder.updateNode(
       id: 0,
       actions: 0 | SemanticsAction.scrollUp.index,
+      flags: 0,
       transform: Matrix4.identity().storage,
       rect: ui.Rect.fromLTRB(0, 0, 50, 100),
     );
@@ -298,6 +301,7 @@ void _testVerticalScrolling() {
     builder.updateNode(
       id: 0,
       actions: 0 | SemanticsAction.scrollUp.index,
+      flags: 0,
       transform: Matrix4.identity().storage,
       rect: ui.Rect.fromLTRB(0, 0, 50, 100),
       childrenInHitTestOrder: Int32List.fromList([1]),
@@ -352,6 +356,7 @@ void _testVerticalScrolling() {
       id: 0,
       actions:
           0 | SemanticsAction.scrollUp.index | SemanticsAction.scrollDown.index,
+      flags: 0,
       transform: Matrix4.identity().storage,
       rect: ui.Rect.fromLTRB(0, 0, 50, 100),
       childrenInHitTestOrder: Int32List.fromList([1, 2, 3]),
@@ -362,6 +367,7 @@ void _testVerticalScrolling() {
       builder.updateNode(
         id: id,
         actions: 0,
+        flags: 0,
         transform: Matrix4.translationValues(0, 50.0 * id, 0).storage,
         rect: ui.Rect.fromLTRB(0, 0, 50, 50),
       );
@@ -412,6 +418,7 @@ void _testHorizontalScrolling() {
     builder.updateNode(
       id: 0,
       actions: 0 | SemanticsAction.scrollLeft.index,
+      flags: 0,
       transform: Matrix4.identity().storage,
       rect: ui.Rect.fromLTRB(0, 0, 100, 50),
     );
@@ -434,6 +441,7 @@ void _testHorizontalScrolling() {
     builder.updateNode(
       id: 0,
       actions: 0 | SemanticsAction.scrollLeft.index,
+      flags: 0,
       transform: Matrix4.identity().storage,
       rect: ui.Rect.fromLTRB(0, 0, 100, 50),
       childrenInHitTestOrder: Int32List.fromList([1]),
@@ -470,6 +478,7 @@ void _testHorizontalScrolling() {
       actions: 0 |
           SemanticsAction.scrollLeft.index |
           SemanticsAction.scrollRight.index,
+      flags: 0,
       transform: Matrix4.identity().storage,
       rect: ui.Rect.fromLTRB(0, 0, 100, 50),
       childrenInHitTestOrder: Int32List.fromList([1, 2, 3]),
@@ -480,6 +489,7 @@ void _testHorizontalScrolling() {
       builder.updateNode(
         id: id,
         actions: 0,
+        flags: 0,
         transform: Matrix4.translationValues(50.0 * id, 0, 0).storage,
         rect: ui.Rect.fromLTRB(0, 0, 50, 50),
       );
@@ -531,6 +541,7 @@ void _testIncrementables() {
     builder.updateNode(
       id: 0,
       actions: 0 | SemanticsAction.increase.index,
+      flags: 0,
       value: 'd',
       transform: Matrix4.identity().storage,
       rect: ui.Rect.fromLTRB(0, 0, 100, 50),
@@ -555,6 +566,7 @@ void _testIncrementables() {
     builder.updateNode(
       id: 0,
       actions: 0 | SemanticsAction.increase.index,
+      flags: 0,
       value: 'd',
       increasedValue: 'e',
       transform: Matrix4.identity().storage,
@@ -587,6 +599,7 @@ void _testIncrementables() {
     builder.updateNode(
       id: 0,
       actions: 0 | SemanticsAction.decrease.index,
+      flags: 0,
       value: 'd',
       decreasedValue: 'c',
       transform: Matrix4.identity().storage,
@@ -620,6 +633,7 @@ void _testIncrementables() {
       id: 0,
       actions:
           0 | SemanticsAction.decrease.index | SemanticsAction.increase.index,
+      flags: 0,
       value: 'd',
       increasedValue: 'e',
       decreasedValue: 'c',

@@ -21,6 +21,7 @@ export 'package:meta/meta.dart'
 export 'src/foundation/assertions.dart';
 export 'src/foundation/basic_types.dart';
 export 'src/foundation/binding.dart';
+export 'src/foundation/bitfield.dart';
 export 'src/foundation/change_notifier.dart';
 export 'src/foundation/collections.dart';
 export 'src/foundation/debug.dart';

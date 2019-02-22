@@ -1,6 +1,6 @@
 import 'layer_tree.dart';
 import 'platform_message.dart';
-import 'font_collection.dart';
+import '../text/font_collection.dart';
 
 abstract class RuntimeDelegate {
   String get defaultRouteName;

@@ -258,9 +258,22 @@ class MatrixUtils {
 /// If the argument is null, returns a list with the single string "null".
 List<String> debugDescribeTransform(Matrix4 transform) {
   if (transform == null) return const <String>['null'];
-  final List<String> matrix = transform.toString().split('\n').toList();
-  matrix.removeLast();
+  final List<String> matrix = [
+    _transformRowToString(transform, 0),
+    _transformRowToString(transform, 1),
+    _transformRowToString(transform, 2),
+    _transformRowToString(transform, 3)
+  ];
   return matrix;
+}
+
+// TODO(flutter_web): upstream to flutter.
+String _transformRowToString(Matrix4 transform, int rowIndex) {
+  Vector4 row = transform.getRow(rowIndex);
+  return '[$rowIndex] ${debugPrintDouble(row[0])},'
+      '${debugPrintDouble(row[1])},'
+      '${debugPrintDouble(row[2])},'
+      '${debugPrintDouble(row[3])}';
 }
 
 /// Property which handles [Matrix4] that represent transforms.

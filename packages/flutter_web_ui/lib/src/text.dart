@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:html';
 import 'dart:math' as math;
 
 import 'package:meta/meta.dart';
 
-import 'assets/fonts.dart';
 import 'canvas.dart';
 import 'dom_renderer.dart';
 import 'geometry.dart';
@@ -1658,33 +1656,4 @@ String webOnlyFontWeightToCss(FontWeight fontWeight) {
   }());
 
   return '';
-}
-
-/// Loads the "Ahem" font onto the web page.
-Future<void> webOnlyUseAhemFont() {
-  const String url = '/packages/flutter_web/assets/Ahem.ttf';
-
-  domRenderer.debugIsInWidgetTest = true;
-
-  // Instead of awaiting on the future returned by `loadFont` we wait for the
-  // `document.fonts.onLoadingDone` event. This is because the `loadFont` future
-  // sometimes never returns.
-  final Completer<void> completer = Completer<void>();
-  StreamSubscription loadSub;
-  StreamSubscription errorSub;
-
-  loadSub = document.fonts.onLoadingDone.listen((_) {
-    completer.complete();
-    loadSub.cancel();
-    errorSub.cancel();
-  });
-
-  errorSub = document.fonts.onLoadingError.listen((_) {
-    completer.completeError(Exception('Failed to load Ahem from from $url'));
-    loadSub.cancel();
-    errorSub.cancel();
-  });
-
-  loadFont('Ahem', 'url($url)');
-  return completer.future;
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter_web_ui/ui.dart' show isWeb;
 import 'package:meta/meta.dart';
 
 import 'print.dart';
@@ -879,7 +880,6 @@ abstract class DiagnosticsNode {
       if (name != null && name.isNotEmpty && showName) {
         builder.write(name);
         if (showSeparator) builder.write(config.afterName);
-
         builder.write(
             config.isNameOnOwnLine || description.contains('\n') ? '\n' : ' ');
         if (description.contains('\n') &&
@@ -1807,6 +1807,17 @@ class DiagnosticsProperty<T> extends DiagnosticsNode {
     // DiagnosticableTree values are shown using the shorter toStringShort()
     // instead of the longer toString() because the toString() for a
     // DiagnosticableTree value is likely too large to be useful.
+
+    if (isWeb && v is Function) {
+      // TODO(flutter_web): upstream.
+      // Normalize web/DDC specific closure toString syntax.
+      // DDC Example: Closure: () => void from: function onClick().
+      String desc = v.toString();
+      if (desc.contains('Closure:') && desc.contains('from:')) {
+        desc = desc.substring(0, desc.indexOf('from: ') - 1);
+      }
+      return desc;
+    }
     return v is DiagnosticableTree ? v.toStringShort() : v.toString();
   }
 

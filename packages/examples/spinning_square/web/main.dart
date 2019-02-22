@@ -2,14 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 import 'package:flutter_web_ui/ui.dart' as ui;
-import 'package:flutter_web_ui/src/assets/assets.dart';
-import 'package:flutter_web_ui/src/assets/fonts.dart';
 import 'package:flutter_web.examples.spinning_square/main.dart' as app;
 
 main() async {
-  ui.webOnlyAssetManager = AssetManager();
-  // TODO(het): This loads all fonts before starting the app. We should
-  // find a smarter way to load the fonts on demand.
-  await loadFonts(ui.webOnlyAssetManager);
+  await ui.webOnlyInitializePlatform();
   app.main();
 }

@@ -1,9 +1,12 @@
 import 'package:flutter_web/material.dart';
 import 'package:flutter_web/rendering.dart';
 import 'package:flutter_web_ui/ui.dart' as ui;
+import 'package:flutter_web_ui/src/dom_renderer.dart' as ui;
 import 'package:html/parser.dart' as html_package;
 import 'package:html/dom.dart' as html_package;
 import 'package:test/test.dart' as test_package;
+
+import 'src/binding.dart' show MockAssetManager;
 
 export 'dart:async' show Future;
 
@@ -15,17 +18,21 @@ export 'src/test_async_utils.dart';
 export 'src/test_pointer.dart';
 export 'src/widget_tester.dart';
 
-/// Used to track when the Ahem font is loaded. This is only set once and used
-/// in all tests.
-Future<void> _webOnlyAhemFontFuture;
+/// Used to track when the platform is initialized. This ensures the test fonts
+/// are available.
+Future<void> _platformInitializedFuture;
 
-/// If the Ahem font is already loaded (by a previous test), then run the test
-/// body immediately. Otherwise, load the Ahem font then run the test.
-Future<dynamic> _ensureAhemFontThenRunTest(dynamic Function() body) {
-  if (_webOnlyAhemFontFuture == null) {
-    _webOnlyAhemFontFuture = ui.webOnlyUseAhemFont();
+/// If the platform is already initialized (by a previous test), then run the test
+/// body immediately. Otherwise, initialize the platform then run the test.
+Future<dynamic> _ensurePlatformInitializedThenRunTest(dynamic Function() body) {
+  if (_platformInitializedFuture == null) {
+    ui.domRenderer.debugIsInWidgetTest = true;
+
+    // Initializing the platform will ensure that the test font is loaded.
+    _platformInitializedFuture =
+        ui.webOnlyInitializePlatform(assetManager: MockAssetManager());
   }
-  return _webOnlyAhemFontFuture.then((_) => body());
+  return _platformInitializedFuture.then((_) => body());
 }
 
 /// Wrapper around Dart's [test_package.test] to ensure that Ahem font is
@@ -42,7 +49,7 @@ void test(
 }) {
   test_package.test(
     description,
-    () => _ensureAhemFontThenRunTest(body),
+    () => _ensurePlatformInitializedThenRunTest(body),
     testOn: testOn,
     timeout: timeout,
     skip: skip,

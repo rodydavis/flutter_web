@@ -12,7 +12,7 @@ import 'package:flutter_web_ui/ui.dart'
     show PointerData, PointerDataPacket, PointerChange;
 
 import 'pointer.dart';
-import 'engine/semantics.dart' as engine;
+import 'semantics/semantics.dart' as engine;
 
 /// Set this flag to true to see all the fired events in the console.
 const _debugLogPointerEvents = false;

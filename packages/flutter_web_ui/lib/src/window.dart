@@ -5,7 +5,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'assets/assets.dart';
 import 'bitmap_canvas.dart';
 import 'browser_routing/history.dart';
 import 'browser_routing/strategies.dart';
@@ -14,9 +13,10 @@ import 'compositor/layer_scene_builder.dart';
 import 'compositor/rasterizer.dart';
 import 'compositor/surface.dart';
 import 'dom_renderer.dart';
-import 'engine/semantics.dart' as engine;
+import 'semantics/semantics.dart' as engine;
 import 'geometry.dart';
 import 'hash_codes.dart';
+import 'initialization.dart' show webOnlyAssetManager;
 import 'painting.dart';
 import 'pointer.dart';
 import 'semantics.dart';
@@ -1119,6 +1119,3 @@ class AccessibilityFeatures {
 /// core scheduler API, the input event callback, the graphics drawing API, and
 /// other such core services.
 final Window window = new Window._();
-
-/// This class handles downloading assets over the network.
-AssetManager webOnlyAssetManager;

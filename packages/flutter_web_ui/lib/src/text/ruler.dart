@@ -140,14 +140,13 @@ class TextDimensions {
   final html.HtmlElement _probe;
 
   /// The width of the paragraph being measured.
-  double get width => _element.offsetWidth.ceil().toDouble();
+  double get width => _element.getBoundingClientRect().width;
 
   /// The height of the paragraph being measured.
-  double get height => _element.offsetHeight.ceil().toDouble();
+  double get height => _element.getBoundingClientRect().height;
 
   /// The alphabetic baseline of the paragraph being measured.
-  double get alphabeticBaseline =>
-      _probe.getBoundingClientRect().bottom.ceil().toDouble();
+  double get alphabeticBaseline => _probe.getBoundingClientRect().bottom;
 }
 
 /// Performs 3 types of measurements:

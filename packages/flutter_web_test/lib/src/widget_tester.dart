@@ -31,9 +31,9 @@ export 'package:test/test.dart'
 /// Signature for callback to [testWidgets] and [benchmarkWidgets].
 typedef WidgetTesterCallback = Future<void> Function(WidgetTester widgetTester);
 
-/// Used to track when the Ahem font is loaded. This is only set once and used
-/// in all tests.
-Future<void> _webOnlyAhemFontFuture;
+/// Used to track when the platform is initialized. This ensures the test fonts
+/// are available.
+Future<void> _platformInitializedFuture;
 
 /// Runs the [callback] inside the Flutter test environment.
 ///
@@ -71,8 +71,10 @@ void testWidgets(String description, WidgetTesterCallback callback,
     window.devicePixelRatio = 3.0;
     window.physicalSize = const Size(2400, 1800);
     window.webOnlyScheduleFrameCallback = () {};
+    domRenderer.debugIsInWidgetTest = true;
     // Only load the Ahem font once and await the same future in all tests.
-    _webOnlyAhemFontFuture = webOnlyUseAhemFont();
+    _platformInitializedFuture =
+        webOnlyInitializePlatform(assetManager: MockAssetManager());
   }
 
   final TestWidgetsFlutterBinding binding =
@@ -80,8 +82,8 @@ void testWidgets(String description, WidgetTesterCallback callback,
   final WidgetTester tester = WidgetTester._(binding);
   timeout ??= binding.defaultTestTimeout;
   test_package.test(description, () async {
-    assert(_webOnlyAhemFontFuture != null);
-    await _webOnlyAhemFontFuture.timeout(const Duration(seconds: 2),
+    assert(_platformInitializedFuture != null);
+    await _platformInitializedFuture.timeout(const Duration(seconds: 2),
         onTimeout: () async {
       throw FlutterError('Timed out loading Ahem font.');
     });

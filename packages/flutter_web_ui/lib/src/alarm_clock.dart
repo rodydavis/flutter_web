@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import '../../ui.dart' as ui;
+import '../ui.dart' as ui;
 
 /// A function that returns current system time.
 typedef TimestampFunction = DateTime Function();

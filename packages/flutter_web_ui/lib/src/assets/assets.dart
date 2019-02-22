@@ -39,7 +39,7 @@ class AssetManager {
       return (request.response as ByteBuffer).asByteData();
     } on ProgressEvent catch (e) {
       if (e.target is HttpRequest) {
-        throw AssetManagerException._(url, (e.target as HttpRequest).status);
+        throw AssetManagerException(url, (e.target as HttpRequest).status);
       }
 
       rethrow;
@@ -51,7 +51,7 @@ class AssetManagerException implements Exception {
   final String url;
   final int httpStatus;
 
-  AssetManagerException._(this.url, this.httpStatus);
+  AssetManagerException(this.url, this.httpStatus);
 
   @override
   String toString() => 'Failed to load asset at "$url" ($httpStatus)';

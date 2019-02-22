@@ -4,7 +4,7 @@
 
 import 'dart:typed_data';
 
-import 'engine/semantics.dart' as engine;
+import 'semantics/semantics.dart' as engine;
 import 'geometry.dart';
 import 'text.dart';
 

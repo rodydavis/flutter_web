@@ -4,7 +4,7 @@ import 'layer_tree.dart';
 import 'viewport_metrics.dart';
 import 'runtime_delegate.dart';
 import 'platform_message.dart';
-import 'font_collection.dart';
+import '../text/font_collection.dart';
 import '../assets/assets.dart';
 
 import '../geometry.dart';
