@@ -91,6 +91,7 @@ class HybridTextEditing {
         break;
 
       case 'TextInput.clearClient':
+      case 'TextInput.hide':
         _stopEditing();
         break;
     }
@@ -132,15 +133,24 @@ class HybridTextEditing {
     window.getSelection()
       ..removeAllRanges()
       ..addRange(_createRange(editingState));
+
+    // Safari on iOS requires that we focus explicitly. Otherwise, the on-screen
+    // keyboard won't show up.
+    element.focus();
   }
 
   void _stopEditing() {
-    _isEditing = true;
+    _isEditing = false;
     _lastEditingState = null;
     for (int i = 0; i < _subscriptions.length; i++) {
       _subscriptions[i].cancel();
     }
     _subscriptions.clear();
+
+    // Remove focus from the editable element to cause the keyboard to hide.
+    // Otherwise, the keyboard stays on screen even when the user navigates to
+    // a different screen (e.g. by hitting the "back" button).
+    element.blur();
   }
 
   /// Reads the current editing state of the content editable element and sends
