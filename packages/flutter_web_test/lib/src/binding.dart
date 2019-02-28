@@ -1748,7 +1748,7 @@ class _MockHttpHeaders extends HttpHeaders {
 }
 
 /// An asset manager that gives fake empty responses for assets.
-class MockAssetManager implements ui.AssetManager {
+class WebOnlyMockAssetManager implements ui.AssetManager {
   String defaultAssetsDir = '';
   String defaultAssetManifest = '{}';
   String defaultFontManifest = '[]';
@@ -1757,7 +1757,7 @@ class MockAssetManager implements ui.AssetManager {
   String get assetsDir => defaultAssetsDir;
 
   @override
-  String getAssetUrl(String asset) => '$defaultAssetsDir/$asset';
+  String getAssetUrl(String asset) => '$asset';
 
   @override
   Future<ByteData> load(String asset) {

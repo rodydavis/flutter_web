@@ -6,7 +6,7 @@ import 'package:html/parser.dart' as html_package;
 import 'package:html/dom.dart' as html_package;
 import 'package:test/test.dart' as test_package;
 
-import 'src/binding.dart' show MockAssetManager;
+import 'src/binding.dart' show WebOnlyMockAssetManager;
 
 export 'dart:async' show Future;
 
@@ -30,7 +30,7 @@ Future<dynamic> _ensurePlatformInitializedThenRunTest(dynamic Function() body) {
 
     // Initializing the platform will ensure that the test font is loaded.
     _platformInitializedFuture =
-        ui.webOnlyInitializePlatform(assetManager: MockAssetManager());
+        ui.webOnlyInitializePlatform(assetManager: WebOnlyMockAssetManager());
   }
   return _platformInitializedFuture.then((_) => body());
 }

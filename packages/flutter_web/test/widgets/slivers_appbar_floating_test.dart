@@ -236,8 +236,8 @@ void main() {
 
     position.animateTo(bigHeight + delegate.maxExtent * 1.9,
         curve: Curves.linear, duration: const Duration(minutes: 1));
-    position.updateUserScrollDirection(
-        ScrollDirection.forward); // ignore: invalid_use_of_protected_member
+    // ignore: invalid_use_of_protected_member
+    position.updateUserScrollDirection(ScrollDirection.forward);
     await tester.pumpAndSettle(const Duration(milliseconds: 1000));
     verifyPaintPosition(key1, const Offset(0.0, 0.0), false);
     verifyPaintPosition(key2, const Offset(0.0, 0.0), true);

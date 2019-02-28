@@ -294,6 +294,10 @@ class StandardMessageCodec implements MessageCodec<dynamic> {
       buffer.putUint8(_valueNull);
     } else if (value is bool) {
       buffer.putUint8(value ? _valueTrue : _valueFalse);
+      // TODO(flutter_web): upstream double/int if/else swap.
+    } else if (value is double) {
+      buffer.putUint8(_valueFloat64);
+      buffer.putFloat64(value);
     } else if (value is int) {
       if (-0x7fffffff - 1 <= value && value <= 0x7fffffff) {
         buffer.putUint8(_valueInt32);
@@ -302,9 +306,6 @@ class StandardMessageCodec implements MessageCodec<dynamic> {
         buffer.putUint8(_valueInt64);
         buffer.putInt64(value);
       }
-    } else if (value is double) {
-      buffer.putUint8(_valueFloat64);
-      buffer.putFloat64(value);
     } else if (value is String) {
       buffer.putUint8(_valueString);
       final List<int> bytes = utf8.encoder.convert(value);

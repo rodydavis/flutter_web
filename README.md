@@ -22,15 +22,23 @@ The long term goal is to completely support all of Flutter's API and
 functionality across modern browsers – with few, if any, exceptions.  During the
 preview, there are a number of exceptions.
 
-* You cannot use existing Flutter code and packages code as-is.
+* You cannot use existing Flutter code, pub packages, or plugins as-is.
 * Some Flutter APIs are not implemented – there are missing classes and members.
-* Some APIs may misbehave – from rendering issues to crashes.
-* At the moment, UI built with `flutter_web` may feel like a mobile app running
-  running on a desktop.
+* Some APIs will misbehave – from rendering issues to crashes.
+* At the moment, UI built with `flutter_web` will feel like a mobile app when
+  running on a desktop browser. For example:
   * Mouse wheel scrolling is not yet enabled – use drag instead.
   * Text selection may scroll the view instead.
   * We plan to address these issues over the coming months.
 * The code in the repository will change without notice.
+* Some widgets will be janky as we have not yet optimized all paint operations.
+
+## How to implement plugins/access browser API?
+
+`flutter_web` does not have a plugin system yet. _Temporarily_, we provide
+access to `dart:html`, `dart:js`, `dart:svg`, `dart:indexed_db` and other Web
+libraries that give you access to the vast majority of browser APIs. However,
+expect that these libraries will be replaced by a different plugin API.
 
 # Getting started
 

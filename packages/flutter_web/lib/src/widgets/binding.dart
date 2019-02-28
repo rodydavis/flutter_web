@@ -273,8 +273,7 @@ mixin WidgetsBinding
   void initServiceExtensions() {
     super.initServiceExtensions();
 
-    const bool isReleaseMode = bool.fromEnvironment('dart.vm.product');
-    if (!isReleaseMode) {
+    profile(() {
       registerSignalServiceExtension(
         name: 'debugDumpApp',
         callback: () {
@@ -294,7 +293,19 @@ mixin WidgetsBinding
           return _forceRebuild();
         },
       );
-    }
+
+      registerServiceExtension(
+        name: 'didSendFirstFrameEvent',
+        callback: (_) async {
+          return <String, dynamic>{
+            // This is defined to return a STRING, not a boolean.
+            // Devtools, the Intellij plugin, and the flutter tool all depend
+            // on it returning a string and not a boolean.
+            'enabled': _needToReportFirstFrame ? 'false' : 'true'
+          };
+        },
+      );
+    });
 
     assert(() {
       registerBoolServiceExtension(
@@ -317,6 +328,18 @@ mixin WidgetsBinding
             debugProfileBuildsEnabled = value;
         },
       );
+
+      // This service extension is deprecated and will be removed by 12/1/2018.
+      // Use ext.flutter.inspector.show instead.
+      registerBoolServiceExtension(
+          name: 'debugWidgetInspector',
+          getter: () async => WidgetsApp.debugShowWidgetInspectorOverride,
+          setter: (bool value) {
+            if (WidgetsApp.debugShowWidgetInspectorOverride == value)
+              return Future<void>.value();
+            WidgetsApp.debugShowWidgetInspectorOverride = value;
+            return _forceRebuild();
+          });
 
       WidgetInspectorService.instance
           .initServiceExtensions(registerServiceExtension);
