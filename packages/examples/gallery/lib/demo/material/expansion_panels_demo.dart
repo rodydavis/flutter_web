@@ -182,11 +182,10 @@ class _ExpansionPanelsDemoState extends State<ExpansionPanelsDemo> {
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: TextFormField(
                       controller: item.textController,
-                      // TODO(flutter_web): enable once supported.
-//                      decoration: InputDecoration(
-//                        hintText: item.hint,
-//                        labelText: item.name,
-//                      ),
+                      decoration: InputDecoration(
+                        hintText: item.hint,
+                        labelText: item.name,
+                      ),
                       onSaved: (String value) {
                         item.value = value;
                       },

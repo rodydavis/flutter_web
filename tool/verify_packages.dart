@@ -17,7 +17,11 @@ void main() async {
   for (var dir in packageDirs) {
     _logWrapped(_ansiMagenta, dir);
     results.add(await _run(dir, 'pub', ['upgrade', '--no-precompile']));
-    results.add(await _run(dir, 'dartanalyzer', ['.']));
+    results.add(await _run(
+      dir,
+      'dartanalyzer',
+      ['--fatal-infos', '--fatal-warnings', '.'],
+    ));
     _printStatus(results);
   }
 
