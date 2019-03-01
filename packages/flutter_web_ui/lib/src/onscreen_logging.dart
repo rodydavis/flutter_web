@@ -22,6 +22,9 @@ void printOnScreen(Object object) {
 
   _logBuffer.writeln('${_lineNumber++}: ${object}');
   _logContainer.text = _logBuffer.toString();
+
+  // Also log to console for browsers that give you access to it.
+  print(object);
 }
 
 void _initialize() {

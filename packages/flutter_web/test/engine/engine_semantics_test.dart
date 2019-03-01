@@ -42,6 +42,9 @@ void main() {
   group('incrementable', () {
     _testIncrementables();
   });
+  group('text field', () {
+    _testTextField();
+  });
 }
 
 void _testEngineSemanticsOwner() {
@@ -646,6 +649,67 @@ void _testIncrementables() {
 <sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
   <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="2" aria-valuemin="0">
 </sem>''');
+
+    semantics().semanticsEnabled = false;
+  });
+}
+
+void _testTextField() {
+  testWidgets('renders a text field', (WidgetTester tester) async {
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.tap.index,
+      flags: 0 | SemanticsFlag.isTextField.index,
+      value: 'hello',
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+  <sem-tf style="user-select: text">hello</sem-tf>
+</sem>''');
+
+    semantics().semanticsEnabled = false;
+  });
+
+  // TODO(yjbanov): this test will need to be adjusted for Safari when we add
+  //                Safari testing.
+  testWidgets('sends a tap action when text field is activated',
+      (WidgetTester tester) async {
+    final SemanticsActionLogger logger = SemanticsActionLogger();
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.tap.index,
+      flags: 0 | SemanticsFlag.isTextField.index,
+      value: 'hello',
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+
+    final html.Element textField =
+        html.document.querySelectorAll('flt-semantics-text-field').single;
+
+    expect(html.document.activeElement, isNot(textField));
+
+    textField.dispatchEvent(html.Event('click'));
+
+    expect(html.document.activeElement, textField);
+    expect(await logger.idLog.first, 0);
+    expect(await logger.actionLog.first, SemanticsAction.tap);
 
     semantics().semanticsEnabled = false;
   });

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(yjbanov): port scroll_controller_test.dart when we have full ListView
-//                implementation.
 import 'dart:async';
 
 import 'package:flutter_web/animation.dart';

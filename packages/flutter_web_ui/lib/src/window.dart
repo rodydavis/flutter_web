@@ -912,8 +912,6 @@ class Window {
     });
   }
 
-  HybridTextEditing _textEditing = HybridTextEditing();
-
   /// Sends a message to a platform-specific plugin.
   ///
   /// The `name` parameter determines which plugin receives the message. The
@@ -962,7 +960,7 @@ class Window {
         break;
 
       case 'flutter/textinput':
-        _textEditing.handleTextInput(data);
+        textEditing.handleTextInput(data);
         break;
     }
 

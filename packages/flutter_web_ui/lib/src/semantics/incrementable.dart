@@ -64,10 +64,6 @@ class Incrementable extends RoleManager {
       }
     });
 
-    // Update the DOM node once immediately so it reflects the current state of
-    // the semantics object.
-    update();
-
     // Store the callback as a closure because Dart does not guarantee that
     // tear-offs produce the same function object.
     _gestureModeListener = (GestureMode mode) {

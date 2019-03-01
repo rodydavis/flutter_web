@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(yjbanov): port overscroll_indicator_test.dart when we have things that
-//                the test uses, e.g. CustomScrollView.
 import 'dart:async' show Timer;
 import 'dart:math' as math;
 

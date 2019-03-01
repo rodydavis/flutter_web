@@ -1,3 +1,5 @@
+Welcome! Thank you for trying Flutter Web Early Tech Preview!
+
 This repository contains the source code for an experimental
 [Flutter](https://flutter.dev/) Web runtime.
 The long term goal is to add web support as a first-tier platform in
@@ -13,25 +15,27 @@ surface.
 * Access to this repository and source code is invitation-only.
 * Do not fork, share, or publish any source code from this repository.
 * Do not discuss the contents of this repository except via the [issue
-  tracker](https://github.com/flutter/flutter_web/issues) and the [discussion
-  group](https://groups.google.com/forum/#!forum/flutter_web_early_access).
+  tracker] and the
+  [discussion group](https://groups.google.com/forum/#!forum/flutter_web_early_access).
 
-## Limitations, Stability, Fidelity
+## Limitations
 
-The long term goal is to completely support all of Flutter's API and
-functionality across modern browsers – with few, if any, exceptions.  During the
-preview, there are a number of exceptions.
+We intend to completely support all of Flutter's API and functionality across
+modern browsers – with few, if any, exceptions. However, during this preview,
+there are a number of exceptions:
 
-* You cannot use existing Flutter code, pub packages, or plugins as-is.
-* Some Flutter APIs are not implemented – there are missing classes and members.
+* Existing Flutter code, pub packages, and plugins do not work as-is.
+* Not all Flutter APIs are implemented for Web – including whole classes and
+  members.
 * Some APIs will misbehave – from rendering issues to crashes.
-* At the moment, UI built with `flutter_web` will feel like a mobile app when
+* Currently, UI built with `flutter_web` will feel like a mobile app when
   running on a desktop browser. For example:
   * Mouse wheel scrolling is not yet enabled – use drag instead.
   * Text selection may scroll the view instead.
-  * We plan to address these issues over the coming months.
+* We plan to address these issues over the coming months.
 * The code in the repository will change without notice.
 * Some widgets will be janky as we have not yet optimized all paint operations.
+* The development workflow only works with Chrome at the moment.
 
 ## How to implement plugins/access browser API?
 
@@ -108,3 +112,14 @@ Clone the repository locally.
     > Note: We plan to support all modern browsers `flutter_web`, but at the
       moment the default for the development server generates code that may only
       work in Chrome.
+
+
+## How to help!
+
+We are not yet ready to accept GitHub pull requests at this time. However,
+[GitHub issues][issue tracker] are very welcome.
+
+Of particular interest to us is testing across a variety of platforms. Please
+try Windows if you have it for example.
+
+[issue tracker]: https://github.com/flutter/flutter_web/issues

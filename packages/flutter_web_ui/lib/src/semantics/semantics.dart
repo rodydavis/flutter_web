@@ -18,6 +18,7 @@ import 'incrementable.dart';
 import 'label_and_value.dart';
 import 'scrollable.dart';
 import 'tappable.dart';
+import 'text_field.dart';
 
 /// Set this flag to `true` to cause the engine to visualize the semantics tree
 /// on the screen.
@@ -142,24 +143,25 @@ class SemanticsNodeUpdate {
   final double thickness;
 }
 
-/// Identified one of the roles a [SemanticsObject] plays.
+/// Identifies one of the roles a [SemanticsObject] plays.
 enum Role {
-  /// A semantic element that supports incrementing and/or decrementing its
-  /// value.
+  /// Supports incrementing and/or decrementing its value.
   incrementable,
 
-  /// Indicates that a semantic element can scroll its contents vertically or
-  /// horizontally.
+  /// Able to scroll its contents vertically or horizontally.
   scrollable,
 
-  /// Marks a node that contains a label or a value.
+  /// Contains a label or a value.
   ///
   /// The two are combined into the same role because they interact with each
   /// other.
   labelAndValue,
 
-  /// Indicates that a semantic object accepts tap or click gestures.
+  /// Accepts tap or click gestures.
   tappable,
+
+  /// Contains editable text.
+  textField,
 }
 
 /// A function that creates a [RoleManager] for a [SemanticsObject].
@@ -170,6 +172,7 @@ final Map<Role, RoleManagerFactory> _roleFactories = <Role, RoleManagerFactory>{
   Role.scrollable: (SemanticsObject object) => Scrollable(object),
   Role.labelAndValue: (SemanticsObject object) => LabelAndValue(object),
   Role.tappable: (SemanticsObject object) => Tappable(object),
+  Role.textField: (SemanticsObject object) => TextField(object),
 };
 
 /// Provides the functionality associated with the role of the given
@@ -232,7 +235,7 @@ class SemanticsObject {
 
     if (_debugShowSemanticsNodes) {
       element.style
-        ..opacity = '0.7'
+        ..opacity = '0.9'
         ..outline = '1px solid green'
         ..color = 'purple';
     }
@@ -572,6 +575,9 @@ class SemanticsObject {
   bool get hasChildren =>
       _childrenInTraversalOrder != null && _childrenInTraversalOrder.isNotEmpty;
 
+  /// Whether this object represents an editable text field.
+  bool get isTextField => hasFlag(ui.SemanticsFlag.isTextField);
+
   /// Updates this object from data received from a semantics [update].
   ///
   /// This method creates [SemanticsObject]s for the direct children of this
@@ -724,6 +730,7 @@ class SemanticsObject {
   /// the lifecycles of [SemanticsObjectRole] objects.
   void _updateRoles() {
     _updateRole(Role.labelAndValue, hasLabel || hasValue);
+    _updateRole(Role.textField, isTextField);
     _updateRole(
         Role.tappable,
         hasAction(ui.SemanticsAction.tap) ||

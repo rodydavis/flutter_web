@@ -28,7 +28,10 @@ class Tappable extends RoleManager {
     semanticsObject.setAriaRole(
         'button', semanticsObject.hasFlag(ui.SemanticsFlag.isButton));
 
-    if (semanticsObject.hasAction(ui.SemanticsAction.tap)) {
+    // Excluding text fields because text fields have browser-specific logic
+    // for recognizing taps and activating the keyboard.
+    if (semanticsObject.hasAction(ui.SemanticsAction.tap) &&
+        !semanticsObject.hasFlag(ui.SemanticsFlag.isTextField)) {
       if (_clickListener == null) {
         _clickListener = (_) {
           if (semanticsObject.owner.gestureMode !=

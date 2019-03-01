@@ -28,10 +28,7 @@ import 'semantics.dart';
 /// separately.
 class LabelAndValue extends RoleManager {
   LabelAndValue(SemanticsObject semanticsObject)
-      : super(Role.labelAndValue, semanticsObject) {
-    // Initial DOM update.
-    update();
-  }
+      : super(Role.labelAndValue, semanticsObject);
 
   /// Supplements the "aria-label" that renders the combination of [_label] and
   /// [_value] to semantics as text content.
@@ -52,10 +49,12 @@ class LabelAndValue extends RoleManager {
     final bool hasValue = semanticsObject.hasValue;
     final bool hasLabel = semanticsObject.hasLabel;
 
-    // If the node is incrementable the value is reported to the browser via
-    // the <input> tag, so we do not need to also render it again here.
-    final bool shouldDisplayValue =
-        hasValue && !semanticsObject.isIncrementable;
+    // If the node is incrementable or a text field the value is reported to the
+    // browser via the respective role managers. We do not need to also render
+    // it again here.
+    final bool shouldDisplayValue = hasValue &&
+        !semanticsObject.isIncrementable &&
+        !semanticsObject.isTextField;
 
     if (!hasLabel && !shouldDisplayValue) {
       _cleanUpDom();

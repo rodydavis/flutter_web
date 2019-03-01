@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_web_ui/ui.dart' as ui;
 
+import 'browser_detection.dart';
 import 'dom_renderer.dart';
 import 'services.dart';
 
@@ -46,6 +47,9 @@ HtmlElement _createEditable() {
   return element;
 }
 
+/// Text editing singleton.
+final HybridTextEditing textEditing = HybridTextEditing();
+
 /// Should be used as a singleton to provide support for text editing in
 /// Flutter Web.
 ///
@@ -55,14 +59,46 @@ HtmlElement _createEditable() {
 /// - HTML's contentEditable feature handles typing and text changes.
 /// - HTML's selection API handles selection changes and cursor movements.
 class HybridTextEditing {
-  HtmlElement _element;
+  /// The default HTML element used to manage editing state when a custom
+  /// element is not provided via [useCustomEditableElement].
+  HtmlElement _defaultEditableElement;
 
-  /// Lazily create an editable element and cache it.
+  /// The HTML element used to manage editing state.
+  ///
+  /// This field is populated using [useCustomEditableElement]. If `null` the
+  /// [_defaultEditableElement] is used instead.
+  HtmlElement _customEditableElement;
+
+  /// Returns the HTML element used to manage editing state.
+  ///
+  /// If a custom element was provided using [useCustomEditableElement], this
+  /// method returns it. Otherwise, it lazily creates an editable element,
+  /// caches it, and returns it.
   HtmlElement get element {
-    if (_element == null) {
-      _element = _createEditable();
+    if (_customEditableElement != null) {
+      return _customEditableElement;
     }
-    return _element;
+    if (_defaultEditableElement == null) {
+      _defaultEditableElement = _createEditable();
+    }
+    return _defaultEditableElement;
+  }
+
+  /// Requests that [customElement] is used for managing text editing state
+  /// instead of the hidden default element.
+  ///
+  /// Use [stopUsingCustomEditableElement] to switch back to default element.
+  void useCustomEditableElement(HtmlElement customElement) {
+    if (customElement != _customEditableElement) {
+      _stopEditing();
+    }
+    _customEditableElement = customElement;
+  }
+
+  /// Switches back to using the built-in default element for managing text
+  /// editing state.
+  void stopUsingCustomEditableElement() {
+    useCustomEditableElement(null);
   }
 
   int _clientId;
@@ -101,14 +137,29 @@ class HybridTextEditing {
     _isEditing = true;
     _syncEditingStateToElement(editingState);
 
+    // Chrome on Android will hide the onscreen keyboard when you tap outside
+    // the text box. Instead, we want the framework to tell us to hide the
+    // keyboard via `TextInput.clearClient` or `TextInput.hide`.
+    //
+    // Safari on iOS does not hide the keyboard as a side-effect of tapping
+    // outside the editable box. Instead it provides an explicit "done" button,
+    // which is reported as "blur", so we must not reacquire focus when we see
+    // a "blur" event and let the keyboard disappear.
+    if (browserEngine == BrowserEngine.blink ||
+        browserEngine == BrowserEngine.unknown) {
+      _subscriptions.add(element.onBlur.listen((_) {
+        element.focus();
+      }));
+    }
+
     // Subscribe to text and selection changes.
     _subscriptions
-      // This prevents the content editable span from losing focus. The only way
-      // to lose focus is when Flutter sends a `TextInput.clearClient` message.
-      ..add(element.onBlur.listen((_) => element.focus()))
-      ..add(document.onSelectionChange
-          .listen((_) => _syncEditingStateToFlutter()))
-      ..add(element.onInput.listen((_) => _syncEditingStateToFlutter()));
+      ..add(document.onSelectionChange.listen((_) {
+        _syncEditingStateToFlutter();
+      }))
+      ..add(element.onChange.listen((_) {
+        _syncEditingStateToFlutter();
+      }));
   }
 
   /// Takes the [editingState] sent from Flutter's [TextInputConnection] and
