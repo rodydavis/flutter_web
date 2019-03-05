@@ -4,7 +4,7 @@
 
 import 'dart:io';
 
-const _dirs = ['packages', 'packages/examples'];
+const _dirs = ['packages', 'examples'];
 
 const _ansiGreen = 32;
 const _ansiRed = 31;

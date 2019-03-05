@@ -69,10 +69,10 @@ Clone the repository locally.
 
 ## Run the hello_world example
 
-1. The example exists at `packages/examples/hello_world` in the repository.
+1. The example exists at `examples/hello_world` in the repository.
 
     ```console
-    $ cd packages/examples/hello_world/
+    $ cd examples/hello_world/
     ```
 
 2. Update packages.
@@ -84,8 +84,8 @@ Clone the repository locally.
     Resolving dependencies... (4.9s)
     ...
     Warning: You are using these overridden dependencies:
-    ! flutter_web 0.0.0 from path ../../flutter_web
-    ! flutter_web_ui 0.0.0 from path ../../flutter_web_ui
+    ! flutter_web 0.0.0 from path ../../packages/flutter_web
+    ! flutter_web_ui 0.0.0 from path ../../packages/flutter_web_ui
     Precompiling executables... (11.9s)
     ...
     ```
@@ -114,7 +114,44 @@ Clone the repository locally.
       work in Chrome.
 
 
-## How to help!
+# Use flutter_web packages from git
+
+If you'd like to depend on the `flutter_web` packages without cloning the
+repository, you can setup your pubspec as follows:
+
+```yaml
+name: my_flutter_web_app
+
+environment:
+  sdk: '>=2.2.0 <3.0.0'
+
+dependencies:
+  flutter_web: any
+  flutter_web_ui: any
+
+dev_dependencies:
+  # Enables the `pub run build_runner` command
+  build_runner: ^1.1.2
+  # Includes the JavaScript compilers
+  build_web_compilers: ^1.0.0
+
+# flutter_web packages are not published to pub.dartlang.org
+# These overrides tell the package tools to get them from GitHub
+dependency_overrides:
+  flutter_web:
+    git:
+      url: https://github.com/flutter/flutter_web
+      path: packages/flutter_web
+  flutter_web_ui:
+    git:
+      url: https://github.com/flutter/flutter_web
+      path: packages/flutter_web_ui
+```
+
+> Note: again, `github.com/flutter/flutter_web` this is a private repository.
+  Your git client must be authenticated with your white-listed GitHub alias.
+
+# How to help!
 
 We are not yet ready to accept GitHub pull requests at this time. However,
 [GitHub issues][issue tracker] are very welcome.

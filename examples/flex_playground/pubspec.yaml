@@ -8,6 +8,6 @@ dev_dependencies:
 
 dependency_overrides:
   flutter_web:
-    path: ../../flutter_web
+    path: ../../packages/flutter_web
   flutter_web_ui:
-    path: ../../flutter_web_ui
+    path: ../../packages/flutter_web_ui

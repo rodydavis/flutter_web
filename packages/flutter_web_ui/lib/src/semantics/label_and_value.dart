@@ -43,8 +43,7 @@ class LabelAndValue extends RoleManager {
   ///   alert is supplied as a label on the parent node.
   html.Element _auxiliaryValueElement;
 
-  /// Updates the DOM [_element] based on the current state of the
-  /// [semanticsObject] and current gesture mode.
+  @override
   void update() {
     final bool hasValue = semanticsObject.hasValue;
     final bool hasLabel = semanticsObject.hasLabel;
@@ -105,9 +104,7 @@ class LabelAndValue extends RoleManager {
     semanticsObject.element.attributes.remove('aria-label');
   }
 
-  /// Cleans up the DOM.
-  ///
-  /// This object is not usable after calling this method.
+  @override
   void dispose() {
     _cleanUpDom();
   }

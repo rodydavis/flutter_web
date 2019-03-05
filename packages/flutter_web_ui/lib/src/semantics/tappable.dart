@@ -20,8 +20,7 @@ class Tappable extends RoleManager {
 
   html.EventListener _clickListener;
 
-  /// Updates the DOM [_element] based on the current state of the
-  /// [semanticsObject] and current gesture mode.
+  @override
   void update() {
     final html.Element element = semanticsObject.element;
 
@@ -57,9 +56,7 @@ class Tappable extends RoleManager {
     _clickListener = null;
   }
 
-  /// Cleans up the DOM.
-  ///
-  /// This object is not usable after calling this method.
+  @override
   void dispose() {
     _stopListening();
     semanticsObject.setAriaRole('button', false);

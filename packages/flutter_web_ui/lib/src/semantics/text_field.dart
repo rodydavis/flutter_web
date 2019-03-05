@@ -115,15 +115,15 @@ class TextField extends RoleManager {
     }, true);
   }
 
-  /// Updates the DOM [_element] based on the current state of the
-  /// [semanticsObject] and current gesture mode.
+  @override
   void update() {
+    // TODO(yjbanov): could this be interfering with the text editing state? We
+    //                might want to update only when we're not currently
+    //                editing.
     _textFieldElement.text = semanticsObject.value ?? '';
   }
 
-  /// Cleans up the DOM.
-  ///
-  /// This object is not usable after calling this method.
+  @override
   void dispose() {
     _textFieldElement.remove();
     semanticsObject.setAriaRole('textbox', false);

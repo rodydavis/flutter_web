@@ -72,8 +72,7 @@ class Incrementable extends RoleManager {
     semanticsObject.owner.addGestureModeListener(_gestureModeListener);
   }
 
-  /// Updates the DOM [_element] based on the current state of the
-  /// [semanticsObject] and current gesture mode.
+  @override
   void update() {
     switch (semanticsObject.owner.gestureMode) {
       case GestureMode.browserGestures:
@@ -133,9 +132,7 @@ class Incrementable extends RoleManager {
     _element.disabled = true;
   }
 
-  /// Cleans up the DOM.
-  ///
-  /// This object is not usable after calling this method.
+  @override
   void dispose() {
     assert(_gestureModeListener != null);
     semanticsObject.owner.removeGestureModeListener(_gestureModeListener);

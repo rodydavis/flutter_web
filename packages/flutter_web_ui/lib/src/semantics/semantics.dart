@@ -14,6 +14,7 @@ import 'package:flutter_web_ui/ui.dart' as ui;
 import '../util.dart' as util;
 import '../alarm_clock.dart';
 
+import 'checkable.dart';
 import 'incrementable.dart';
 import 'label_and_value.dart';
 import 'scrollable.dart';
@@ -162,6 +163,9 @@ enum Role {
 
   /// Contains editable text.
   textField,
+
+  /// A control that has a checked state, such as a check box or a radio button.
+  checkable,
 }
 
 /// A function that creates a [RoleManager] for a [SemanticsObject].
@@ -173,6 +177,7 @@ final Map<Role, RoleManagerFactory> _roleFactories = <Role, RoleManagerFactory>{
   Role.labelAndValue: (SemanticsObject object) => LabelAndValue(object),
   Role.tappable: (SemanticsObject object) => Tappable(object),
   Role.textField: (SemanticsObject object) => TextField(object),
+  Role.checkable: (SemanticsObject object) => Checkable(object),
 };
 
 /// Provides the functionality associated with the role of the given
@@ -738,6 +743,7 @@ class SemanticsObject {
     _updateRole(Role.incrementable, isIncrementable);
     _updateRole(Role.scrollable,
         isVerticalScrollContainer || isHorizontalScrollContainer);
+    _updateRole(Role.checkable, hasFlag(ui.SemanticsFlag.hasCheckedState));
   }
 
   void _updateRole(Role role, bool enabled) {

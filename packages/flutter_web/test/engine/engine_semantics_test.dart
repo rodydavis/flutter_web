@@ -45,6 +45,9 @@ void main() {
   group('text field', () {
     _testTextField();
   });
+  group('checkboxes and radio buttons', () {
+    _testCheckboxesAndRadioButtons();
+  });
 }
 
 void _testEngineSemanticsOwner() {
@@ -710,6 +713,103 @@ void _testTextField() {
     expect(html.document.activeElement, textField);
     expect(await logger.idLog.first, 0);
     expect(await logger.actionLog.first, SemanticsAction.tap);
+
+    semantics().semanticsEnabled = false;
+  });
+}
+
+void _testCheckboxesAndRadioButtons() {
+  testWidgets('renders a checked checkbox', (WidgetTester tester) async {
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.tap.index,
+      flags: 0 |
+          SemanticsFlag.hasCheckedState.index |
+          SemanticsFlag.isChecked.index,
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem role="checkbox" aria-checked="true" style="opacity: 0; color: rgba(0, 0, 0, 0)"></sem>
+''');
+
+    semantics().semanticsEnabled = false;
+  });
+
+  testWidgets('renders an unchecked checkbox', (WidgetTester tester) async {
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.tap.index,
+      flags: 0 | SemanticsFlag.hasCheckedState.index,
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem role="checkbox" aria-checked="false" style="opacity: 0; color: rgba(0, 0, 0, 0)"></sem>
+''');
+
+    semantics().semanticsEnabled = false;
+  });
+
+  testWidgets('renders a checked radio button', (WidgetTester tester) async {
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.tap.index,
+      flags: 0 |
+          SemanticsFlag.hasCheckedState.index |
+          SemanticsFlag.isInMutuallyExclusiveGroup.index |
+          SemanticsFlag.isChecked.index,
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem role="radio" aria-checked="true" style="opacity: 0; color: rgba(0, 0, 0, 0)"></sem>
+''');
+
+    semantics().semanticsEnabled = false;
+  });
+
+  testWidgets('renders an unchecked checkbox', (WidgetTester tester) async {
+    semantics()
+      ..debugOverrideTimestampFunction(() => _testTime)
+      ..semanticsEnabled = true;
+
+    final ui.SemanticsUpdateBuilder builder = ui.SemanticsUpdateBuilder();
+    builder.updateNode(
+      id: 0,
+      actions: 0 | SemanticsAction.tap.index,
+      flags: 0 |
+          SemanticsFlag.hasCheckedState.index |
+          SemanticsFlag.isInMutuallyExclusiveGroup.index,
+      transform: Matrix4.identity().storage,
+      rect: ui.Rect.fromLTRB(0, 0, 100, 50),
+    );
+
+    semantics().updateSemantics(builder.build());
+    expectSemanticsTree('''
+<sem role="radio" aria-checked="false" style="opacity: 0; color: rgba(0, 0, 0, 0)"></sem>
+''');
 
     semantics().semanticsEnabled = false;
   });

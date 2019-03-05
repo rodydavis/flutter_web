@@ -75,8 +75,7 @@ class Scrollable extends RoleManager {
     }
   }
 
-  /// Updates the DOM [element] based on the current state of the
-  /// [semanticsObject] and current gesture mode.
+  @override
   void update() {
     if (_scrollListener == null) {
       // We need to set touch-action:none explicitly here, despite the fact
@@ -187,9 +186,7 @@ class Scrollable extends RoleManager {
     }
   }
 
-  /// Cleans up the DOM.
-  ///
-  /// This object is not usable after calling this method.
+  @override
   void dispose() {
     final html.CssStyleDeclaration style = semanticsObject.element.style;
     assert(_gestureModeListener != null);
