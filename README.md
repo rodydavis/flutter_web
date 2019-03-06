@@ -1,73 +1,97 @@
-Welcome! Thank you for trying Flutter Web Early Tech Preview!
+# Flutter Web Early Access Program (EAP)
+
+Welcome to the Flutter Web Early Access Program.
 
 This repository contains the source code for an experimental
-[Flutter](https://flutter.dev/) Web runtime.
-The long term goal is to add web support as a first-tier platform in
-the Flutter SDK alongside iOS and Android.
+[Flutter](https://flutter.dev/) Web runtime. Our goal is to add web
+support as a first-tier platform in the Flutter SDK alongside iOS and Android.
 The code in this repository represents a stepping stone to that goal by
 providing web-only packages that implement (almost) the entire Flutter API
 surface.
 
-# DISCLAIMER
+## Important Notes
 
-## This is a closed preview
+### Confidentiality
 
-* Access to this repository and source code is invitation-only.
+* This is a closed preview, provided under NDA. Access to this repository
+  and source code is by invitation only.
 * Do not fork, share, or publish any source code from this repository.
 * Do not discuss the contents of this repository except via the [issue
-  tracker] and the
-  [discussion group](https://groups.google.com/forum/#!forum/flutter_web_early_access).
+  tracker] and
+  the [discussion group](https://groups.google.com/forum/#!forum/flutter_web_early_access).
 
-## Limitations
+### Limitations
 
 We intend to completely support all of Flutter's API and functionality across
 modern browsers – with few, if any, exceptions. However, during this preview,
 there are a number of exceptions:
 
 * Existing Flutter code, pub packages, and plugins do not work as-is.
-* Not all Flutter APIs are implemented for Web – including whole classes and
-  members.
-* Some APIs will misbehave – from rendering issues to crashes.
+* Not all Flutter APIs are implemented on Flutter Web at this time.
 * Currently, UI built with `flutter_web` will feel like a mobile app when
   running on a desktop browser. For example:
   * Mouse wheel scrolling is not yet enabled – use drag instead.
   * Text selection may scroll the view instead.
-* We plan to address these issues over the coming months.
-* The code in the repository will change without notice.
+* The API is not stable at this stage.
 * Some widgets will be janky as we have not yet optimized all paint operations.
 * The development workflow only works with Chrome at the moment.
+* `flutter_web` does not have a plugin system yet. _Temporarily_, we provide
+  access to `dart:html`, `dart:js`, `dart:svg`, `dart:indexed_db` and other Web
+  libraries that give you access to the vast majority of browser APIs. However,
+  expect that these libraries will be replaced by a different plugin API.
 
-## How to implement plugins/access browser API?
+## Testing Flutter Web
 
-`flutter_web` does not have a plugin system yet. _Temporarily_, we provide
-access to `dart:html`, `dart:js`, `dart:svg`, `dart:indexed_db` and other Web
-libraries that give you access to the vast majority of browser APIs. However,
-expect that these libraries will be replaced by a different plugin API.
+While we are far from code complete, we're ready for you to start developing
+and experimenting with Flutter Web. We are building the product around a number
+of target scenarios, and we'd appreciate your feedback on feature gaps or
+suitability against these scenarios, as well as other scenarios for which you
+find Flutter Web useful. The five scenarios that are informing our development
+of Flutter Web to date are:
 
-# Getting started
+1. *Standalone app*: an experience built entirely in Flutter Web;
+1. *Content island*: a fixed-size `iframe`-like component that is embedded
+   within a specific web page and is self-sufficient in content;
+1. *Embedded control*: a reusable web component that can be embedded in multiple
+   pages and communicates with other content on the page;
+1. *Flutter mobile web companion*: a 'lite' version of an existing Flutter mobile app that
+   can be used in scenarios where a full mobile app is undesirable (for example,
+   try-before-buy).
+1. *Embedded Flutter content*: dynamic content for an existing Flutter app
+   that can be added at runtime (e.g. code push scenarios on Android).
 
-## Install the Dart SDK
+We'd love to see repros that demonstrate crashes, rendering fidelity issues or
+extreme performance issues. We'd also love general feedback on the quality of
+the release and the developer experience.
 
-The Flutter SDK does not (yet) include the web tools required to compile Dart
-code to JavaScript, so you'll have to install the Dart SDK, too. The Dart SDK
-installs independently of Flutter – there should be no issues having both
-installed on the same machine.
+Of particular interest to us is testing across a variety of development
+(Windows, Linux, Mac) and deployment
+(Chrome/Firefox/Edge on Windows, Linux, Mac, Chrome/Android, Safari/iOS etc.)
+platforms and form factors.
 
-Follow the directions at
-<https://www.dartlang.org/tools/sdk> to get
-started.
+Since we are developing this in a separate fork to the main Flutter repo, we are
+not yet ready to accept GitHub pull requests at this time. However,
+[GitHub issues][issue tracker] are very welcome.
 
-Make sure you have Dart 2.2.0 installed by running `dart --version` on the
-console.
+[issue tracker]: https://github.com/flutter/flutter_web/issues
 
-## Clone the flutter_web source code
+## Getting started
+
+### Get the Dart web compilers
+
+The Dart web compilers were just recently added to the Flutter dev SDK.
+
+To use the Flutter SDK with the flutter_web preview make sure you are on the
+dev channel and have upgraded to at least `v1.3.1`.
+
+### Clone the flutter_web source code
 
 Clone the repository locally.
 
 > Note: this is a private repository. Your git client must be authenticated
   with your white-listed GitHub alias.
 
-## Run the hello_world example
+### Run the hello_world example
 
 1. The example exists at `examples/hello_world` in the repository.
 
@@ -77,17 +101,11 @@ Clone the repository locally.
 
 2. Update packages.
 
-    > Note: `pub upgrade` is analogous to `flutter packages upgrade`.
-
     ```console
-    $ pub upgrade
-    Resolving dependencies... (4.9s)
-    ...
-    Warning: You are using these overridden dependencies:
-    ! flutter_web 0.0.0 from path ../../packages/flutter_web
-    ! flutter_web_ui 0.0.0 from path ../../packages/flutter_web_ui
-    Precompiling executables... (11.9s)
-    ...
+    $ flutter packages upgrade
+    ! flutter_web 0.0.0 from path ../../flutter_web
+    ! flutter_web_ui 0.0.0 from path ../../flutter_web_ui
+    Running "flutter packages upgrade" in hello_world...                5.0s
     ```
 
     If that succeeds, you're ready to run it!
@@ -95,7 +113,7 @@ Clone the repository locally.
 3. Build and serve the example locally.
 
     ```console
-    $ pub run build_runner serve
+    $ flutter packages pub run build_runner serve
     [INFO] Generating build script completed, took 331ms
     ...
     [INFO] Building new asset graph completed, took 1.4s
@@ -114,7 +132,7 @@ Clone the repository locally.
       work in Chrome.
 
 
-# Use flutter_web packages from git
+## Use flutter_web packages from git
 
 If you'd like to depend on the `flutter_web` packages without cloning the
 repository, you can setup your pubspec as follows:
@@ -151,12 +169,3 @@ dependency_overrides:
 > Note: again, `github.com/flutter/flutter_web` this is a private repository.
   Your git client must be authenticated with your white-listed GitHub alias.
 
-# How to help!
-
-We are not yet ready to accept GitHub pull requests at this time. However,
-[GitHub issues][issue tracker] are very welcome.
-
-Of particular interest to us is testing across a variety of platforms. Please
-try Windows if you have it for example.
-
-[issue tracker]: https://github.com/flutter/flutter_web/issues
