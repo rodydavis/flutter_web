@@ -309,6 +309,8 @@ class HoudiniCanvas implements EngineCanvas {
   }
 
   void drawParagraph(Paragraph paragraph, Offset offset) {
+    assert(paragraph.webOnlyIsLaidOut);
+
     html.Element paragraphElement =
         paragraph.webOnlyGetParagraphElement().clone(true);
     paragraphElement.style

@@ -593,6 +593,8 @@ class BitmapCanvas implements EngineCanvas {
   }
 
   void drawParagraph(Paragraph paragraph, Offset offset) {
+    assert(paragraph.webOnlyIsLaidOut);
+
     if (paragraph.webOnlyDrawOnCanvas) {
       var style = paragraph.webOnlyGetParagraphGeometricStyle();
       if (style != _cachedLastStyle) {

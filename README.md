@@ -16,9 +16,12 @@ surface.
 * This is a closed preview, provided under NDA. Access to this repository
   and source code is by invitation only.
 * Do not fork, share, or publish any source code from this repository.
+* Similarly, do not share or publish code that depends on Flutter Web (for
+  example, if you create a separate branch of an existing Flutter project that
+  supports Flutter Web, you may not publish that branch externally).
 * Do not discuss the contents of this repository except via the [issue
-  tracker] and
-  the [discussion group](https://groups.google.com/forum/#!forum/flutter_web_early_access).
+  tracker] and the [discussion
+  group](https://groups.google.com/forum/#!forum/flutter_web_early_access).
 
 ### Limitations
 
@@ -54,9 +57,9 @@ of Flutter Web to date are:
    within a specific web page and is self-sufficient in content;
 1. *Embedded control*: a reusable web component that can be embedded in multiple
    pages and communicates with other content on the page;
-1. *Flutter mobile web companion*: a 'lite' version of an existing Flutter mobile app that
-   can be used in scenarios where a full mobile app is undesirable (for example,
-   try-before-buy).
+1. *Flutter mobile web companion*: a 'lite' version of an existing Flutter
+   mobile app that can be used in scenarios where a full mobile app is
+   undesirable (for example, try-before-buy).
 1. *Embedded Flutter content*: dynamic content for an existing Flutter app
    that can be added at runtime (e.g. code push scenarios on Android).
 
@@ -132,7 +135,9 @@ Clone the repository locally.
       work in Chrome.
 
 
-## Use flutter_web packages from git
+## Workflow
+
+### Use flutter_web packages from git
 
 If you'd like to depend on the `flutter_web` packages without cloning the
 repository, you can setup your pubspec as follows:
@@ -169,3 +174,87 @@ dependency_overrides:
 > Note: again, `github.com/flutter/flutter_web` this is a private repository.
   Your git client must be authenticated with your white-listed GitHub alias.
 
+### Getting (stateless) hot-reload with `webdev`
+
+The [webdev](https://pub.dartlang.org/packages/webdev) package offers features
+beyond the `build_runner` command.
+
+To install `webdev`:
+
+```console
+$ flutter packages pub global activate webdev
+```
+
+To use `webdev` with hot-reload, run the following within your `flutter_web`
+project directory:
+
+```console
+$ flutter packages pub global run webdev serve --hot-reload
+```
+
+You'll notice a similar output to `flutter packages pub run build_runner serve`
+but now changes to your application code should cause a quick refresh of the
+application on save.
+
+> Note: the `--hot-reload` option is not perfect. If you notice unexpected
+  behavior, you may want to manually refresh the page.
+
+> Note: the `--hot-reload` option is currently "stateless". Application state
+  will be lost on reload. We do hope to offer "stateful" hot-reload on the web
+  – we're actively working on it!
+
+
+### Building with the production JavaScript compiler
+
+The `serve` workflow documented above (with `build_runner` and `webdev`) uses
+the [Dart Dev Compiler](https://webdev.dartlang.org/tools/dartdevc) which is
+designed for fast, incremental compilation and easy debugging.
+
+If you'd like evaluate production performance and code size, you can enable
+our release compiler, [dart2js](https://webdev.dartlang.org/tools/dart2js).
+
+For the `serve` command, pass in the `--release` flag (or just `-r`).
+
+```console
+$ flutter packages pub run build_runner serve -r
+```
+
+or
+
+```console
+$ flutter packages pub global run webdev serve -r
+```
+
+> Note: Builds will be *much* slower in this configuration.
+
+If you'd like to generate output to disk, we recommend you use `webdev`.
+
+```console
+$ flutter packages pub global run webdev build
+```
+
+This will create a `build` directory with `index.html`, `main.dart.js` and the
+rest of the files needed to run the application using a static HTTP server.
+
+> Note: **DO NOT** deploy anything built with `flutter_web` publicly during the
+  early-access program.
+
+To optimize the output JavaScript, you can enable optimization flags using a
+`build.yaml` file in the root of your project with the following contents:
+
+```yaml
+# See https://github.com/dart-lang/build/tree/master/build_web_compilers#configuration
+targets:
+  $default:
+    builders:
+      build_web_compilers|entrypoint:
+        generate_for:
+        - web/**.dart
+        options:
+          dart2js_args:
+            - --no-source-maps
+            - -O4
+```
+
+> Note: the `-O4` option enables a number of advanced optimizations that may
+  cause runtime errors in code that has not been thoroughly tested.

@@ -1047,16 +1047,23 @@ class Paragraph {
     _alphabeticBaseline = alphabeticBaseline;
     _ideographicBaseline = ideographicBaseline;
     _webOnlyIsSingleLine = isSingleLine;
+    _webOnlyIsLaidOut = true;
   }
 
   /// Whether or not this paragraph can be drawn on a single line.
-  bool _webOnlyIsSingleLine;
+  bool _webOnlyIsSingleLine = false;
 
   /// Returns `true` if this paragraph can be directly painted to the canvas.
   ///
   /// For now, we can only draw paragraphs onto the canvas directly if they
   /// are on a single line and do not use rich text.
+  // TODO(yjbanov): This is Engine-internal API. We should make it private.
   bool get webOnlyDrawOnCanvas => _webOnlyIsSingleLine && _plainText != null;
+
+  /// Whether this paragraph has been laid out.
+  // TODO(yjbanov): This is Engine-internal API. We should make it private.
+  bool get webOnlyIsLaidOut => _webOnlyIsLaidOut;
+  bool _webOnlyIsLaidOut = false;
 
   /// Asserts that the properties used to measure paragraph layout are the same
   /// as the properties of this paragraphs root style.

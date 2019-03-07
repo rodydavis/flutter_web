@@ -901,6 +901,11 @@ class PaintDrawParagraph extends PaintCommand {
 
   @override
   void apply(EngineCanvas canvas) {
+    if (!paragraph.webOnlyIsLaidOut) {
+      // Ignore non-laid out paragraphs. This matches Flutter's behavior.
+      return;
+    }
+
     canvas.drawParagraph(paragraph, offset);
   }
 
