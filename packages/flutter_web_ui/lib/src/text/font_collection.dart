@@ -1,6 +1,9 @@
-import 'dart:typed_data';
+import 'dart:async';
 import 'dart:convert' show json, utf8;
-import 'dart:html' as html show FontFace, document, window;
+import 'dart:html' as html
+    show FontFace, ParagraphElement, StyleElement, document, window;
+import 'dart:typed_data';
+
 import '../assets/assets.dart';
 
 const _testFontFamily = 'Ahem';
@@ -45,7 +48,11 @@ class FontCollection {
           'There was a problem trying to load FontManifest.json');
     }
 
-    _assetFontManager = _FontManager();
+    if (supportsFontLoadingApi) {
+      _assetFontManager = _FontManager();
+    } else {
+      _assetFontManager = _PolyfillFontManager();
+    }
 
     for (Map<String, dynamic> fontFamily in fontManifest) {
       final String family = fontFamily['family'];
@@ -67,7 +74,7 @@ class FontCollection {
 
   /// Registers fonts that are used by tests.
   void debugRegisterTestFonts() {
-    _testFontManager = _DebugTestFontManager(_testFontFamily);
+    _testFontManager = _FontManager();
     _testFontManager.registerAsset(
         _testFontFamily, 'url($_testFontUrl)', const <String, String>{});
   }
@@ -83,14 +90,25 @@ class FontCollection {
   void clear() {
     _assetFontManager = null;
     _testFontManager = null;
-    html.document.fonts.clear();
+    if (supportsFontLoadingApi) {
+      html.document.fonts.clear();
+    }
   }
 }
 
 /// Manages a collection of fonts and ensures they are loaded.
 class _FontManager {
-  final _registeredFamilies = <String, List<html.FontFace>>{};
   final _fontLoadingFutures = <Future<void>>[];
+
+  factory _FontManager() {
+    if (supportsFontLoadingApi) {
+      return _FontManager._();
+    } else {
+      return _PolyfillFontManager();
+    }
+  }
+
+  _FontManager._();
 
   void registerAsset(
     String family,
@@ -98,19 +116,8 @@ class _FontManager {
     Map<String, String> descriptors,
   ) {
     final fontFace = html.FontFace(family, asset, descriptors);
-    _registeredFamilies
-        .putIfAbsent(family, () => <html.FontFace>[])
-        .add(fontFace);
     _fontLoadingFutures
         .add(fontFace.load().then((_) => html.document.fonts.add(fontFace)));
-  }
-
-  /// Returns a set of [FontFace]s that match the given [family].
-  ///
-  /// These fonts are not guaranteed to be loaded yet. To ensure they have
-  /// been, call [ensureFontsLoaded].
-  List<html.FontFace> fontsForFamily(String family) {
-    return _registeredFamilies[family];
   }
 
   /// Returns a [Future] that completes when all fonts that have been
@@ -120,12 +127,85 @@ class _FontManager {
   }
 }
 
-class _DebugTestFontManager extends _FontManager {
-  final String _debugTestFontFamily;
+/// A font manager that works without using the CSS Font Loading API.
+///
+/// The CSS Font Loading API is not implemented in IE 11 or Edge. To tell if a
+/// font is loaded, we continuously measure some text using that font until the
+/// width changes.
+class _PolyfillFontManager extends _FontManager {
+  _PolyfillFontManager() : super._();
 
-  _DebugTestFontManager(this._debugTestFontFamily);
+  /// A String containing characters whose width varies greatly between fonts.
+  static const _testString = 'giItT1WQy@!-/#';
+
+  static const Duration _fontLoadTimeout = const Duration(seconds: 2);
+  static const Duration _fontLoadRetryDuration =
+      const Duration(milliseconds: 50);
 
   @override
-  List<html.FontFace> fontsForFamily(String family) =>
-      super.fontsForFamily(_debugTestFontFamily);
+  void registerAsset(
+    String family,
+    String asset,
+    Map<String, String> descriptors,
+  ) {
+    final paragraph = html.ParagraphElement();
+    paragraph.style.position = 'absolute';
+    paragraph.style.visibility = 'hidden';
+    paragraph.style.fontSize = '72px';
+    paragraph.style.fontFamily = 'sans-serif';
+    if (descriptors['style'] != null) {
+      paragraph.style.fontStyle = descriptors['style'];
+    }
+    if (descriptors['weight'] != null) {
+      paragraph.style.fontWeight = descriptors['weight'];
+    }
+    paragraph.text = _testString;
+
+    html.document.body.append(paragraph);
+    final sansSerifWidth = paragraph.offsetWidth;
+
+    paragraph.style.fontFamily = '$family, sans-serif';
+
+    Completer<void> completer = Completer<void>();
+
+    DateTime _fontLoadStart;
+
+    void _watchWidth() {
+      if (paragraph.offsetWidth != sansSerifWidth) {
+        paragraph.remove();
+        completer.complete();
+      } else {
+        if (DateTime.now().difference(_fontLoadStart) > _fontLoadTimeout) {
+          completer.completeError(
+              Exception('Timed out trying to load font: $family'));
+        } else {
+          Timer(_fontLoadRetryDuration, _watchWidth);
+        }
+      }
+    }
+
+    final fontStyleMap = <String, String>{};
+    fontStyleMap['font-family'] = "'$family'";
+    fontStyleMap['src'] = asset;
+    if (descriptors['style'] != null) {
+      fontStyleMap['font-style'] = descriptors['style'];
+    }
+    if (descriptors['weight'] != null) {
+      fontStyleMap['font-weight'] = descriptors['weight'];
+    }
+    final fontFaceDeclaration = fontStyleMap.keys
+        .map((name) => '$name: ${fontStyleMap[name]};')
+        .join(' ');
+    final fontLoadStyle = html.StyleElement();
+    fontLoadStyle.type = 'text/css';
+    fontLoadStyle.innerHtml = '@font-face { $fontFaceDeclaration }';
+    html.document.head.append(fontLoadStyle);
+
+    _fontLoadStart = DateTime.now();
+    _watchWidth();
+
+    _fontLoadingFutures.add(completer.future);
+  }
 }
+
+final bool supportsFontLoadingApi = html.document.fonts != null;

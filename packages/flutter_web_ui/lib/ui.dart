@@ -4,6 +4,7 @@
 
 export 'src/canvas.dart';
 export 'src/compositing.dart';
+export 'src/engine.dart';
 export 'src/geometry.dart';
 export 'src/hash_codes.dart';
 export 'src/initialization.dart';

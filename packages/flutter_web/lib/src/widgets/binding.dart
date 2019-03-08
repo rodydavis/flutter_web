@@ -6,7 +6,8 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter_web_ui/ui.dart'
     show AppLifecycleState, Locale, AccessibilityFeatures;
-import 'package:flutter_web_ui/ui.dart' as ui show window;
+import 'package:flutter_web_ui/ui.dart' as ui
+    show isWeb, window, webOnlyInitializeEngine;
 
 import 'package:flutter_web/foundation.dart';
 import 'package:flutter_web/gestures.dart';
@@ -282,17 +283,19 @@ mixin WidgetsBinding
         },
       );
 
-      registerBoolServiceExtension(
-        name: 'showPerformanceOverlay',
-        getter: () =>
-            Future<bool>.value(WidgetsApp.showPerformanceOverlayOverride),
-        setter: (bool value) {
-          if (WidgetsApp.showPerformanceOverlayOverride == value)
-            return Future<void>.value();
-          WidgetsApp.showPerformanceOverlayOverride = value;
-          return _forceRebuild();
-        },
-      );
+      if (!ui.isWeb) {
+        registerBoolServiceExtension(
+          name: 'showPerformanceOverlay',
+          getter: () =>
+              Future<bool>.value(WidgetsApp.showPerformanceOverlayOverride),
+          setter: (bool value) {
+            if (WidgetsApp.showPerformanceOverlayOverride == value)
+              return Future<void>.value();
+            WidgetsApp.showPerformanceOverlayOverride = value;
+            return _forceRebuild();
+          },
+        );
+      }
 
       registerServiceExtension(
         name: 'didSendFirstFrameEvent',
@@ -760,6 +763,7 @@ mixin WidgetsBinding
 /// * [WidgetsBinding.handleBeginFrame], which pumps the widget pipeline to
 ///   ensure the widget, element, and render trees are all built.
 void runApp(Widget app) {
+  ui.webOnlyInitializeEngine();
   WidgetsFlutterBinding.ensureInitialized()
     ..attachRootWidget(app)
     ..scheduleWarmUpFrame();

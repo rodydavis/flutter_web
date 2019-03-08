@@ -36,7 +36,9 @@ class CardTheme extends Diagnosticable {
     this.elevation,
     this.margin,
     this.shape,
-  }); // TODO(flutter_web) enable : assert(elevation == null || elevation >= 0.0);
+  });
+  // TODO(flutter_web) enable after compiler support
+  // : assert(elevation == null || elevation >= 0.0);
 
   /// Default value for [Card.clipBehavior].
   ///

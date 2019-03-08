@@ -773,15 +773,15 @@ void main() {
     );
 
     await tester.tap(find.text('Green'));
-
-    for (int pump = 0; pump < 8; pump++) {
-      await tester.pump(const Duration(milliseconds: 30));
-      // TODO(flutter_web): Enable after golden support is added.
+    // TODO(flutter_web): enable after golden file support.
+//    for (int pump = 0; pump < 8; pump++) {
+//      await tester.pump(const Duration(milliseconds: 30));
 //      await expectLater(
 //        find.byType(BottomNavigationBar),
 //        matchesGoldenFile('bottom_navigation_bar.shifting_transition.$pump.png'),
+//	      skip: true,
 //      );
-    }
+//    }
   });
 
   testWidgets('BottomNavigationBar item title should not be nullable',

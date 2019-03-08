@@ -2,15 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-
-import 'package:flutter_web_ui/ui.dart' as ui;
-import 'package:flutter_web_ui/ui.dart';
-import 'package:flutter_web_ui/src/dom_renderer.dart';
-
-import 'src/widgets/binding.dart' as binding;
-import 'src/widgets/framework.dart';
-
 export 'package:vector_math/vector_math_64.dart' show Matrix4;
 
 export 'package:flutter_web/foundation.dart';
@@ -109,71 +100,3 @@ export 'src/widgets/visibility.dart';
 export 'src/widgets/web_navigator.dart';
 export 'src/widgets/widget_inspector.dart';
 export 'src/widgets/will_pop_scope.dart';
-
-/// Inflate the given widget and attach it to the screen.
-///
-/// The widget is given constraints during layout that force it to fill the
-/// entire screen. If you wish to align your widget to one side of the screen
-/// (e.g., the top), consider using the [Align] widget. If you wish to center
-/// your widget, you can also use the [Center] widget
-///
-/// Calling [runApp] again will detach the previous root widget from the screen
-/// and attach the given widget in its place. The new widget tree is compared
-/// against the previous widget tree and any differences are applied to the
-/// underlying render tree, similar to what happens when a [StatefulWidget]
-/// rebuilds after calling [State.setState].
-///
-/// Initializes the binding using [WidgetsFlutterBinding] if necessary.
-///
-/// See also:
-///
-/// * [WidgetsBinding.attachRootWidget], which creates the root widget for the
-///   widget hierarchy.
-/// * [RenderObjectToWidgetAdapter.attachToRenderTree], which creates the root
-///   element for the element hierarchy.
-/// * [WidgetsBinding.handleBeginFrame], which pumps the widget pipeline to
-///   ensure the widget, element, and render trees are all built.
-void runApp(Widget app) {
-  _ensureProductionBindingsInitialized();
-  binding.runApp(app);
-}
-
-/// Initialize bindings, if they haven't been initialized yet.
-void _ensureProductionBindingsInitialized() {
-  if (binding.WidgetsBinding.instance != null) {
-    return;
-  }
-
-  // Calling this getter to force the DOM renderer to initialize before we
-  // initialize framework bindings.
-  domRenderer;
-
-  bool waitingForAnimation = false;
-  ui.window.webOnlyScheduleFrameCallback = () {
-    // We're asked to schedule a frame and call `frameHandler` when the frame
-    // fires.
-    if (!waitingForAnimation) {
-      waitingForAnimation = true;
-      html.window.requestAnimationFrame((num highResTime) {
-        // Reset immediately, because `frameHandler` can schedule more frames.
-        waitingForAnimation = false;
-
-        // We have to convert high-resolution time to `int` so we can construct
-        // a `Duration` out of it. However, high-res time is supplied in
-        // milliseconds as a double value, with sub-millisecond information
-        // hidden in the fraction. So we first multiply it by 1000 to uncover
-        // microsecond precision, and only then convert to `int`.
-        final highResTimeMicroseconds = (1000 * highResTime).toInt();
-        ui.window
-            .onBeginFrame(new Duration(microseconds: highResTimeMicroseconds));
-        // TODO(yjbanov): technically Flutter flushes microtasks between
-        //                onBeginFrame and onDrawFrame. We don't, which hasn't
-        //                been an issue yet, but eventually we'll have to
-        //                implement it properly.
-        ui.window.onDrawFrame();
-      });
-    }
-  };
-
-  PointerBinding();
-}

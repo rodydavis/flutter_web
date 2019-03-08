@@ -519,7 +519,7 @@ void main() {
     expect(extensionChangedEvent['extension'], 'ext.flutter.platformOverride');
     expect(extensionChangedEvent['value'], 'android');
     binding.reassembled = 0;
-  });
+  }, skip: ui.isWeb);
 
   test('Service extensions - repaintRainbow', () async {
     Map<String, dynamic> result;
@@ -568,7 +568,7 @@ void main() {
     expect(result, <String, String>{'enabled': 'false'});
     expect(debugRepaintRainbowEnabled, false);
     expect(binding.frameScheduled, isFalse);
-  });
+  }, skip: ui.isWeb);
 
   test('Service extensions - reassemble', () async {
     Map<String, dynamic> result;
@@ -620,7 +620,7 @@ void main() {
     expect(result, <String, String>{'enabled': 'false'});
     expect(WidgetsApp.showPerformanceOverlayOverride, false);
     expect(binding.frameScheduled, isFalse);
-  });
+  }, skip: ui.isWeb);
 
   test('Service extensions - debugWidgetInspector', () async {
     Map<String, dynamic> result;
@@ -716,7 +716,7 @@ void main() {
     // TODO(flutter_web): upstream , 2 extensions (exit and saveCompilationTrace
     // are not supported for web.
     expect(binding.extensions.length,
-        25 + widgetInspectorExtensionCount - (ui.isWeb ? 2 : 0));
+        25 + widgetInspectorExtensionCount - (ui.isWeb ? 5 : 0));
 
     expect(console, isEmpty);
     debugPrint = debugPrintThrottled;
