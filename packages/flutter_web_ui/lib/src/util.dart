@@ -81,22 +81,25 @@ bool isIdentityFloat64ListTransform(Float64List matrix) {
 String float64ListToCssTransform(Float64List matrix) {
   assert(matrix.length == 16);
   final Float64List m = matrix;
-  if (m[0] == 0.0 &&
+  if (m[0] == 1.0 &&
       m[1] == 0.0 &&
       m[2] == 0.0 &&
       m[3] == 0.0 &&
       m[4] == 0.0 &&
-      m[5] == 0.0 &&
+      m[5] == 1.0 &&
       m[6] == 0.0 &&
       m[7] == 0.0 &&
       m[8] == 0.0 &&
       m[9] == 0.0 &&
       m[10] == 1.0 &&
       m[11] == 0.0 &&
+      // 12 can be anything
+      // 13 can be anything
+      m[14] == 0.0 &&
       m[15] == 1.0) {
     var tx = m[12];
     var ty = m[13];
-    return 'translate($tx, $ty)';
+    return 'translate(${tx}px, ${ty}px)';
   } else {
     return 'matrix3d(${m[0]},${m[1]},${m[2]},${m[3]},${m[4]},${m[5]},${m[6]},${m[7]},${m[8]},${m[9]},${m[10]},${m[11]},${m[12]},${m[13]},${m[14]},${m[15]})';
   }

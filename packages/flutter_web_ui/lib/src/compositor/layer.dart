@@ -236,7 +236,7 @@ class TransformLayer extends ContainerLayer {
     assert(needsPainting);
 
     context.canvas.save();
-    context.canvas.transformMatrix(_transform);
+    context.canvas.transform(_transform.storage);
     paintChildren(context);
     context.canvas.restore();
   }

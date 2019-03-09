@@ -9,10 +9,6 @@
 // - evaluate reusing houdini canvases
 import 'dart:convert' as convert;
 import 'dart:html' as html;
-import 'dart:typed_data';
-
-import 'package:meta/meta.dart';
-import 'package:vector_math/vector_math_64.dart';
 
 import 'canvas.dart';
 import 'dom_renderer.dart';
@@ -24,27 +20,12 @@ import 'recording_canvas.dart';
 import 'text.dart';
 import 'util.dart';
 
-class _SaveStackEntry {
-  _SaveStackEntry({
-    @required this.savedElement,
-    @required this.transform,
-  });
-
-  final html.Element savedElement;
-  final Matrix4 transform;
-}
-
 /// A canvas that renders to a combination of HTML DOM and CSS Custom Paint API.
 ///
 /// This canvas produces paint commands for houdini_painter.js to apply. This
 /// class must be kept in sync with houdini_painter.js.
-class HoudiniCanvas implements EngineCanvas {
+class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
   final html.Element rootElement = new html.Element.tag('flt-houdini');
-
-  /// A unit vector pointing in the positive Z direction.
-  ///
-  /// This vector must not be mutated.
-  static final Vector3 _unitZ = Vector3(0.0, 0.0, 1.0);
 
   /// The rectangle positioned relative to the parent layer's coordinate system
   /// where this canvas paints.
@@ -66,25 +47,11 @@ class HoudiniCanvas implements EngineCanvas {
 
   /// Prepare to reuse this canvas by clearing it's current contents.
   void clear() {
+    super.clear();
     _serializedCommands = <List>[];
     // TODO(yjbanov): we should measure if reusing old elements is beneficial.
     domRenderer.clearDom(rootElement);
   }
-
-  /// The stack that maintains [save] and [restore] operations.
-  final List<_SaveStackEntry> _saveStack = <_SaveStackEntry>[];
-
-  /// The stack that maintains the DOM elements used to express certain paint
-  /// operations, such as clips.
-  final List<html.Element> _elementStack = <html.Element>[];
-  html.Element get _element =>
-      _elementStack.isEmpty ? rootElement : _elementStack.last;
-
-  /// Current transform.
-  ///
-  /// This field is _mutable_. When saving the transform on the [_saveStack] it
-  /// must be copied to avoid side-effects.
-  Matrix4 _transform = Matrix4.identity();
 
   /// Paint commands serialized for sending to the CSS custom painter.
   List<List> _serializedCommands = <List>[];
@@ -110,81 +77,24 @@ class HoudiniCanvas implements EngineCanvas {
     }
   }
 
-  void save() {
-    _saveStack.add(_SaveStackEntry(
-      savedElement: _element,
-      transform: _transform.clone(),
-    ));
-  }
-
-  void restore() {
-    if (_saveStack.isEmpty) {
-      return;
-    }
-    final _SaveStackEntry entry = _saveStack.removeLast();
-    _transform = entry.transform;
-
-    // Pop out of any clips.
-    while (_element != entry.savedElement) {
-      _elementStack.removeLast();
-    }
-  }
-
-  void translate(double dx, double dy) {
-    _transform.translate(dx, dy);
-  }
-
-  void scale(double sx, double sy) {
-    _transform.scale(sx, sy);
-  }
-
-  void rotate(double radians) {
-    _transform.rotate(_unitZ, radians);
-  }
-
-  void skew(double sx, double sy) {
-    throw UnimplementedError();
-  }
-
-  // TODO(yjbanov): this is wrong. It has been inherited from BitmapCanvas
-  //                that doesn't fully implement it. For example, it does not
-  //                support nested transforms. It also breaks when transform is
-  //                preceded by other ops.
-  void transform(Float64List matrix4) {
-    _element.style.transformOrigin = '0 0 0';
-    if (matrix4.elementAt(0) == 0 &&
-        matrix4.elementAt(1) == 0 &&
-        matrix4.elementAt(2) == 0 &&
-        matrix4.elementAt(3) == 0 &&
-        matrix4.elementAt(4) == 0 &&
-        matrix4.elementAt(5) == 0 &&
-        matrix4.elementAt(6) == 0 &&
-        matrix4.elementAt(7) == 0 &&
-        matrix4.elementAt(8) == 0 &&
-        matrix4.elementAt(9) == 0 &&
-        matrix4.elementAt(10) == 1 &&
-        matrix4.elementAt(11) == 0 &&
-        matrix4.elementAt(15) == 1) {
-      var tx = matrix4.elementAt(12);
-      var ty = matrix4.elementAt(13);
-      _element.style.transform = 'translate($tx, $ty)';
-    } else {
-      // TODO(flutter_web): detect pure scale+translate to replace hack below.
-      _element.style.transform = float64ListToCssTransform(matrix4);
-    }
-  }
-
   void clipRect(Rect rect) {
     final clip = html.Element.tag('flt-clip-rect');
+    String cssTransform = matrix4ToCssTransform(
+        transformWithOffset(currentTransform, Offset(rect.left, rect.top)));
     clip.style
       ..overflow = 'hidden'
       ..position = 'absolute'
-      ..transform = _computeEffectiveCssTranformWithOffset(rect.left, rect.top)
+      ..transform = cssTransform
       ..width = '${rect.width}px'
       ..height = '${rect.height}px';
-    _transform = Matrix4.translationValues(-rect.left, -rect.top, 0.0);
-    _element.append(clip);
-    _elementStack.add(clip);
+
+    // The clipping element will translate the coordinate system as well, which
+    // is not what a clip should do. To offset that we translate in the opposite
+    // direction.
+    super.translate(-rect.left, -rect.top);
+
+    currentElement.append(clip);
+    pushElement(clip);
   }
 
   void clipRRect(RRect rrect) {
@@ -229,8 +139,13 @@ class HoudiniCanvas implements EngineCanvas {
           '${rrect.blRadiusX}px ${rrect.blRadiusY}px';
     }
 
-    _element.append(clip);
-    _elementStack.add(clip);
+    // The clipping element will translate the coordinate system as well, which
+    // is not what a clip should do. To offset that we translate in the opposite
+    // direction.
+    super.translate(-rrect.left, -rrect.top);
+
+    currentElement.append(clip);
+    pushElement(clip);
   }
 
   void clipPath(Path path) {
@@ -282,30 +197,22 @@ class HoudiniCanvas implements EngineCanvas {
     // TODO(yjbanov): implement.
   }
 
-  String _computeEffectiveCssTranformWithOffset(double dx, double dy) {
-    Matrix4 effectiveTransform = _transform;
-    if (dx != 0.0 || dy != 0.0) {
-      // Clone to avoid mutating _transform.
-      effectiveTransform = effectiveTransform.clone();
-      effectiveTransform.translate(dx, dy, 0.0);
-    }
-    return matrix4ToCssTransform(effectiveTransform);
-  }
-
   void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
     // TODO(yjbanov): implement src rectangle
     HtmlImage htmlImage = image;
     html.Element imageBox = html.Element.tag('flt-img');
+    String cssTransform = matrix4ToCssTransform(
+        transformWithOffset(currentTransform, Offset(dst.left, dst.top)));
     imageBox.style
       ..position = 'absolute'
       ..transformOrigin = '0 0 0'
       ..width = '${dst.width.toInt()}px'
       ..height = '${dst.height.toInt()}px'
-      ..transform = _computeEffectiveCssTranformWithOffset(dst.left, dst.top)
+      ..transform = cssTransform
       ..backgroundImage = 'url(${htmlImage.imgElement.src})'
       ..backgroundRepeat = 'norepeat'
       ..backgroundSize = '${dst.width}px ${dst.height}px';
-    _element.append(imageBox);
+    currentElement.append(imageBox);
   }
 
   void drawParagraph(Paragraph paragraph, Offset offset) {
@@ -313,13 +220,17 @@ class HoudiniCanvas implements EngineCanvas {
 
     html.Element paragraphElement =
         paragraph.webOnlyGetParagraphElement().clone(true);
+
+    String cssTransform =
+        matrix4ToCssTransform(transformWithOffset(currentTransform, offset));
+
     paragraphElement.style
       ..position = 'absolute'
       ..transformOrigin = '0 0 0'
-      ..transform = _computeEffectiveCssTranformWithOffset(offset.dx, offset.dy)
+      ..transform = cssTransform
       ..whiteSpace = paragraph.webOnlyDrawOnCanvas ? 'nowrap' : 'pre-wrap'
       ..width = '${paragraph.width}px'
       ..height = '${paragraph.height}px';
-    _element.append(paragraphElement);
+    currentElement.append(paragraphElement);
   }
 }

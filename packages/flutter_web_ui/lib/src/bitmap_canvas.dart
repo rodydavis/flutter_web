@@ -6,10 +6,7 @@ import 'dart:html' as html;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:vector_math/vector_math_64.dart';
-
 import 'canvas.dart';
-import 'compositing.dart' show SceneBuilder;
 import 'engine_canvas.dart';
 import 'geometry.dart';
 import 'html_image_codec.dart';
@@ -21,7 +18,7 @@ import 'text.dart';
 import 'util.dart';
 
 /// A raw HTML canvas that is directly written to.
-class BitmapCanvas implements EngineCanvas {
+class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   /// The rectangle positioned relative to the parent layer's coordinate
   /// system's origin, within which this canvas paints.
   ///
@@ -54,6 +51,7 @@ class BitmapCanvas implements EngineCanvas {
 
   /// Prepare to reuse this canvas by clearing it's current contents.
   void clear() {
+    super.clear();
     // Flutter emits paint operations positioned relative to the parent layer's
     // coordinate system. However, canvas' coordinate system's origin is always
     // in the top-left corner of the canvas. We therefore need to inject an
@@ -116,7 +114,9 @@ class BitmapCanvas implements EngineCanvas {
     _ctx.scale(html.window.devicePixelRatio, html.window.devicePixelRatio);
 
     // This compensates for the translate on the `rootElement`.
-    _ctx.translate(-bounds.left, -bounds.top);
+    if (bounds.left != 0.0 || bounds.top != 0.0) {
+      translate(-bounds.left, -bounds.top);
+    }
   }
 
   html.CanvasElement get canvas {
@@ -181,6 +181,7 @@ class BitmapCanvas implements EngineCanvas {
   }
 
   int save() {
+    super.save();
     ctx.save();
     return _saveCount++;
   }
@@ -190,11 +191,15 @@ class BitmapCanvas implements EngineCanvas {
   }
 
   void restore() {
+    super.restore();
     ctx.restore();
     _saveCount--;
     _cachedLastStyle = null;
   }
 
+  // TODO(yjbanov): not sure what this is attempting to do, but it is probably
+  //                wrong because some clips and transforms are expressed using
+  //                HTML DOM elements.
   void restoreToCount(int count) {
     assert(_saveCount >= count);
     int restores = _saveCount - count;
@@ -205,77 +210,70 @@ class BitmapCanvas implements EngineCanvas {
   }
 
   void translate(double dx, double dy) {
+    super.translate(dx, dy);
     ctx.translate(dx, dy);
   }
 
   void scale(double sx, double sy) {
+    super.scale(sx, sy);
     ctx.scale(sx, sy);
   }
 
   void rotate(double radians) {
+    super.rotate(radians);
     ctx.rotate(radians);
   }
 
   void skew(double sx, double sy) {
+    super.skew(sx, sy);
     ctx.transform(0, sx, sy, 0, 0, 0);
   }
 
-  Matrix4 get currentTransform {
-    var domTransform = _ctx.currentTransform;
-    var matrix = Matrix4.identity();
-    matrix[0] = domTransform.a;
-    matrix[1] = domTransform.b;
-    matrix[4] = domTransform.c;
-    matrix[5] = domTransform.d;
-    matrix[12] = domTransform.e;
-    matrix[13] = domTransform.f;
-    return matrix;
-  }
-
-  void transformMatrix(Matrix4 matrix) {
-    _ctx.transform(
-      matrix[0],
-      matrix[1],
-      matrix[4],
-      matrix[5],
-      matrix[12],
-      matrix[13],
-    );
-  }
-
   void transform(Float64List matrix4) {
-    if (SceneBuilder.webOnlyUseLayerSceneBuilder) {
-      _ctx.transform(
-        matrix4[0],
-        matrix4[1],
-        matrix4[4],
-        matrix4[5],
-        matrix4[12],
-        matrix4[13],
-      );
-    } else {
-      canvas.style.transformOrigin = '0 0 0';
-      if (matrix4.elementAt(0) == 0 &&
-          matrix4.elementAt(1) == 0 &&
-          matrix4.elementAt(2) == 0 &&
-          matrix4.elementAt(3) == 0 &&
-          matrix4.elementAt(4) == 0 &&
-          matrix4.elementAt(5) == 0 &&
-          matrix4.elementAt(6) == 0 &&
-          matrix4.elementAt(7) == 0 &&
-          matrix4.elementAt(8) == 0 &&
-          matrix4.elementAt(9) == 0 &&
-          matrix4.elementAt(10) == 1 &&
-          matrix4.elementAt(11) == 0 &&
-          matrix4.elementAt(15) == 1) {
-        var tx = matrix4.elementAt(12);
-        var ty = matrix4.elementAt(13);
-        canvas.style.transform = 'translate($tx, $ty)';
-      } else {
-        // TODO(flutter_web): detect pure scale+translate to replace hack below.
-        canvas.style.transform = float64ListToCssTransform(matrix4);
+    super.transform(matrix4);
+
+    // Canvas2D transform API:
+    //
+    // ctx.transform(a, b, c, d, e, f);
+    //
+    // In 3x3 matrix form assuming vector representation of (x, y, 1):
+    //
+    // a c e
+    // b d f
+    // 0 0 1
+    //
+    // This translates to 4x4 matrix with vector representation of (x, y, z, 1)
+    // as:
+    //
+    // a c 0 e
+    // b d 0 f
+    // 0 0 1 0
+    // 0 0 0 1
+    //
+    // This matrix is sufficient to represent 2D rotates, translates, scales,
+    // and skews.
+    assert(() {
+      if (matrix4[2] != 0.0 ||
+          matrix4[3] != 0.0 ||
+          matrix4[7] != 0.0 ||
+          matrix4[8] != 0.0 ||
+          matrix4[9] != 0.0 ||
+          matrix4[10] != 1.0 ||
+          matrix4[11] != 0.0 ||
+          matrix4[14] != 0.0 ||
+          matrix4[15] != 1.0) {
+        print('WARNING: 3D transformation matrix was passed to BitmapCanvas.');
       }
-    }
+      return true;
+    }());
+    _ctx.transform(
+      matrix4[0],
+      matrix4[1],
+      matrix4[4],
+      matrix4[5],
+      matrix4[12],
+      matrix4[13],
+    );
   }
 
   void clipRect(Rect rect) {
@@ -624,14 +622,17 @@ class BitmapCanvas implements EngineCanvas {
 
     html.Element paragraphElement =
         paragraph.webOnlyGetParagraphElement().clone(true);
+
+    String cssTransform =
+        matrix4ToCssTransform(transformWithOffset(currentTransform, offset));
+
     paragraphElement.style
       ..position = 'absolute'
-      ..transform =
-          'translate(${offset.dx - bounds.left}px, ${offset.dy - bounds.top}px)'
+      ..transform = cssTransform
       ..whiteSpace = 'pre-wrap'
       ..width = '${paragraph.width}px'
       ..height = '${paragraph.height}px';
-    rootElement.append(paragraphElement);
+    currentElement.append(paragraphElement);
     _paragraphs.add(paragraphElement);
   }
 

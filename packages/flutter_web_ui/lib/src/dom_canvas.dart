@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:html' as html;
-import 'dart:typed_data';
 
-import 'package:meta/meta.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'canvas.dart';
@@ -16,19 +14,9 @@ import 'painting.dart';
 import 'text.dart';
 import 'util.dart';
 
-class _SaveStackEntry {
-  _SaveStackEntry({
-    @required this.transform,
-  });
-
-  final Matrix4 transform;
-}
-
 /// A canvas that renders to DOM elements and CSS properties.
-class DomCanvas implements EngineCanvas {
+class DomCanvas extends EngineCanvas with SaveStackTracking {
   final html.Element rootElement = new html.Element.tag('flt-dom-canvas');
-
-  static final Vector3 _unitZ = Vector3(0.0, 0.0, 1.0);
 
   DomCanvas() {
     rootElement.style
@@ -41,50 +29,9 @@ class DomCanvas implements EngineCanvas {
 
   /// Prepare to reuse this canvas by clearing it's current contents.
   void clear() {
+    super.clear();
     // TODO(yjbanov): we should measure if reusing old elements is beneficial.
     domRenderer.clearDom(rootElement);
-  }
-
-  final List<_SaveStackEntry> _saveStack = <_SaveStackEntry>[];
-
-  final List<html.Element> _elementStack = <html.Element>[];
-  html.Element get _element =>
-      _elementStack.isEmpty ? rootElement : _elementStack.last;
-
-  Matrix4 _transform = Matrix4.identity();
-
-  void save() {
-    _saveStack.add(_SaveStackEntry(
-      transform: _transform.clone(),
-    ));
-  }
-
-  void restore() {
-    if (_saveStack.isEmpty) {
-      return;
-    }
-    final _SaveStackEntry entry = _saveStack.removeLast();
-    _transform = entry.transform;
-  }
-
-  void translate(double dx, double dy) {
-    _transform.translate(dx, dy);
-  }
-
-  void scale(double sx, double sy) {
-    _transform.scale(sx, sy);
-  }
-
-  void rotate(double radians) {
-    _transform.rotate(_unitZ, radians);
-  }
-
-  void skew(double sx, double sy) {
-    throw UnimplementedError();
-  }
-
-  void transform(Float64List matrix4) {
-    _transform.multiply(Matrix4.fromFloat64List(matrix4));
   }
 
   void clipRect(Rect rect) {
@@ -109,7 +56,7 @@ class DomCanvas implements EngineCanvas {
       ..bottom = '0'
       ..left = '0'
       ..backgroundColor = color.toCssString();
-    _element.append(box);
+    currentElement.append(box);
   }
 
   void drawLine(Offset p1, Offset p2, Paint paint) {
@@ -129,11 +76,11 @@ class DomCanvas implements EngineCanvas {
       return true;
     }());
     String effectiveTransform;
-    if (_transform.isIdentity()) {
+    if (currentTransform.isIdentity()) {
       effectiveTransform = 'translate(${rect.left}px, ${rect.top}px)';
     } else {
       // Clone to avoid mutating _transform.
-      Matrix4 translated = _transform.clone();
+      Matrix4 translated = currentTransform.clone();
       translated.translate(rect.left, rect.top);
       effectiveTransform = matrix4ToCssTransform(translated);
     }
@@ -145,7 +92,7 @@ class DomCanvas implements EngineCanvas {
       ..height = '${rect.height}px'
       ..backgroundColor = paint.color.toCssString();
 
-    _element.append(rectangle);
+    currentElement.append(rectangle);
   }
 
   void drawRRect(RRect rrect, Paint paint) {
@@ -187,13 +134,8 @@ class DomCanvas implements EngineCanvas {
     html.Element paragraphElement =
         paragraph.webOnlyGetParagraphElement().clone(true);
 
-    Matrix4 effectiveTransform = _transform;
-    if (offset != Offset.zero) {
-      // Clone to avoid mutating _transform.
-      effectiveTransform = effectiveTransform.clone();
-      effectiveTransform.translate(offset.dx, offset.dy, 0.0);
-    }
-    String cssTransform = matrix4ToCssTransform(effectiveTransform);
+    String cssTransform =
+        matrix4ToCssTransform(transformWithOffset(currentTransform, offset));
 
     paragraphElement.style
       ..position = 'absolute'
@@ -202,6 +144,6 @@ class DomCanvas implements EngineCanvas {
       ..whiteSpace = 'pre-wrap'
       ..width = '${paragraph.width}px'
       ..height = '${paragraph.height}px';
-    _element.append(paragraphElement);
+    currentElement.append(paragraphElement);
   }
 }

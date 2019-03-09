@@ -264,8 +264,7 @@ void _testContainer() {
     html.Element container =
         html.document.querySelector('flt-semantics-container');
 
-    expect(parentElement.style.transform,
-        'matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 10, 10, 0, 1)');
+    expect(parentElement.style.transform, 'translate(10px, 10px)');
     expect(parentElement.style.transformOrigin, '0px 0px 0px');
     expect(container.style.transform, 'translate(-10px, -10px)');
     expect(container.style.transformOrigin, '0px 0px 0px');

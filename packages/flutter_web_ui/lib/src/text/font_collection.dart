@@ -201,6 +201,14 @@ class _PolyfillFontManager extends _FontManager {
     fontLoadStyle.innerHtml = '@font-face { $fontFaceDeclaration }';
     html.document.head.append(fontLoadStyle);
 
+    // HACK: If this is an icon font, then when it loads it won't change the
+    // width of our test string. So we just have to hope it loads before the
+    // layout phase.
+    if (family.toLowerCase().contains('icon')) {
+      paragraph.remove();
+      return;
+    }
+
     _fontLoadStart = DateTime.now();
     _watchWidth();
 
