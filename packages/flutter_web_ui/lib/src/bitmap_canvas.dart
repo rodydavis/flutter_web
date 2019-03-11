@@ -154,10 +154,6 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
       case PaintingStyle.stroke:
         ctx.stroke();
         break;
-      case PaintingStyle.strokeAndFill:
-        ctx.stroke();
-        ctx.fill();
-        break;
       case PaintingStyle.fill:
       default:
         ctx.fill();

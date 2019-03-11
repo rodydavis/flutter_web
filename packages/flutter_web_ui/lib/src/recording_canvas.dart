@@ -26,6 +26,8 @@ class RecordingCanvas {
   /// Maximum paintable bounds for this canvas.
   final _PaintBounds _paintBounds;
   final _commands = <PaintCommand>[];
+  int _paintVersion = 0;
+  Paint _lastPaintInstance;
 
   RecordingCanvas(Rect bounds) : this._paintBounds = _PaintBounds(bounds);
 
@@ -169,14 +171,14 @@ class RecordingCanvas {
         math.max(p1.dy, p2.dy) + strokeWidth);
     _hasArbitraryPaint = true;
     _didDraw = true;
-    _commands.add(new PaintDrawLine(p1, p2, paint));
+    _commands.add(new PaintDrawLine(p1, p2, _clonePaint(paint)));
   }
 
   void drawPaint(Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     _paintBounds.grow(_paintBounds.maxPaintBounds);
-    _commands.add(new PaintDrawPaint(paint));
+    _commands.add(new PaintDrawPaint(_clonePaint(paint)));
   }
 
   void drawRect(Rect rect, Paint paint) {
@@ -184,12 +186,12 @@ class RecordingCanvas {
       _hasArbitraryPaint = true;
     }
     _didDraw = true;
-    if (paint.strokeWidth != null && paint.strokeWidth > 1.0) {
-      _paintBounds.grow(rect.inflate(paint.strokeWidth));
-    } else {
-      _paintBounds.grow(rect);
+    if (paint.strokeWidth != null && paint.strokeWidth != 0) {
+      double strokeWidth = paint.strokeWidth;
+      rect = rect.translate(-strokeWidth, -strokeWidth);
     }
-    _commands.add(new PaintDrawRect(rect, paint));
+    _paintBounds.grow(rect);
+    _commands.add(new PaintDrawRect(rect, _clonePaint(paint)));
   }
 
   void drawRRect(RRect rrect, Paint paint) {
@@ -201,7 +203,7 @@ class RecordingCanvas {
     var top = math.min(rrect.top, rrect.bottom) - strokeWidth;
     var bottom = math.max(rrect.top, rrect.bottom) + strokeWidth;
     _paintBounds.growLTRB(left, top, right, bottom);
-    _commands.add(new PaintDrawRRect(rrect, paint));
+    _commands.add(new PaintDrawRRect(rrect, _clonePaint(paint)));
   }
 
   void drawDRRect(RRect outer, RRect inner, Paint paint) {
@@ -210,7 +212,7 @@ class RecordingCanvas {
     var strokeWidth = paint.strokeWidth == null ? 0 : paint.strokeWidth;
     _paintBounds.growLTRB(outer.left - strokeWidth, outer.top - strokeWidth,
         outer.right + strokeWidth, outer.bottom + strokeWidth);
-    _commands.add(new PaintDrawDRRect(outer, inner, paint));
+    _commands.add(new PaintDrawDRRect(outer, inner, _clonePaint(paint)));
   }
 
   void drawOval(Rect rect, Paint paint) {
@@ -221,7 +223,7 @@ class RecordingCanvas {
     } else {
       _paintBounds.grow(rect);
     }
-    _commands.add(new PaintDrawOval(rect, paint));
+    _commands.add(new PaintDrawOval(rect, _clonePaint(paint)));
   }
 
   void drawCircle(Offset c, double radius, Paint paint) {
@@ -233,7 +235,7 @@ class RecordingCanvas {
         c.dy - radius - strokeWidth,
         c.dx + radius + strokeWidth,
         c.dy + radius + strokeWidth);
-    _commands.add(new PaintDrawCircle(c, radius, paint));
+    _commands.add(new PaintDrawCircle(c, radius, _clonePaint(paint)));
   }
 
   void drawPath(Path path, Paint paint) {
@@ -244,7 +246,7 @@ class RecordingCanvas {
       pathBounds = pathBounds.inflate(paint.strokeWidth);
     }
     _paintBounds.grow(pathBounds);
-    _commands.add(new PaintDrawPath(path, paint));
+    _commands.add(new PaintDrawPath(path, _clonePaint(paint)));
   }
 
   void drawImage(Image image, Offset offset, Paint paint) {
@@ -253,14 +255,14 @@ class RecordingCanvas {
     var left = offset.dx;
     var top = offset.dy;
     _paintBounds.growLTRB(left, top, left + image.width, top + image.height);
-    _commands.add(new PaintDrawImage(image, offset, paint));
+    _commands.add(new PaintDrawImage(image, offset, _clonePaint(paint)));
   }
 
   void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     _paintBounds.grow(dst);
-    _commands.add(new PaintDrawImageRect(image, src, dst, paint));
+    _commands.add(new PaintDrawImageRect(image, src, dst, _clonePaint(paint)));
   }
 
   void drawParagraph(Paragraph paragraph, Offset offset) {
@@ -281,6 +283,20 @@ class RecordingCanvas {
     _paintBounds.grow(shadowRect);
     _commands
         .add(new PaintDrawShadow(path, color, elevation, transparentOccluder));
+  }
+
+  Paint _clonePaint(Paint paint) {
+    if (!identical(paint, _lastPaintInstance)) {
+      _lastPaintInstance = paint;
+      paint.webOnlyMarkUsed();
+      return paint;
+    }
+    if (!paint.webOnlyIsDirty) {
+      // Same unmutated paint object that was past to api last time so
+      // we can record as is.
+      return paint;
+    }
+    return _lastPaintInstance = Paint.webOnlyClone(paint);
   }
 
   int saveCount = 1;

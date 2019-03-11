@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:html' as html;
-
 import 'package:vector_math/vector_math_64.dart';
 
 import 'canvas.dart';
@@ -84,13 +83,19 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
       translated.translate(rect.left, rect.top);
       effectiveTransform = matrix4ToCssTransform(translated);
     }
-    rectangle.style
+    var style = rectangle.style;
+    style
       ..position = 'absolute'
       ..transformOrigin = '0 0 0'
       ..transform = effectiveTransform
       ..width = '${rect.width}px'
-      ..height = '${rect.height}px'
-      ..backgroundColor = paint.color.toCssString();
+      ..height = '${rect.height}px';
+    if (paint.style == PaintingStyle.stroke) {
+      style.border = '${paint.strokeWidth}px solid '
+          '${paint.color.toCssString()}';
+    } else {
+      style.backgroundColor = paint.color.toCssString();
+    }
 
     currentElement.append(rectangle);
   }

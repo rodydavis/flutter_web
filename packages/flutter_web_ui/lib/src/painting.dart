@@ -296,12 +296,6 @@ enum PaintingStyle {
   /// of the given size being painted. The line drawn on the edge will
   /// be the width given by the [Paint.strokeWidth] property.
   stroke,
-
-  /// Apply the [Paint] to the inside of the shape and the edge of the
-  /// shape at the same time. The resulting drawing is similar to what
-  /// would be achieved by inflating the shape by half the stroke
-  /// width (as given by [Paint.strokeWidth]), and then using [fill].
-  strokeAndFill,
 }
 
 /// Algorithms to use when painting on the canvas.
@@ -875,6 +869,7 @@ class Paint {
   BlendMode get blendMode => _blendMode ?? BlendMode.srcOver;
   set blendMode(BlendMode value) {
     _blendMode = value;
+    _isDirty = true;
   }
 
   BlendMode _blendMode;
@@ -885,6 +880,7 @@ class Paint {
   PaintingStyle get style => _paintingStyle ?? PaintingStyle.fill;
   set style(PaintingStyle value) {
     _paintingStyle = value;
+    _isDirty = true;
   }
 
   PaintingStyle _paintingStyle;
@@ -898,6 +894,7 @@ class Paint {
   double get strokeWidth => _strokeWidth ?? 0.0;
   set strokeWidth(double value) {
     _strokeWidth = value;
+    _isDirty = true;
   }
 
   double _strokeWidth;
@@ -907,15 +904,33 @@ class Paint {
   /// [PaintingStyle.strokeAndFill].
   ///
   /// If null, defaults to [StrokeCap.butt], i.e. no caps.
-  StrokeCap strokeCap;
+  StrokeCap get strokeCap => _strokeCap;
+  set strokeCap(StrokeCap value) {
+    _strokeCap = value;
+    _isDirty = true;
+  }
+
+  StrokeCap _strokeCap;
 
   /// Whether to apply anti-aliasing to lines and images drawn on the
   /// canvas.
   ///
   /// Defaults to true. The value null is treated as false.
-  bool isAntiAlias = true;
+  bool get isAntiAlias => _isAntiAlias;
+  set isAntiAlias(bool value) {
+    _isAntiAlias = value;
+    _isDirty = true;
+  }
 
-  Color color = _defaultPaintColor;
+  bool _isAntiAlias = true;
+
+  Color get color => _color;
+  set color(Color value) {
+    _color = value;
+    _isDirty = true;
+  }
+
+  Color _color = _defaultPaintColor;
   static const Color _defaultPaintColor = const Color(0xFF000000);
 
   /// The shader to use when stroking or filling a shape.
@@ -928,13 +943,25 @@ class Paint {
   ///  * [ImageShader], a shader that tiles an [Image].
   ///  * [colorFilter], which overrides [shader].
   ///  * [color], which is used if [shader] and [colorFilter] are null.
-  Shader shader;
+  Shader get shader => _shader;
+  set shader(Shader value) {
+    _shader = value;
+    _isDirty = true;
+  }
+
+  Shader _shader;
 
   /// A mask filter (for example, a blur) to apply to a shape after it has been
   /// drawn but before it has been composited into the image.
   ///
   /// See [MaskFilter] for details.
-  MaskFilter maskFilter;
+  MaskFilter get maskFilter => _maskFilter;
+  set maskFilter(MaskFilter value) {
+    _maskFilter = value;
+    _isDirty = true;
+  }
+
+  MaskFilter _maskFilter;
 
   /// Controls the performance vs quality trade-off to use when applying
   /// filters, such as [maskFilter], or when drawing images, as with
@@ -942,7 +969,13 @@ class Paint {
   ///
   /// Defaults to [FilterQuality.none].
   // TODO(ianh): verify that the image drawing methods actually respect this
-  FilterQuality filterQuality;
+  FilterQuality get filterQuality => _filterQuality;
+  set filterQuality(FilterQuality value) {
+    _filterQuality = value;
+    _isDirty = true;
+  }
+
+  FilterQuality _filterQuality;
 
   /// A color filter to apply when a shape is drawn or when a layer is
   /// composited.
@@ -950,7 +983,23 @@ class Paint {
   /// See [ColorFilter] for details.
   ///
   /// When a shape is being drawn, [colorFilter] overrides [color] and [shader].
-  ColorFilter colorFilter;
+  ColorFilter get colorFilter => _colorFilter;
+  set colorFilter(ColorFilter value) {
+    _colorFilter = value;
+    _isDirty = true;
+  }
+
+  ColorFilter _colorFilter;
+
+  // True if Paint has been mutated since last use in RecordingCanvas.
+  bool _isDirty = true;
+
+  // Marks this paint object as previously used.
+  void webOnlyMarkUsed() {
+    _isDirty = false;
+  }
+
+  bool get webOnlyIsDirty => _isDirty;
 
   @override
   String toString() {
@@ -958,8 +1007,7 @@ class Paint {
       StringBuffer result = new StringBuffer();
       String semicolon = '';
       result.write('Paint(');
-      if (style == PaintingStyle.stroke ||
-          style == PaintingStyle.strokeAndFill) {
+      if (style == PaintingStyle.stroke) {
         result.write('$style');
         if (strokeWidth != null && strokeWidth != 0.0)
           result.write(' $strokeWidth');
@@ -985,6 +1033,19 @@ class Paint {
     } else {
       return super.toString();
     }
+  }
+
+  // Internal for recording canvas use.
+  static Paint webOnlyClone(Paint paint) {
+    return new Paint()
+      .._filterQuality = paint._filterQuality
+      .._maskFilter = paint._maskFilter
+      .._shader = paint._shader
+      .._isAntiAlias = paint._isAntiAlias
+      .._color = paint._color
+      .._colorFilter = paint._colorFilter
+      .._strokeWidth = paint._strokeWidth
+      .._strokeCap = paint._strokeCap;
   }
 }
 

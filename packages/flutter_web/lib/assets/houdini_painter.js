@@ -135,10 +135,6 @@ class FlutterPainter {
       case PaintingStyle.stroke:
         ctx.stroke();
         break;
-      case PaintingStyle.strokeAndFill:
-        ctx.stroke();
-        ctx.fill();
-        break;
       case PaintingStyle.fill:
       default:
         ctx.fill();
@@ -528,7 +524,6 @@ function _scanCommand(command) {
 const PaintingStyle = {
   fill: 0,
   stroke: 1,
-  strokeAndFill: 2,
 };
 
 /// A singleton used to parse serialized commands.
