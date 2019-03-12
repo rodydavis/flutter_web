@@ -55,26 +55,29 @@ enum PointerDeviceKind {
 /// Information about the state of a pointer.
 class PointerData {
   /// Creates an object that represents the state of a pointer.
-  const PointerData(
-      {this.timeStamp = Duration.zero,
-      this.change = PointerChange.cancel,
-      this.kind = PointerDeviceKind.touch,
-      this.device = 0,
-      this.physicalX = 0.0,
-      this.physicalY = 0.0,
-      this.buttons = 0,
-      this.obscured = false,
-      this.pressure = 0.0,
-      this.pressureMin = 0.0,
-      this.pressureMax = 0.0,
-      this.distance = 0.0,
-      this.distanceMax = 0.0,
-      this.radiusMajor = 0.0,
-      this.radiusMinor = 0.0,
-      this.radiusMin = 0.0,
-      this.radiusMax = 0.0,
-      this.orientation = 0.0,
-      this.tilt = 0.0});
+  const PointerData({
+    this.timeStamp = Duration.zero,
+    this.change = PointerChange.cancel,
+    this.kind = PointerDeviceKind.touch,
+    this.device = 0,
+    this.physicalX = 0.0,
+    this.physicalY = 0.0,
+    this.buttons = 0,
+    this.obscured = false,
+    this.pressure = 0.0,
+    this.pressureMin = 0.0,
+    this.pressureMax = 0.0,
+    this.distance = 0.0,
+    this.distanceMax = 0.0,
+    this.size = 0.0,
+    this.radiusMajor = 0.0,
+    this.radiusMinor = 0.0,
+    this.radiusMin = 0.0,
+    this.radiusMax = 0.0,
+    this.orientation = 0.0,
+    this.tilt = 0.0,
+    this.platformData: 0,
+  });
 
   /// Time of event dispatch, relative to an arbitrary timeline.
   final Duration timeStamp;
@@ -134,6 +137,14 @@ class PointerData {
   /// 0.0.
   final double distanceMax;
 
+  /// The area of the screen being pressed, scaled to a value between 0 and 1.
+  /// The value of size can be used to determine fat touch events. This value
+  /// is only set on Android, and is a device specific approximation within
+  /// the range of detectable values. So, for example, the value of 0.1 could
+  /// mean a touch with the tip of the finger, 0.2 a touch with full finger,
+  /// and 0.3 the full palm.
+  final double size;
+
   /// The radius of the contact ellipse along the major axis, in logical pixels.
   final double radiusMajor;
 
@@ -187,6 +198,9 @@ class PointerData {
   /// the stylus is flat on that surface).
   final double tilt;
 
+  /// Opaque platform-specific data associated with the event.
+  final int platformData;
+
   @override
   String toString() => '$runtimeType(x: $physicalX, y: $physicalY)';
 
@@ -205,12 +219,14 @@ class PointerData {
         'pressureMax: $pressureMax, '
         'distance: $distance, '
         'distanceMax: $distanceMax, '
+        'size: $size, '
         'radiusMajor: $radiusMajor, '
         'radiusMinor: $radiusMinor, '
         'radiusMin: $radiusMin, '
         'radiusMax: $radiusMax, '
         'orientation: $orientation, '
-        'tilt: $tilt'
+        'tilt: $tilt, '
+        'platformData: $platformData'
         ')';
   }
 }

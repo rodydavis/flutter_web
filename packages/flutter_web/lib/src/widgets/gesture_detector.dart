@@ -20,6 +20,10 @@ export 'package:flutter_web/gestures.dart'
         GestureTapCallback,
         GestureTapCancelCallback,
         GestureLongPressCallback,
+        GestureLongPressStartCallback,
+        GestureLongPressMoveUpdateCallback,
+        GestureLongPressUpCallback,
+        GestureLongPressEndCallback,
         GestureDragDownCallback,
         GestureDragStartCallback,
         GestureDragUpdateCallback,
@@ -32,6 +36,9 @@ export 'package:flutter_web/gestures.dart'
         GestureForcePressPeakCallback,
         GestureForcePressEndCallback,
         GestureForcePressUpdateCallback,
+        LongPressStartDetails,
+        LongPressMoveUpdateDetails,
+        LongPressEndDetails,
         ScaleStartDetails,
         ScaleUpdateDetails,
         ScaleEndDetails,
@@ -167,7 +174,10 @@ class GestureDetector extends StatelessWidget {
     this.onTapCancel,
     this.onDoubleTap,
     this.onLongPress,
+    this.onLongPressStart,
+    this.onLongPressMoveUpdate,
     this.onLongPressUp,
+    this.onLongPressEnd,
     this.onVerticalDragDown,
     this.onVerticalDragStart,
     this.onVerticalDragUpdate,
@@ -192,7 +202,7 @@ class GestureDetector extends StatelessWidget {
     this.onScaleEnd,
     this.behavior,
     this.excludeFromSemantics = false,
-    this.dragStartBehavior = DragStartBehavior.down,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : assert(excludeFromSemantics != null),
         assert(dragStartBehavior != null),
         assert(() {
@@ -265,12 +275,44 @@ class GestureDetector extends StatelessWidget {
   /// succession.
   final GestureTapCallback onDoubleTap;
 
-  /// A pointer has remained in contact with the screen at the same location for
-  /// a long period of time.
+  /// Called when a long press gesture has been recognized.
+  ///
+  /// Triggered when a pointer has remained in contact with the screen at the
+  /// same location for a long period of time.
+  ///
+  /// See also:
+  ///
+  ///  * [onLongPressStart], which has the same timing but has data for the
+  ///    press location.
   final GestureLongPressCallback onLongPress;
 
+  /// Callback for long press start with gesture location.
+  ///
+  /// Triggered when a pointer has remained in contact with the screen at the
+  /// same location for a long period of time.
+  ///
+  /// See also:
+  ///
+  ///  * [onLongPress], which has the same timing but without the location data.
+  final GestureLongPressStartCallback onLongPressStart;
+
+  /// A pointer has been drag-moved after a long press.
+  final GestureLongPressMoveUpdateCallback onLongPressMoveUpdate;
+
   /// A pointer that has triggered a long-press has stopped contacting the screen.
+  ///
+  /// See also:
+  ///
+  ///  * [onLongPressEnd], which has the same timing but has data for the up
+  ///    gesture location.
   final GestureLongPressUpCallback onLongPressUp;
+
+  /// A pointer that has triggered a long-press has stopped contacting the screen.
+  ///
+  /// See also:
+  ///
+  ///  * [onLongPressUp], which has the same timing but without the location data.
+  final GestureLongPressEndCallback onLongPressEnd;
 
   /// A pointer has contacted the screen and might begin to move vertically.
   final GestureDragDownCallback onVerticalDragDown;
@@ -382,7 +424,6 @@ class GestureDetector extends StatelessWidget {
   /// duplication of information.
   final bool excludeFromSemantics;
 
-  // TODO(jslavitz): Set the DragStartBehavior default to be start across all widgets.
   /// Determines the way that drag start behavior is handled.
   ///
   /// If set to [DragStartBehavior.start], gesture drag behavior will
@@ -393,7 +434,7 @@ class GestureDetector extends StatelessWidget {
   /// animation smoother and setting it to [DragStartBehavior.down] will make
   /// drag behavior feel slightly more reactive.
   ///
-  /// By default, the drag start behavior is [DragStartBehavior.down].
+  /// By default, the drag start behavior is [DragStartBehavior.start].
   ///
   /// Only the [onStart] callbacks for the [VerticalDragGestureRecognizer],
   /// [HorizontalDragGestureRecognizer] and [PanGestureRecognizer] are affected
@@ -436,13 +477,20 @@ class GestureDetector extends StatelessWidget {
       );
     }
 
-    if (onLongPress != null || onLongPressUp != null) {
+    if (onLongPress != null ||
+        onLongPressUp != null ||
+        onLongPressStart != null ||
+        onLongPressMoveUpdate != null ||
+        onLongPressEnd != null) {
       gestures[LongPressGestureRecognizer] =
           GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
         () => LongPressGestureRecognizer(debugOwner: this),
         (LongPressGestureRecognizer instance) {
           instance
             ..onLongPress = onLongPress
+            ..onLongPressStart = onLongPressStart
+            ..onLongPressMoveUpdate = onLongPressMoveUpdate
+            ..onLongPressEnd = onLongPressEnd
             ..onLongPressUp = onLongPressUp;
         },
       );
@@ -830,9 +878,10 @@ class RawGestureDetectorState extends State<RawGestureDetector> {
   @override
   Widget build(BuildContext context) {
     Widget result = Listener(
-        onPointerDown: _handlePointerDown,
-        behavior: widget.behavior ?? _defaultBehavior,
-        child: widget.child);
+      onPointerDown: _handlePointerDown,
+      behavior: widget.behavior ?? _defaultBehavior,
+      child: widget.child,
+    );
     if (!widget.excludeFromSemantics)
       result = _GestureSemantics(owner: this, child: result);
     return result;
@@ -860,8 +909,11 @@ class RawGestureDetectorState extends State<RawGestureDetector> {
 }
 
 class _GestureSemantics extends SingleChildRenderObjectWidget {
-  const _GestureSemantics({Key key, Widget child, this.owner})
-      : super(key: key, child: child);
+  const _GestureSemantics({
+    Key key,
+    Widget child,
+    this.owner,
+  }) : super(key: key, child: child);
 
   final RawGestureDetectorState owner;
 

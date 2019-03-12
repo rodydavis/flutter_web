@@ -4,8 +4,8 @@
 
 import 'package:flutter_web/foundation.dart';
 
-// Any changes to this file should be reflected in the
-// debugAssertAllGesturesVarsUnset() function below.
+// Any changes to this file should be reflected in the debugAssertAllGesturesVarsUnset()
+// function below.
 
 /// Whether to print the results of each hit test to the console.
 ///
@@ -14,6 +14,15 @@ import 'package:flutter_web/foundation.dart';
 ///
 /// This has no effect in release builds.
 bool debugPrintHitTestResults = false;
+
+/// Whether to print the details of each mouse hover event to the console.
+///
+/// When this is set, in debug mode, any time a mouse hover event is triggered
+/// by the [GestureBinding], the results are dumped to the console.
+///
+/// This has no effect in release builds, and only applies to mouse hover
+/// events.
+bool debugPrintMouseHoverEvents = false;
 
 /// Prints information about gesture recognizers and gesture arenas.
 ///
@@ -40,8 +49,7 @@ bool debugPrintGestureArenaDiagnostics = false;
 ///    arenas.
 bool debugPrintRecognizerCallbacksTrace = false;
 
-/// Returns true if none of the gestures library debug variables have been
-/// changed.
+/// Returns true if none of the gestures library debug variables have been changed.
 ///
 /// This function is used by the test framework to ensure that debug variables
 /// haven't been inadvertently changed.
@@ -52,7 +60,7 @@ bool debugAssertAllGesturesVarsUnset(String reason) {
   assert(() {
     if (debugPrintHitTestResults ||
         debugPrintGestureArenaDiagnostics ||
-        debugPrintRecognizerCallbacksTrace) throw new FlutterError(reason);
+        debugPrintRecognizerCallbacksTrace) throw FlutterError(reason);
     return true;
   }());
   return true;

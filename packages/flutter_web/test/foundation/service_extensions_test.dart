@@ -31,8 +31,10 @@ class TestServiceExtensionsBinding extends BindingBase
       <String, List<Map<String, dynamic>>>{};
 
   @override
-  void registerServiceExtension(
-      {@required String name, @required ServiceExtensionCallback callback}) {
+  void registerServiceExtension({
+    @required String name,
+    @required ServiceExtensionCallback callback,
+  }) {
     expect(extensions.containsKey(name), isFalse);
     extensions[name] = callback;
   }
@@ -713,8 +715,7 @@ void main() {
 
     // If you add a service extension... TEST IT! :-)
     // ...then increment this number.
-    // TODO(flutter_web): upstream , 2 extensions (exit and saveCompilationTrace
-    // are not supported for web.
+    // TODO(flutter_web): upstream , 3 extensions are not supported for web.
     expect(binding.extensions.length,
         25 + widgetInspectorExtensionCount - (ui.isWeb ? 5 : 0));
 

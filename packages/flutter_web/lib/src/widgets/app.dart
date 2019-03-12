@@ -754,6 +754,16 @@ class _WidgetsAppState extends State<WidgetsApp>
     });
   }
 
+  // RENDERING
+  @override
+  void didChangePlatformBrightness() {
+    setState(() {
+      // The platformBrightness property of window has changed. We reference
+      // window in our build function, so we need to call setState(), but
+      // we don't need to cache anything locally.
+    });
+  }
+
   // BUILDER
 
   @override

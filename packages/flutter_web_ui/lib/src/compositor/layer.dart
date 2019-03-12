@@ -327,7 +327,7 @@ class PhysicalShapeLayer extends ContainerLayer {
           _color.alpha != 0xff);
     }
 
-    final paint = Paint()..color = _color;
+    final paint = (Paint()..color = _color).webOnlyPaintData;
     if (_clipBehavior != Clip.antiAliasWithSaveLayer) {
       context.canvas.drawPath(_path, paint);
     }

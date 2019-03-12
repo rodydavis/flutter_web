@@ -17,6 +17,7 @@ export 'src/nonconst.dart';
 export 'src/test_async_utils.dart';
 export 'src/test_pointer.dart';
 export 'src/widget_tester.dart';
+export 'src/window.dart';
 
 /// Used to track when the platform is initialized. This ensures the test fonts
 /// are available.

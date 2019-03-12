@@ -49,7 +49,7 @@ enum _SwitchType { material, adaptive }
 ///  * [Checkbox], another widget with similar semantics.
 ///  * [Radio], for selecting among a set of explicit values.
 ///  * [Slider], for selecting a value in a range.
-///  * <https://material.google.com/components/selection-controls.html#selection-controls-switch>
+///  * <https://material.io/design/components/selection-controls.html#switches>
 class Switch extends StatefulWidget {
   /// Creates a material design switch.
   ///
@@ -73,7 +73,9 @@ class Switch extends StatefulWidget {
     this.activeThumbImage,
     this.inactiveThumbImage,
     this.materialTapTargetSize,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : _switchType = _SwitchType.material,
+        assert(dragStartBehavior != null),
         super(key: key);
 
   /// Creates a [CupertinoSwitch] if the target platform is iOS, creates a
@@ -95,6 +97,7 @@ class Switch extends StatefulWidget {
     this.activeThumbImage,
     this.inactiveThumbImage,
     this.materialTapTargetSize,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : _switchType = _SwitchType.adaptive,
         super(key: key);
 
@@ -174,6 +177,9 @@ class Switch extends StatefulWidget {
 
   final _SwitchType _switchType;
 
+  /// {@macro flutter.cupertino.switch.dragStartBehavior}
+  final DragStartBehavior dragStartBehavior;
+
   @override
   _SwitchState createState() => _SwitchState();
 
@@ -228,6 +234,7 @@ class _SwitchState extends State<Switch> with TickerProviderStateMixin {
     }
 
     return _SwitchRenderObjectWidget(
+      dragStartBehavior: widget.dragStartBehavior,
       value: widget.value,
       activeColor: activeThumbColor,
       inactiveColor: inactiveThumbColor,
@@ -243,18 +250,20 @@ class _SwitchState extends State<Switch> with TickerProviderStateMixin {
   }
 
   Widget buildCupertinoSwitch(BuildContext context) {
-    final Size size = getSwitchSize(Theme.of(context));
-    return Container(
-        width: size.width, // Same size as the Material switch.
-        height: size.height,
-        alignment: Alignment.center,
-        // TODO(flutter_web): enable after Cupertino support is added.
-        child: throw new UnimplementedError() // CupertinoSwitch(
+    throw UnimplementedError();
+    // TODO(flutter_web): Port CupertinoSwitch.
+//    final Size size = getSwitchSize(Theme.of(context));
+//    return Container(
+//      width: size.width,  // Same size as the Material switch.
+//      height: size.height,
+//      alignment: Alignment.center,
+//      child: CupertinoSwitch(
+//        dragStartBehavior: widget.dragStartBehavior,
 //        value: widget.value,
 //        onChanged: widget.onChanged,
 //        activeColor: widget.activeColor,
 //      ),
-        );
+//    );
   }
 
   @override
@@ -295,6 +304,7 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
     this.onChanged,
     this.vsync,
     this.additionalConstraints,
+    this.dragStartBehavior,
   }) : super(key: key);
 
   final bool value;
@@ -308,10 +318,12 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
   final ValueChanged<bool> onChanged;
   final TickerProvider vsync;
   final BoxConstraints additionalConstraints;
+  final DragStartBehavior dragStartBehavior;
 
   @override
   _RenderSwitch createRenderObject(BuildContext context) {
     return _RenderSwitch(
+      dragStartBehavior: dragStartBehavior,
       value: value,
       activeColor: activeColor,
       inactiveColor: inactiveColor,
@@ -341,6 +353,7 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
       ..onChanged = onChanged
       ..textDirection = Directionality.of(context)
       ..additionalConstraints = additionalConstraints
+      ..dragStartBehavior = dragStartBehavior
       ..vsync = vsync;
   }
 }
@@ -359,6 +372,7 @@ class _RenderSwitch extends RenderToggleable {
     @required TextDirection textDirection,
     ValueChanged<bool> onChanged,
     @required TickerProvider vsync,
+    DragStartBehavior dragStartBehavior,
   })  : assert(textDirection != null),
         _activeThumbImage = activeThumbImage,
         _inactiveThumbImage = inactiveThumbImage,
@@ -378,7 +392,8 @@ class _RenderSwitch extends RenderToggleable {
     _drag = HorizontalDragGestureRecognizer()
       ..onStart = _handleDragStart
       ..onUpdate = _handleDragUpdate
-      ..onEnd = _handleDragEnd;
+      ..onEnd = _handleDragEnd
+      ..dragStartBehavior = dragStartBehavior;
   }
 
   ImageProvider get activeThumbImage => _activeThumbImage;
@@ -431,6 +446,13 @@ class _RenderSwitch extends RenderToggleable {
     if (_textDirection == value) return;
     _textDirection = value;
     markNeedsPaint();
+  }
+
+  DragStartBehavior get dragStartBehavior => _drag.dragStartBehavior;
+  set dragStartBehavior(DragStartBehavior value) {
+    assert(value != null);
+    if (_drag.dragStartBehavior == value) return;
+    _drag.dragStartBehavior = value;
   }
 
   @override
@@ -487,10 +509,11 @@ class _RenderSwitch extends RenderToggleable {
   BoxDecoration _createDefaultThumbDecoration(
       Color color, ImageProvider image) {
     return BoxDecoration(
-        color: color,
-        image: image == null ? null : DecorationImage(image: image),
-        shape: BoxShape.circle,
-        boxShadow: kElevationToShadow[1]);
+      color: color,
+      image: image == null ? null : DecorationImage(image: image),
+      shape: BoxShape.circle,
+      boxShadow: kElevationToShadow[1],
+    );
   }
 
   bool _isPainting = false;
@@ -541,17 +564,19 @@ class _RenderSwitch extends RenderToggleable {
     final Paint paint = Paint()..color = trackColor;
     const double trackHorizontalPadding = kRadialReactionRadius - _kTrackRadius;
     final Rect trackRect = Rect.fromLTWH(
-        offset.dx + trackHorizontalPadding,
-        offset.dy + (size.height - _kTrackHeight) / 2.0,
-        size.width - 2.0 * trackHorizontalPadding,
-        _kTrackHeight);
+      offset.dx + trackHorizontalPadding,
+      offset.dy + (size.height - _kTrackHeight) / 2.0,
+      size.width - 2.0 * trackHorizontalPadding,
+      _kTrackHeight,
+    );
     final RRect trackRRect = RRect.fromRectAndRadius(
         trackRect, const Radius.circular(_kTrackRadius));
     canvas.drawRRect(trackRRect, paint);
 
     final Offset thumbPosition = Offset(
-        kRadialReactionRadius + visualPosition * _trackInnerLength,
-        size.height / 2.0);
+      kRadialReactionRadius + visualPosition * _trackInnerLength,
+      size.height / 2.0,
+    );
 
     paintRadialReaction(canvas, offset, thumbPosition);
 
@@ -573,9 +598,10 @@ class _RenderSwitch extends RenderToggleable {
       final double inset = 1.0 - (currentValue - 0.5).abs() * 2.0;
       final double radius = _kThumbRadius - inset;
       thumbPainter.paint(
-          canvas,
-          thumbPosition + offset - Offset(radius, radius),
-          configuration.copyWith(size: Size.fromRadius(radius)));
+        canvas,
+        thumbPosition + offset - Offset(radius, radius),
+        configuration.copyWith(size: Size.fromRadius(radius)),
+      );
     } finally {
       _isPainting = false;
     }

@@ -263,7 +263,7 @@ class DayPicker extends StatelessWidget {
     @required this.lastDate,
     @required this.displayedMonth,
     this.selectableDayPredicate,
-    this.dragStartBehavior = DragStartBehavior.down,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : assert(selectedDate != null),
         assert(currentDate != null),
         assert(onChanged != null),
@@ -297,7 +297,6 @@ class DayPicker extends StatelessWidget {
   /// Optional user supplied predicate function to customize selectable days.
   final SelectableDayPredicate selectableDayPredicate;
 
-  // TODO(jslavitz): Set the DragStartBehavior default to be start across all widgets.
   /// Determines the way that drag start behavior is handled.
   ///
   /// If set to [DragStartBehavior.start], the drag gesture used to scroll a
@@ -309,7 +308,7 @@ class DayPicker extends StatelessWidget {
   /// animation smoother and setting it to [DragStartBehavior.down] will make
   /// drag behavior feel slightly more reactive.
   ///
-  /// By default, the drag start behavior is [DragStartBehavior.down].
+  /// By default, the drag start behavior is [DragStartBehavior.start].
   ///
   /// See also:
   ///
@@ -560,7 +559,7 @@ class MonthPicker extends StatefulWidget {
     @required this.firstDate,
     @required this.lastDate,
     this.selectableDayPredicate,
-    this.dragStartBehavior = DragStartBehavior.down,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : assert(selectedDate != null),
         assert(onChanged != null),
         assert(!firstDate.isAfter(lastDate)),
@@ -842,7 +841,7 @@ class YearPicker extends StatefulWidget {
     @required this.onChanged,
     @required this.firstDate,
     @required this.lastDate,
-    this.dragStartBehavior = DragStartBehavior.down,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : assert(selectedDate != null),
         assert(onChanged != null),
         assert(!firstDate.isAfter(lastDate)),
@@ -1069,63 +1068,65 @@ class _DatePickerDialogState extends State<_DatePickerDialog> {
         ],
       ),
     );
-    final Dialog dialog = Dialog(child: OrientationBuilder(
-        builder: (BuildContext context, Orientation orientation) {
-      assert(orientation != null);
-      final Widget header = _DatePickerHeader(
-        selectedDate: _selectedDate,
-        mode: _mode,
-        onModeChanged: _handleModeChanged,
-        orientation: orientation,
-      );
-      switch (orientation) {
-        case Orientation.portrait:
-          return SizedBox(
-            width: _kMonthPickerPortraitWidth,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                header,
-                Container(
-                  color: theme.dialogBackgroundColor,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      picker,
-                      actions,
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        case Orientation.landscape:
-          return SizedBox(
-            height: _kDatePickerLandscapeHeight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                header,
-                Flexible(
-                  child: Container(
-                    width: _kMonthPickerLandscapeWidth,
+    final Dialog dialog = Dialog(
+      child: OrientationBuilder(
+          builder: (BuildContext context, Orientation orientation) {
+        assert(orientation != null);
+        final Widget header = _DatePickerHeader(
+          selectedDate: _selectedDate,
+          mode: _mode,
+          onModeChanged: _handleModeChanged,
+          orientation: orientation,
+        );
+        switch (orientation) {
+          case Orientation.portrait:
+            return SizedBox(
+              width: _kMonthPickerPortraitWidth,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  header,
+                  Container(
                     color: theme.dialogBackgroundColor,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[picker, actions],
+                      children: <Widget>[
+                        picker,
+                        actions,
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-      }
-      return null;
-    }));
+                ],
+              ),
+            );
+          case Orientation.landscape:
+            return SizedBox(
+              height: _kDatePickerLandscapeHeight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  header,
+                  Flexible(
+                    child: Container(
+                      width: _kMonthPickerLandscapeWidth,
+                      color: theme.dialogBackgroundColor,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[picker, actions],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+        }
+        return null;
+      }),
+    );
 
     return Theme(
       data: theme.copyWith(

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter_web/painting.dart';
 import 'package:flutter_web_ui/ui.dart' as ui;
+
+import 'package:flutter_web/painting.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
 
 void main() {
@@ -168,7 +169,7 @@ void main() {
     expect(caretOffset.dx, 21);
     caretOffset = painter.getOffsetForCaret(
         const ui.TextPosition(offset: text.length), ui.Rect.zero);
-    expect(caretOffset.dx, 399);
+    expect(caretOffset.dx, 441);
 
     caretOffset = painter.getOffsetForCaret(
         const ui.TextPosition(offset: 1), ui.Rect.zero);

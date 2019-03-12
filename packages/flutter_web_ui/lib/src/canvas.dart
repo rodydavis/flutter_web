@@ -99,7 +99,11 @@ class PictureRecorder {
   ///
   /// Returns null if the PictureRecorder is not associated with a canvas.
   Picture endRecording() {
-    assert(_isRecording);
+    // Returning null is what the flutter engine does:
+    // lib/ui/painting/picture_recorder.cc
+    if (!_isRecording) {
+      return null;
+    }
     _isRecording = false;
     return new Picture._(_canvas, cullRect);
   }
@@ -1637,7 +1641,8 @@ class Path {
     }
     var size = window.physicalSize / window.devicePixelRatio;
     _rawRecorder ??= new RawRecordingCanvas(size);
-    _rawRecorder.drawPath(this, new Paint()..color = Color(0xFF000000));
+    _rawRecorder.drawPath(
+        this, (new Paint()..color = Color(0xFF000000)).webOnlyPaintData);
     bool result = _rawRecorder.ctx.isPointInPath(pointX, pointY);
     _rawRecorder.dispose();
     return result;

@@ -126,8 +126,7 @@ class FontWeight {
 }
 
 /// Whether and how to align text horizontally.
-// The order of this enum must match the order of the values in
-// RenderStyleConstants.h's ETextAlign.
+// The order of this enum must match the order of the values in RenderStyleConstants.h's ETextAlign.
 enum TextAlign {
   /// Align the text on the left edge of the container.
   left,
@@ -198,8 +197,7 @@ String textAlignToCssValue(TextAlign align, TextDirection textDirection) {
 
 /// A horizontal line used for aligning text.
 enum TextBaseline {
-  /// The horizontal line used to align the bottom of glyphs for alphabetic
-  /// characters.
+  /// The horizontal line used to align the bottom of glyphs for alphabetic characters.
   alphabetic,
 
   /// The horizontal line used to align ideographic characters.
@@ -219,8 +217,7 @@ class TextDecoration {
 
   final int _mask;
 
-  /// Whether this decoration will paint at least as much decoration as the
-  /// given decoration.
+  /// Whether this decoration will paint at least as much decoration as the given decoration.
   bool contains(TextDecoration other) {
     return (_mask | other._mask) == _mask;
   }
@@ -277,37 +274,47 @@ enum TextDecorationStyle {
   wavy
 }
 
+/// Determines if lists [a] and [b] are deep equivalent.
+///
+/// Returns true if the lists are both null, or if they are both non-null, have
+/// the same length, and contain the same elements in the same order. Returns
+/// false otherwise.
+bool _listEquals<T>(List<T> a, List<T> b) {
+  if (a == null) return b == null;
+  if (b == null || a.length != b.length) return false;
+  for (int index = 0; index < a.length; index += 1) {
+    if (a[index] != b[index]) return false;
+  }
+  return true;
+}
+
 /// An opaque object that determines the size, position, and rendering of text.
 class TextStyle {
   /// Creates a new TextStyle object.
   ///
-  /// * `color`: The color to use when painting the text. If this is specified,
-  ///   `foreground` must be null.
-  /// * `decoration`: The decorations to paint near the text (e.g., an
-  ///   underline).
+  /// * `color`: The color to use when painting the text. If this is specified, `foreground` must be null.
+  /// * `decoration`: The decorations to paint near the text (e.g., an underline).
   /// * `decorationColor`: The color in which to paint the text decorations.
-  /// * `decorationStyle`: The style in which to paint the text decorations
-  ///   (e.g., dashed).
-  /// * `fontWeight`: The typeface thickness to use when painting the text
-  ///   (e.g., bold).
-  /// * `fontStyle`: The typeface variant to use when drawing the letters (e.g.,
-  ///   italics).
-  /// * `fontFamily`: The name of the font to use when painting the text (e.g.,
-  ///   Roboto).
-  /// * `fontSize`: The size of glyphs (in logical pixels) to use when painting
-  ///   the text.
-  /// * `letterSpacing`: The amount of space (in logical pixels) to add between
-  ///   each letter.
-  /// * `wordSpacing`: The amount of space (in logical pixels) to add at each
-  ///   sequence of white-space (i.e. between each word).
-  /// * `textBaseline`: The common baseline that should be aligned between this
-  ///   text span and its parent text span, or, for the root text spans, with
-  ///   the line box.
+  /// * `decorationStyle`: The style in which to paint the text decorations (e.g., dashed).
+  /// * `fontWeight`: The typeface thickness to use when painting the text (e.g., bold).
+  /// * `fontStyle`: The typeface variant to use when drawing the letters (e.g., italics).
+  /// * `fontFamily`: The name of the font to use when painting the text (e.g., Roboto). If a `fontFamilyFallback` is
+  ///   provided and `fontFamily` is not, then the first font family in `fontFamilyFallback` will take the postion of
+  ///   the preferred font family. When a higher priority font cannot be found or does not contain a glyph, a lower
+  ///   priority font will be used.
+  /// * `fontFamilyFallback`: An ordered list of the names of the fonts to fallback on when a glyph cannot
+  ///   be found in a higher priority font. When the `fontFamily` is null, the first font family in this list
+  ///   is used as the preferred font. Internally, the 'fontFamily` is concatenated to the front of this list.
+  ///   When no font family is provided through 'fontFamilyFallback' (null or empty) or `fontFamily`, then the
+  ///   platform default font will be used.
+  /// * `fontSize`: The size of glyphs (in logical pixels) to use when painting the text.
+  /// * `letterSpacing`: The amount of space (in logical pixels) to add between each letter.
+  /// * `wordSpacing`: The amount of space (in logical pixels) to add at each sequence of white-space (i.e. between each word).
+  /// * `textBaseline`: The common baseline that should be aligned between this text span and its parent text span, or, for the root text spans, with the line box.
   /// * `height`: The height of this text span, as a multiple of the font size.
   /// * `locale`: The locale used to select region-specific glyphs.
   /// * `background`: The paint drawn as a background for the text.
-  /// * `foreground`: The paint used to draw the text. If this is specified,
-  ///   `color` must be null.
+  /// * `foreground`: The paint used to draw the text. If this is specified, `color` must be null.
   TextStyle({
     Color color,
     TextDecoration decoration,
@@ -320,17 +327,16 @@ class TextStyle {
     List<String> fontFamilyFallback,
     double fontSize,
     double letterSpacing,
-    List<Shadow> shadows,
     double wordSpacing,
     double height,
     Locale locale,
     Paint background,
     Paint foreground,
+    List<Shadow> shadows,
   })  : assert(
             color == null || foreground == null,
             'Cannot provide both a color and a foreground\n'
-            'The color argument is just a shorthand for "foreground:'
-            ' new Paint()..color = color".'),
+            'The color argument is just a shorthand for "foreground: new Paint()..color = color".'),
         _color = color,
         _decoration = decoration,
         _decorationColor = decorationColor,
@@ -338,17 +344,20 @@ class TextStyle {
         _fontWeight = fontWeight,
         _fontStyle = fontStyle,
         _textBaseline = textBaseline,
+        // TODO(b/128311960): when font fallback is supported, we should check
+        //                    for it here.
+        _webOnlyIsFontFamilyProvided = fontFamily != null,
         _fontFamily = fontFamily ?? '',
-        // TODO: add support for web font fallback
+        // TODO(b/128311960): add support for font family fallback.
         _fontFamilyFallback = fontFamilyFallback,
         _fontSize = fontSize,
         _letterSpacing = letterSpacing,
         _wordSpacing = wordSpacing,
         _height = height,
         _locale = locale,
-        _shadows = shadows,
         _background = background,
-        _foreground = foreground;
+        _foreground = foreground,
+        _shadows = shadows;
 
   final Color _color;
   final TextDecoration _decoration;
@@ -357,6 +366,7 @@ class TextStyle {
   final FontWeight _fontWeight;
   final FontStyle _fontStyle;
   final TextBaseline _textBaseline;
+  final bool _webOnlyIsFontFamilyProvided;
   final String _fontFamily;
   final List<String> _fontFamilyFallback;
   final double _fontSize;
@@ -387,26 +397,32 @@ class TextStyle {
         _height == typedOther._height &&
         _locale == typedOther._locale &&
         _background == typedOther._background &&
-        _foreground == typedOther._foreground;
+        _foreground == typedOther._foreground &&
+        _listEquals<Shadow>(_shadows, typedOther._shadows) &&
+        _listEquals<String>(
+            _fontFamilyFallback, typedOther._fontFamilyFallback);
   }
 
   @override
   int get hashCode => hashValues(
-      _color,
-      _decoration,
-      _decorationColor,
-      _decorationStyle,
-      _fontWeight,
-      _fontStyle,
-      _textBaseline,
-      _fontFamily,
-      _fontSize,
-      _letterSpacing,
-      _wordSpacing,
-      _height,
-      _locale,
-      _background,
-      _foreground);
+        _color,
+        _decoration,
+        _decorationColor,
+        _decorationStyle,
+        _fontWeight,
+        _fontStyle,
+        _textBaseline,
+        _fontFamily,
+        _fontFamilyFallback,
+        _fontSize,
+        _letterSpacing,
+        _wordSpacing,
+        _height,
+        _locale,
+        _background,
+        _foreground,
+        _shadows,
+      );
 
   @override
   String toString() {
@@ -419,12 +435,12 @@ class TextStyle {
           'fontWeight: ${_fontWeight ?? "unspecified"}, '
           'fontStyle: ${_fontStyle ?? "unspecified"}, '
           'textBaseline: ${_textBaseline ?? "unspecified"}, '
-          'fontFamily: ${_fontFamily == null || _fontFamily.isEmpty ? "unspecified" : _fontFamily}, '
-          'fontFamilyFallback: ${_fontFamilyFallback != null && _fontFamilyFallback.isNotEmpty ? _fontFamilyFallback : "unspecified"}, '
+          'fontFamily: ${_webOnlyIsFontFamilyProvided && _fontFamily != null ? _fontFamily : "unspecified"}, '
+          'fontFamilyFallback: ${_webOnlyIsFontFamilyProvided && _fontFamilyFallback != null && _fontFamilyFallback.isNotEmpty ? _fontFamilyFallback : "unspecified"}, '
           'fontSize: ${_fontSize != null ? _fontSize.toStringAsFixed(1) : "unspecified"}, '
-          'letterSpacing: ${_letterSpacing ?? "unspecified"}, '
-          'wordSpacing: ${_wordSpacing ?? "unspecified"}, '
-          'height: ${_height == null ? "unspecified" : "${_height.toStringAsFixed(1)}x"}, '
+          'letterSpacing: ${_letterSpacing != null ? "${_letterSpacing}x" : "unspecified"}, '
+          'wordSpacing: ${_wordSpacing != null ? "${_wordSpacing}x" : "unspecified"}, '
+          'height: ${_height != null ? "${_height.toStringAsFixed(1)}x" : "unspecified"}, '
           'locale: ${_locale ?? "unspecified"}, '
           'background: ${_background ?? "unspecified"}, '
           'foreground: ${_foreground ?? "unspecified"}, '
@@ -452,12 +468,6 @@ class ParagraphStyle {
   ///   directionality of the paragraph, as well as the meaning of
   ///   [TextAlign.start] and [TextAlign.end] in the `textAlign` field.
   ///
-  /// * `fontWeight`: The typeface thickness to use when painting the text
-  ///   (e.g., bold).
-  ///
-  /// * `fontStyle`: The typeface variant to use when drawing the letters (e.g.,
-  ///   italics).
-  ///
   /// * `maxLines`: The maximum number of lines painted. Lines beyond this
   ///   number are silently dropped. For example, if `maxLines` is 1, then only
   ///   one line is rendered. If `maxLines` is null, but `ellipsis` is not null,
@@ -471,8 +481,23 @@ class ParagraphStyle {
   /// * `fontSize`: The size of glyphs (in logical pixels) to use when painting
   ///   the text.
   ///
-  /// * `lineHeight`: The minimum height of the line boxes, as a multiple of the
-  ///   font size.
+  /// * `height`: The minimum height of the line boxes, as a multiple of the
+  ///   font size. The lines of the paragraph will be at least
+  ///   `(height + leading) * fontSize` tall when fontSize
+  ///   is not null. When fontSize is null, there is no minimum line height. Tall
+  ///   glyphs due to baseline alignment or large [TextStyle.fontSize] may cause
+  ///   the actual line height after layout to be taller than specified here.
+  ///   [fontSize] must be provided for this property to take effect.
+  ///
+  /// * `fontWeight`: The typeface thickness to use when painting the text
+  ///   (e.g., bold).
+  ///
+  /// * `fontStyle`: The typeface variant to use when drawing the letters (e.g.,
+  ///   italics).
+  ///
+  /// * `strutStyle`: The properties of the strut. Strut defines a set of minimum
+  ///   vertical line height related metrics and can be used to obtain more
+  ///   advanced line spacing behavior.
   ///
   /// * `ellipsis`: String used to ellipsize overflowing text. If `maxLines` is
   ///   not null, then the `ellipsis`, if any, is applied to the last rendered
@@ -484,15 +509,16 @@ class ParagraphStyle {
   ///   considered equivalent and turn off this behavior.
   ///
   /// * `locale`: The locale used to select region-specific glyphs.
-  const ParagraphStyle({
+  ParagraphStyle({
     TextAlign textAlign,
     TextDirection textDirection,
-    FontWeight fontWeight,
-    FontStyle fontStyle,
     int maxLines,
     String fontFamily,
     double fontSize,
-    double lineHeight,
+    double height,
+    FontWeight fontWeight,
+    FontStyle fontStyle,
+    StrutStyle strutStyle,
     String ellipsis,
     Locale locale,
   })  : _textAlign = textAlign,
@@ -502,7 +528,9 @@ class ParagraphStyle {
         _maxLines = maxLines,
         _fontFamily = fontFamily,
         _fontSize = fontSize,
-        _lineHeight = lineHeight,
+        _height = height,
+        // TODO(b/128317744): add support for strut style.
+        _strutStyle = strutStyle,
         _ellipsis = ellipsis,
         _locale = locale;
 
@@ -513,9 +541,24 @@ class ParagraphStyle {
   final int _maxLines;
   final String _fontFamily;
   final double _fontSize;
-  final double _lineHeight;
+  final double _height;
+  final StrutStyle _strutStyle;
   final String _ellipsis;
   final Locale _locale;
+
+  double get _webOnlyLineHeight {
+    if (_strutStyle == null || _strutStyle._height == null) {
+      // When there's no strut height, always use paragraph style height.
+      return _height;
+    }
+    if (_strutStyle._forceStrutHeight == true) {
+      // When strut height is forced, ignore paragraph style height.
+      return _strutStyle._height;
+    }
+    // In this case, strut height acts as a minimum height for all parts of the
+    // paragraph. So we take the max of strut height and paragraph style height.
+    return math.max(_strutStyle._height, _height);
+  }
 
   @override
   bool operator ==(dynamic other) {
@@ -529,14 +572,14 @@ class ParagraphStyle {
         _maxLines == typedOther._maxLines ||
         _fontFamily == typedOther._fontFamily ||
         _fontSize == typedOther._fontSize ||
-        _lineHeight == typedOther._lineHeight ||
+        _height == typedOther._height ||
         _ellipsis == typedOther._ellipsis ||
         _locale == typedOther._locale;
   }
 
   @override
   int get hashCode =>
-      hashValues(_fontFamily, _fontSize, _lineHeight, _ellipsis, _locale);
+      hashValues(_fontFamily, _fontSize, _height, _ellipsis, _locale);
 
   @override
   String toString() {
@@ -549,14 +592,98 @@ class ParagraphStyle {
           'maxLines: ${_maxLines ?? "unspecified"}, '
           'fontFamily: ${_fontFamily ?? "unspecified"}, '
           'fontSize: ${_fontSize != null ? _fontSize.toStringAsFixed(1) : "unspecified"}, '
-          'lineHeight: ${_lineHeight == null ? "unspecified" : "${_lineHeight.toStringAsFixed(1)}x"}, '
-          'ellipsis: ${_ellipsis ?? "unspecified"}, '
+          'height: ${_height != null ? "${_height.toStringAsFixed(1)}x" : "unspecified"}, '
+          'ellipsis: ${_ellipsis != null ? "\"$_ellipsis\"" : "unspecified"}, '
           'locale: ${_locale ?? "unspecified"}'
           ')';
     } else {
       return super.toString();
     }
   }
+}
+
+class StrutStyle {
+  /// Creates a new StrutStyle object.
+  ///
+  /// * `fontFamily`: The name of the font to use when painting the text (e.g.,
+  ///   Roboto).
+  ///
+  /// * `fontFamilyFallback`: An ordered list of font family names that will be searched for when
+  ///    the font in `fontFamily` cannot be found.
+  ///
+  /// * `fontSize`: The size of glyphs (in logical pixels) to use when painting
+  ///   the text.
+  ///
+  /// * `lineHeight`: The minimum height of the line boxes, as a multiple of the
+  ///   font size. The lines of the paragraph will be at least
+  ///   `(lineHeight + leading) * fontSize` tall when fontSize
+  ///   is not null. When fontSize is null, there is no minimum line height. Tall
+  ///   glyphs due to baseline alignment or large [TextStyle.fontSize] may cause
+  ///   the actual line height after layout to be taller than specified here.
+  ///   [fontSize] must be provided for this property to take effect.
+  ///
+  /// * `leading`: The minimum amount of leading between lines as a multiple of
+  ///   the font size. [fontSize] must be provided for this property to take effect.
+  ///
+  /// * `fontWeight`: The typeface thickness to use when painting the text
+  ///   (e.g., bold).
+  ///
+  /// * `fontStyle`: The typeface variant to use when drawing the letters (e.g.,
+  ///   italics).
+  ///
+  /// * `forceStrutHeight`: When true, the paragraph will force all lines to be exactly
+  ///   `(lineHeight + leading) * fontSize` tall from baseline to baseline.
+  ///   [TextStyle] is no longer able to influence the line height, and any tall
+  ///   glyphs may overlap with lines above. If a [fontFamily] is specified, the
+  ///   total ascent of the first line will be the min of the `Ascent + half-leading`
+  ///   of the [fontFamily] and `(lineHeight + leading) * fontSize`. Otherwise, it
+  ///   will be determined by the Ascent + half-leading of the first text.
+  StrutStyle({
+    String fontFamily,
+    List<String> fontFamilyFallback,
+    double fontSize,
+    double height,
+    double leading,
+    FontWeight fontWeight,
+    FontStyle fontStyle,
+    bool forceStrutHeight,
+  })  : _fontFamily = fontFamily,
+        _fontFamilyFallback = fontFamilyFallback,
+        _fontSize = fontSize,
+        _height = height,
+        _leading = leading,
+        _fontWeight = fontWeight,
+        _fontStyle = fontStyle,
+        _forceStrutHeight = forceStrutHeight;
+
+  final String _fontFamily;
+  final List<String> _fontFamilyFallback;
+  final double _fontSize;
+  final double _height;
+  final double _leading;
+  final FontWeight _fontWeight;
+  final FontStyle _fontStyle;
+  final bool _forceStrutHeight;
+
+  @override
+  bool operator ==(dynamic other) {
+    if (identical(this, other)) return true;
+    if (other.runtimeType != runtimeType) return false;
+    final StrutStyle typedOther = other;
+    return _fontFamily == typedOther._fontFamily &&
+        _fontSize == typedOther._fontSize &&
+        _height == typedOther._height &&
+        _leading == typedOther._leading &&
+        _fontWeight == typedOther._fontWeight &&
+        _fontStyle == typedOther._fontStyle &&
+        _forceStrutHeight == typedOther._forceStrutHeight &&
+        _listEquals<String>(
+            _fontFamilyFallback, typedOther._fontFamilyFallback);
+  }
+
+  @override
+  int get hashCode => hashValues(_fontFamily, _fontFamilyFallback, _fontSize,
+      _height, _leading, _fontWeight, _fontStyle, _forceStrutHeight);
 }
 
 /// A direction in which text flows.
@@ -643,8 +770,7 @@ class ParagraphStyle {
 /// In practice, it is also expected that many developers will only be
 /// targeting one language, and in that case it may be simpler to think in
 /// visual terms.
-// The order of this enum must match the order of the values in
-// TextDirection.h's TextDirection.
+// The order of this enum must match the order of the values in TextDirection.h's TextDirection.
 enum TextDirection {
   /// The text flows from right to left (e.g. Arabic, Hebrew).
   rtl,
@@ -689,8 +815,7 @@ class TextBox {
 
   /// The left edge of the text box, irrespective of direction.
   ///
-  /// To get the leading edge (which may depend on the [direction]), consider
-  /// [start].
+  /// To get the leading edge (which may depend on the [direction]), consider [start].
   final double left;
 
   /// The top edge of the text box.
@@ -698,8 +823,7 @@ class TextBox {
 
   /// The right edge of the text box, irrespective of direction.
   ///
-  /// To get the trailing edge (which may depend on the [direction]), consider
-  /// [end].
+  /// To get the trailing edge (which may depend on the [direction]), consider [end].
   final double right;
 
   /// The bottom edge of the text box.
@@ -711,8 +835,7 @@ class TextBox {
   /// Returns a rect of the same size as this box.
   Rect toRect() => new Rect.fromLTRB(left, top, right, bottom);
 
-  /// The [left] edge of the box for left-to-right text; the [right] edge of the
-  /// box for right-to-left text.
+  /// The [left] edge of the box for left-to-right text; the [right] edge of the box for right-to-left text.
   ///
   /// See also:
   ///
@@ -721,8 +844,7 @@ class TextBox {
     return (direction == TextDirection.ltr) ? left : right;
   }
 
-  /// The [right] edge of the box for left-to-right text; the [left] edge of the
-  /// box for right-to-left text.
+  /// The [right] edge of the box for left-to-right text; the [left] edge of the box for right-to-left text.
   ///
   /// See also:
   ///
@@ -749,39 +871,76 @@ class TextBox {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'TextBox.fromLTRBD('
-          '${left.toStringAsFixed(1)}, '
-          '${top.toStringAsFixed(1)}, '
-          '${right.toStringAsFixed(1)}, '
-          '${bottom.toStringAsFixed(1)}, '
-          '$direction)';
+      return 'TextBox.fromLTRBD(${left.toStringAsFixed(1)}, ${top.toStringAsFixed(1)}, ${right.toStringAsFixed(1)}, ${bottom.toStringAsFixed(1)}, $direction)';
     }
     return super.toString();
   }
 }
 
-/// Whether a [TextPosition] is visually upstream or downstream of its offset.
+/// A way to disambiguate a [TextPosition] when its offset could match two
+/// different locations in the rendered string.
 ///
-/// For example, when a text position exists at a line break, a single offset
-/// has two visual positions, one prior to the line break (at the end of the
-/// first line) and one after the line break (at the start of the second line).
-/// A text affinity disambiguates between those cases. (Something similar
-/// happens with between runs of bidirectional text.)
+/// For example, at an offset where the rendered text wraps, there are two
+/// visual positions that the offset could represent: one prior to the line
+/// break (at the end of the first line) and one after the line break (at the
+/// start of the second line). A text affinity disambiguates between these two
+/// cases.
+///
+/// This affects only line breaks caused by wrapping, not explicit newline
+/// characters. For newline characters, the position is fully specified by the
+/// offset alone, and there is no ambiguity.
+///
+/// [TextAffinity] also affects bidirectional text at the interface between LTR
+/// and RTL text. Consider the following string, where the lowercase letters
+/// will be displayed as LTR and the uppercase letters RTL: "helloHELLO".  When
+/// rendered, the string would appear visually as "helloOLLEH".  An offset of 5
+/// would be ambiguous without a corresponding [TextAffinity].  Looking at the
+/// string in code, the offset represents the position just after the "o" and
+/// just before the "H".  When rendered, this offset could be either in the
+/// middle of the string to the right of the "o" or at the end of the string to
+/// the right of the "H".
 enum TextAffinity {
-  /// The position has affinity for the upstream side of the text position.
+  /// The position has affinity for the upstream side of the text position, i.e.
+  /// in the direction of the beginning of the string.
   ///
-  /// For example, if the offset of the text position is a line break, the
-  /// position represents the end of the first line.
+  /// In the example of an offset at the place where text is wrapping, upstream
+  /// indicates the end of the first line.
+  ///
+  /// In the bidirectional text example "helloHELLO", an offset of 5 with
+  /// [TextAffinity] upstream would appear in the middle of the rendered text,
+  /// just to the right of the "o". See the definition of [TextAffinity] for the
+  /// full example.
   upstream,
 
-  /// The position has affinity for the downstream side of the text position.
+  /// The position has affinity for the downstream side of the text position,
+  /// i.e. in the direction of the end of the string.
   ///
-  /// For example, if the offset of the text position is a line break, the
-  /// position represents the start of the second line.
+  /// In the example of an offset at the place where text is wrapping,
+  /// downstream indicates the beginning of the second line.
+  ///
+  /// In the bidirectional text example "helloHELLO", an offset of 5 with
+  /// [TextAffinity] downstream would appear at the end of the rendered text,
+  /// just to the right of the "H". See the definition of [TextAffinity] for the
+  /// full example.
   downstream,
 }
 
-/// A visual position in a string of text.
+/// A position in a string of text.
+///
+/// A TextPosition can be used to locate a position in a string in code (using
+/// the [offset] property), and it can also be used to locate the same position
+/// visually in a rendered string of text (using [offset] and, when needed to
+/// resolve ambiguity, [affinity]).
+///
+/// The location of an offset in a rendered string is ambiguous in two cases.
+/// One happens when rendered text is forced to wrap. In this case, the offset
+/// where the wrap occurs could visually appear either at the end of the first
+/// line or the beginning of the second line. The second way is with
+/// bidirectional text.  An offset at the interface between two different text
+/// directions could have one of two locations in the rendered text.
+///
+/// See the documentation for [TextAffinity] for more information on how
+/// TextAffinity disambiguates situations like these.
 class TextPosition {
   /// Creates an object representing a particular position in a string.
   ///
@@ -792,21 +951,21 @@ class TextPosition {
   })  : assert(offset != null),
         assert(affinity != null);
 
-  /// The index of the character that immediately follows the position.
+  /// The index of the character that immediately follows the position in the
+  /// string representation of the text.
   ///
   /// For example, given the string `'Hello'`, offset 0 represents the cursor
   /// being before the `H`, while offset 5 represents the cursor being just
   /// after the `o`.
   final int offset;
 
-  /// If the offset has more than one visual location (e.g., occurs at a line
-  /// break), which of the two locations is represented by this position.
+  /// Disambiguates cases where the position in the string given by [offset]
+  /// could represent two different visual positions in the rendered text. For
+  /// example, this can happen when text is forced to wrap, or when one string
+  /// of text is rendered with multiple text directions.
   ///
-  /// For example, if the text `'AB'` had a forced line break between the `A`
-  /// and the `B`, then the downstream affinity at offset 1 represents the
-  /// cursor being just after the `A` on the first line, while the upstream
-  /// affinity at offset 1 represents the cursor being just before the `B` on
-  /// the first line.
+  /// See the documentation for [TextAffinity] for more information on how
+  /// TextAffinity disambiguates situations like these.
   final TextAffinity affinity;
 
   @override
@@ -832,14 +991,14 @@ class TextPosition {
 /// The only constraint that can be specified is the [width]. See the discussion
 /// at [width] for more details.
 class ParagraphConstraints {
-  /// Creates constraints for laying out a paragraph.
+  /// Creates constraints for laying out a pargraph.
   ///
   /// The [width] argument must not be null.
   const ParagraphConstraints({
     this.width,
   }) : assert(width != null);
 
-  /// The width the paragraph should use when computing the positions of glyphs.
+  /// The width the paragraph should use whey computing the positions of glyphs.
   ///
   /// If possible, the paragraph will select a soft line break prior to reaching
   /// this width. If no soft line break is available, the paragraph will select
@@ -870,6 +1029,67 @@ class ParagraphConstraints {
 
   @override
   String toString() => '$runtimeType(width: $width)';
+}
+
+/// Defines various ways to vertically bound the boxes returned by
+/// [Paragraph.getBoxesForRange].
+enum BoxHeightStyle {
+  /// Provide tight bounding boxes that fit heights per run. This style may result
+  /// in uneven bounding boxes that do not nicely connect with adjacent boxes.
+  tight,
+
+  /// The height of the boxes will be the maximum height of all runs in the
+  /// line. All boxes in the same line will be the same height. This does not
+  /// guarantee that the boxes will cover the entire vertical height of the line
+  /// when there is additional line spacing.
+  ///
+  /// See [RectHeightStyle.includeLineSpacingTop], [RectHeightStyle.includeLineSpacingMiddle],
+  /// and [RectHeightStyle.includeLineSpacingBottom] for styles that will cover
+  /// the entire line.
+  max,
+
+  /// Extends the top and bottom edge of the bounds to fully cover any line
+  /// spacing.
+  ///
+  /// The top and bottom of each box will cover half of the
+  /// space above and half of the space below the line.
+  ///
+  /// {@template flutter.dart:ui.boxHeightStyle.includeLineSpacing}
+  /// The top edge of each line should be the same as the bottom edge
+  /// of the line above. There should be no gaps in vertical coverage given any
+  /// amount of line spacing. Line spacing is not included above the first line
+  /// and below the last line due to no additional space present there.
+  /// {@endtemplate}
+  includeLineSpacingMiddle,
+
+  /// Extends the top edge of the bounds to fully cover any line spacing.
+  ///
+  /// The line spacing will be added to the top of the box.
+  ///
+  /// {@macro flutter.dart:ui.rectHeightStyle.includeLineSpacing}
+  includeLineSpacingTop,
+
+  /// Extends the bottom edge of the bounds to fully cover any line spacing.
+  ///
+  /// The line spacing will be added to the bottom of the box.
+  ///
+  /// {@macro flutter.dart:ui.boxHeightStyle.includeLineSpacing}
+  includeLineSpacingBottom,
+}
+
+/// Defines various ways to horizontally bound the boxes returned by
+/// [Paragraph.getBoxesForRange].
+enum BoxWidthStyle {
+  // Provide tight bounding boxes that fit widths to the runs of each line
+  // independently.
+  tight,
+
+  /// Adds up to two additional boxes as needed at the beginning and/or end
+  /// of each line so that the widths of the boxes in line are the same width
+  /// as the widest line in the paragraph. The additional boxes on each line
+  /// are only added when the relevant box at the relevant edge of that line
+  /// does not span the maximum width of the paragraph.
+  max,
 }
 
 /// A paragraph of text.
@@ -1082,7 +1302,26 @@ class Paragraph {
   }
 
   /// Returns a list of text boxes that enclose the given text range.
-  List<TextBox> getBoxesForRange(int start, int end) {
+  ///
+  /// The [boxHeightStyle] and [boxWidthStyle] parameters allow customization
+  /// of how the boxes are bound vertically and horizontally. Both style
+  /// parameters default to the tight option, which will provide close-fitting
+  /// boxes and will not account for any line spacing.
+  ///
+  /// The [boxHeightStyle] and [boxWidthStyle] parameters must not be null.
+  ///
+  /// See [BoxHeightStyle] and [BoxWidthStyle] for full descriptions of each option.
+  List<TextBox> getBoxesForRange(int start, int end,
+      {BoxHeightStyle boxHeightStyle = BoxHeightStyle.tight,
+      BoxWidthStyle boxWidthStyle = BoxWidthStyle.tight}) {
+    assert(boxHeightStyle != null);
+    assert(boxWidthStyle != null);
+    return _getBoxesForRange(
+        start, end, boxHeightStyle.index, boxWidthStyle.index);
+  }
+
+  List<TextBox> _getBoxesForRange(
+      int start, int end, int boxHeightStyle, int boxWidthStyle) {
     if (_plainText == null) {
       return [];
     }
@@ -1225,7 +1464,16 @@ class ParagraphBuilder {
 
   /// Creates a [ParagraphBuilder] object, which is used to create a
   /// [Paragraph].
-  ParagraphBuilder(this._paragraphStyle) {
+  ParagraphBuilder(ParagraphStyle style) : _paragraphStyle = style {
+    // TODO(b/128317744): Implement support for strut font families.
+    List<String> strutFontFamilies;
+    if (style._strutStyle != null) {
+      strutFontFamilies = <String>[];
+      if (style._strutStyle._fontFamily != null)
+        strutFontFamilies.add(style._strutStyle._fontFamily);
+      if (style._strutStyle._fontFamilyFallback != null)
+        strutFontFamilies.addAll(style._strutStyle._fontFamilyFallback);
+    }
     applyParagraphStyleToElement(
         element: _paragraphElement, style: _paragraphStyle);
   }
@@ -1565,9 +1813,9 @@ void applyParagraphStyleToElement({
     if (style._maxLines != null) {
       domRenderer.setElementStyle(element, 'max-lines', '${style._maxLines}');
     }
-    if (style._lineHeight != null) {
+    if (style._webOnlyLineHeight != null) {
       domRenderer.setElementStyle(
-          element, 'line-height', '${style._lineHeight}');
+          element, 'line-height', '${style._webOnlyLineHeight}');
     }
     if (style._textDirection != null) {
       domRenderer.setElementStyle(
@@ -1599,9 +1847,9 @@ void applyParagraphStyleToElement({
     if (style._maxLines != previousStyle._maxLines) {
       domRenderer.setElementStyle(element, 'max-lines', '${style._maxLines}');
     }
-    if (style._lineHeight != previousStyle._lineHeight) {
+    if (style._webOnlyLineHeight != style._webOnlyLineHeight) {
       domRenderer.setElementStyle(
-          element, 'line-height', '${style._lineHeight}');
+          element, 'line-height', '${style._webOnlyLineHeight}');
     }
     if (style._textDirection != previousStyle._textDirection) {
       domRenderer.setElementStyle(

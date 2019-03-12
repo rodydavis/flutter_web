@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 import 'dart:developer';
-
 import 'package:flutter_web/io.dart' show Platform;
+import 'package:flutter_web_ui/ui.dart' as ui show Scene, SceneBuilder, Window;
+
 import 'package:flutter_web/foundation.dart';
 import 'package:flutter_web/services.dart';
-import 'package:flutter_web_ui/ui.dart' as ui show Scene, SceneBuilder, window;
 import 'package:flutter_web/src/util.dart';
 import 'package:vector_math/vector_math_64.dart';
 
@@ -36,7 +36,7 @@ class ViewConfiguration {
 
   /// Creates a transformation matrix that applies the [devicePixelRatio].
   Matrix4 toMatrix() {
-    return new Matrix4.diagonal3Values(devicePixelRatio, devicePixelRatio, 1.0);
+    return Matrix4.diagonal3Values(devicePixelRatio, devicePixelRatio, 1.0);
   }
 
   @override
@@ -60,8 +60,10 @@ class RenderView extends RenderObject
   RenderView({
     RenderBox child,
     @required ViewConfiguration configuration,
+    @required ui.Window window,
   })  : assert(configuration != null),
-        _configuration = configuration {
+        _configuration = configuration,
+        _window = window {
     this.child = child;
   }
 
@@ -86,6 +88,8 @@ class RenderView extends RenderObject
     markNeedsLayout();
   }
 
+  ui.Window _window;
+
   /// Whether Flutter should automatically compute the desired system UI.
   ///
   /// When this setting is enabled, Flutter will hit-test the layer tree at the
@@ -103,8 +107,8 @@ class RenderView extends RenderObject
   ///
   /// See also:
   ///
-  ///   * [AnnotatedRegion], for placing [SystemUiOverlayStyle] in the layer tree.
-  ///   * [SystemChrome.setSystemUIOverlayStyle], for imperatively setting the system ui style.
+  ///  * [AnnotatedRegion], for placing [SystemUiOverlayStyle] in the layer tree.
+  ///  * [SystemChrome.setSystemUIOverlayStyle], for imperatively setting the system ui style.
   bool automaticSystemUiAdjustment = true;
 
   /// Bootstrap the rendering pipeline by scheduling the first frame.
@@ -125,8 +129,7 @@ class RenderView extends RenderObject
 
   Layer _updateMatricesAndCreateNewRootLayer() {
     _rootTransform = configuration.toMatrix();
-    final ContainerLayer rootLayer =
-        new TransformLayer(transform: _rootTransform);
+    final ContainerLayer rootLayer = TransformLayer(transform: _rootTransform);
     rootLayer.webOnlyPaintedBy = this;
     rootLayer.attach(this);
     assert(_rootTransform != null);
@@ -151,7 +154,7 @@ class RenderView extends RenderObject
     _size = configuration.size;
     assert(_size.isFinite);
 
-    if (child != null) child.layout(new BoxConstraints.tight(_size));
+    if (child != null) child.layout(BoxConstraints.tight(_size));
   }
 
   @override
@@ -200,7 +203,7 @@ class RenderView extends RenderObject
       final ui.SceneBuilder builder = ui.SceneBuilder();
       final ui.Scene scene = layer.buildScene(builder);
       if (automaticSystemUiAdjustment) _updateSystemChrome();
-      ui.window.render(scene);
+      _window.render(scene);
       scene.dispose();
       assert(() {
         if (debugRepaintRainbowEnabled || debugRepaintTextRainbowEnabled)
@@ -216,11 +219,9 @@ class RenderView extends RenderObject
   void _updateSystemChrome() {
     final Rect bounds = paintBounds;
     final Offset top = Offset(
-        bounds.center.dx, ui.window.padding.top / ui.window.devicePixelRatio);
-    final Offset bottom = Offset(
-        bounds.center.dx,
-        bounds.center.dy -
-            ui.window.padding.bottom / ui.window.devicePixelRatio);
+        bounds.center.dx, _window.padding.top / _window.devicePixelRatio);
+    final Offset bottom = Offset(bounds.center.dx,
+        bounds.center.dy - _window.padding.bottom / _window.devicePixelRatio);
     final SystemUiOverlayStyle upperOverlayStyle =
         layer.find<SystemUiOverlayStyle>(top);
     // Only android has a customizable system navigation bar.
@@ -269,15 +270,15 @@ class RenderView extends RenderObject
       return true;
     }());
     properties.add(DiagnosticsProperty<Size>(
-        'window size', ui.window.physicalSize,
+        'window size', _window.physicalSize,
         tooltip: 'in physical pixels'));
     properties.add(DoubleProperty(
-        'device pixel ratio', ui.window.devicePixelRatio,
+        'device pixel ratio', _window.devicePixelRatio,
         tooltip: 'physical pixels per logical pixel'));
     properties.add(DiagnosticsProperty<ViewConfiguration>(
         'configuration', configuration,
         tooltip: 'in logical pixels'));
-    if (ui.window.semanticsEnabled)
+    if (_window.semanticsEnabled)
       properties.add(DiagnosticsNode.message('semantics enabled'));
   }
 }

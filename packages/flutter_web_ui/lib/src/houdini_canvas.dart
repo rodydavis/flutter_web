@@ -156,35 +156,35 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
     // Drawn using CSS Paint.
   }
 
-  void drawLine(Offset p1, Offset p2, Paint paint) {
+  void drawLine(Offset p1, Offset p2, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
-  void drawPaint(Paint paint) {
+  void drawPaint(PaintData paint) {
     // Drawn using CSS Paint.
   }
 
-  void drawRect(Rect rect, Paint paint) {
+  void drawRect(Rect rect, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
-  void drawRRect(RRect rrect, Paint paint) {
+  void drawRRect(RRect rrect, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
-  void drawDRRect(RRect outer, RRect inner, Paint paint) {
+  void drawDRRect(RRect outer, RRect inner, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
-  void drawOval(Rect rect, Paint paint) {
+  void drawOval(Rect rect, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
-  void drawCircle(Offset c, double radius, Paint paint) {
+  void drawCircle(Offset c, double radius, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
-  void drawPath(Path path, Paint paint) {
+  void drawPath(Path path, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
@@ -193,11 +193,11 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
     // Drawn using CSS Paint.
   }
 
-  void drawImage(Image image, Offset p, Paint paint) {
+  void drawImage(Image image, Offset p, PaintData paint) {
     // TODO(yjbanov): implement.
   }
 
-  void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
+  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
     // TODO(yjbanov): implement src rectangle
     HtmlImage htmlImage = image;
     html.Element imageBox = html.Element.tag('flt-img');

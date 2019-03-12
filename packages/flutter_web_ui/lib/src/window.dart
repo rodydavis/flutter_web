@@ -641,6 +641,26 @@ class Window {
     _onTextScaleFactorChanged = callback;
   }
 
+  /// The setting indicating the current brightness mode of the host platform.
+  /// If the platform has no preference, [platformBrightness] defaults to [Brightness.light].
+  Brightness get platformBrightness => _platformBrightness;
+  Brightness _platformBrightness = Brightness.light;
+
+  /// A callback that is invoked whenever [platformBrightness] changes value.
+  ///
+  /// The framework invokes this callback in the same zone in which the
+  /// callback was set.
+  ///
+  /// See also:
+  ///
+  ///  * [WidgetsBindingObserver], for a mechanism at the widgets layer to
+  ///    observe when this callback is invoked.
+  VoidCallback get onPlatformBrightnessChanged => _onPlatformBrightnessChanged;
+  VoidCallback _onPlatformBrightnessChanged;
+  set onPlatformBrightnessChanged(VoidCallback callback) {
+    _onPlatformBrightnessChanged = callback;
+  }
+
   /// A callback that is invoked whenever the [devicePixelRatio],
   /// [physicalSize], [padding], or [viewInsets] values change, for example
   /// when the device is rotated or when the application is resized (e.g. when
@@ -1111,6 +1131,21 @@ class AccessibilityFeatures {
 
   @override
   int get hashCode => _index.hashCode;
+}
+
+/// Describes the contrast of a theme or color palette.
+enum Brightness {
+  /// The color is dark and will require a light text color to achieve readable
+  /// contrast.
+  ///
+  /// For example, the color might be dark grey, requiring white text.
+  dark,
+
+  /// The color is light and will require a dark text color to achieve readable
+  /// contrast.
+  ///
+  /// For example, the color might be bright white, requiring black text.
+  light,
 }
 
 /// The [Window] singleton. This object exposes the size of the display, the

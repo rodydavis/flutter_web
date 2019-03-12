@@ -7,18 +7,17 @@ import 'package:flutter_web/material.dart';
 import 'package:flutter_web/rendering.dart';
 
 Future<void> pumpTest(WidgetTester tester, TargetPlatform platform) async {
-  await tester.pumpWidget(new MaterialApp(
-    theme: new ThemeData(
+  await tester.pumpWidget(MaterialApp(
+    theme: ThemeData(
       platform: platform,
     ),
-    home: new CustomScrollView(
-      slivers: const <Widget>[
-        const SliverToBoxAdapter(child: const SizedBox(height: 2000.0)),
+    home: const CustomScrollView(
+      slivers: <Widget>[
+        SliverToBoxAdapter(child: SizedBox(height: 2000.0)),
       ],
     ),
   ));
   await tester.pump(const Duration(seconds: 5)); // to let the theme animate
-  return null;
 }
 
 const double dragOffset = 200.0;
@@ -64,13 +63,16 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     final double result2 = getScrollOffset(tester);
 
-    // iOS (result2) is slipperier than Android (result1)
-    expect(result1, lessThan(result2));
+    expect(
+        result1,
+        lessThan(
+            result2)); // iOS (result2) is slipperier than Android (result1)
   });
 
   testWidgets('Holding scroll', (WidgetTester tester) async {
     await pumpTest(tester, TargetPlatform.iOS);
-    await tester.drag(find.byType(Viewport), const Offset(0.0, 200.0));
+    await tester.drag(find.byType(Viewport), const Offset(0.0, 200.0),
+        touchSlopY: 0.0);
     expect(getScrollOffset(tester), -200.0);
     await tester.pump(); // trigger ballistic
     await tester.pump(const Duration(milliseconds: 10));

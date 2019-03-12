@@ -4,11 +4,11 @@
 
 import 'package:flutter_web_ui/ui.dart';
 
-import 'package:flutter_web/gestures.dart' show DragStartBehavior;
 import 'package:flutter_web/rendering.dart';
 import 'package:flutter_web/material.dart';
 import 'package:flutter_web/widgets.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
+import 'package:flutter_web/gestures.dart' show DragStartBehavior;
 
 import '../widgets/semantics_tester.dart';
 import 'feedback_tester.dart';

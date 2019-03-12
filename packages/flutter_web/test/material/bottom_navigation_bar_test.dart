@@ -560,7 +560,9 @@ void main() {
             ignoreId: true, ignoreTransform: true, ignoreRect: true));
 
     semantics.dispose();
-  });
+  },
+      skip:
+          true); // TODO(flutter_web): Sync BottomNavigationBar then sync this test file.
 
   testWidgets('BottomNavigationBar.shifting semantics',
       (WidgetTester tester) async {
@@ -632,7 +634,9 @@ void main() {
             ignoreId: true, ignoreTransform: true, ignoreRect: true));
 
     semantics.dispose();
-  });
+  },
+      skip:
+          true); // TODO(flutter_web): Sync BottomNavigationBar then sync this test file.
 
   testWidgets('BottomNavigationBar handles items.length changes',
       (WidgetTester tester) async {

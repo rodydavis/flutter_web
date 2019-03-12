@@ -13,15 +13,18 @@ void main() {
       (WidgetTester tester) async {
     debugDisableShadows = false;
     await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: PhysicalModel(
-          shape: BoxShape.rectangle,
-          color: Colors.grey,
-          shadowColor: Colors.red,
-          elevation: 1.0,
-          child:
-              Material(child: TextField(controller: TextEditingController())),
+      MediaQuery(
+        data: const MediaQueryData(devicePixelRatio: 1.0),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: PhysicalModel(
+            shape: BoxShape.rectangle,
+            color: Colors.grey,
+            shadowColor: Colors.red,
+            elevation: 1.0,
+            child:
+                Material(child: TextField(controller: TextEditingController())),
+          ),
         ),
       ),
     );

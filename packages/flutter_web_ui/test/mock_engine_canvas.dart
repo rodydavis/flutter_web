@@ -6,6 +6,7 @@ import 'dart:html' as html;
 import 'dart:typed_data';
 
 import 'package:flutter_web_ui/src/engine_canvas.dart';
+import 'package:flutter_web_ui/src/painting.dart';
 import 'package:flutter_web_ui/ui.dart';
 
 /// Contains method name that was called on [MockEngineCanvas] and arguments
@@ -102,7 +103,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
-  void drawLine(Offset p1, Offset p2, Paint paint) {
+  void drawLine(Offset p1, Offset p2, PaintData paint) {
     _called('drawLine', arguments: {
       'p1': p1,
       'p2': p2,
@@ -110,22 +111,22 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
-  void drawPaint(Paint paint) {
+  void drawPaint(PaintData paint) {
     _called('drawPaint', arguments: paint);
   }
 
-  void drawRect(Rect rect, Paint paint) {
+  void drawRect(Rect rect, PaintData paint) {
     _called('drawRect', arguments: paint);
   }
 
-  void drawRRect(RRect rrect, Paint paint) {
+  void drawRRect(RRect rrect, PaintData paint) {
     _called('drawRRect', arguments: {
       'rrect': rrect,
       'paint': paint,
     });
   }
 
-  void drawDRRect(RRect outer, RRect inner, Paint paint) {
+  void drawDRRect(RRect outer, RRect inner, PaintData paint) {
     _called('drawDRRect', arguments: {
       'outer': outer,
       'inner': inner,
@@ -133,14 +134,14 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
-  void drawOval(Rect rect, Paint paint) {
+  void drawOval(Rect rect, PaintData paint) {
     _called('drawOval', arguments: {
       'rect': rect,
       'paint': paint,
     });
   }
 
-  void drawCircle(Offset c, double radius, Paint paint) {
+  void drawCircle(Offset c, double radius, PaintData paint) {
     _called('drawCircle', arguments: {
       'c': c,
       'radius': radius,
@@ -148,7 +149,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
-  void drawPath(Path path, Paint paint) {
+  void drawPath(Path path, PaintData paint) {
     _called('drawPath', arguments: {
       'path': path,
       'paint': paint,
@@ -165,7 +166,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
-  void drawImage(Image image, Offset p, Paint paint) {
+  void drawImage(Image image, Offset p, PaintData paint) {
     _called('drawImage', arguments: {
       'image': image,
       'p': p,
@@ -173,7 +174,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
-  void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
+  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
     _called('drawImageRect', arguments: {
       'image': image,
       'src': src,

@@ -86,15 +86,15 @@ void testWidgets(String description, WidgetTesterCallback callback,
 }
 
 /// Initializes domRenderer with specific devicePixelRation and physicalSize.
-void webOnlyInitializeTestDomRenderer() {
+void webOnlyInitializeTestDomRenderer({double devicePixelRatio = 3.0}) {
   if (WidgetsBinding.instance == null) {
     // Force-initialize DomRenderer so it doesn't overwrite test pixel ratio.
     domRenderer;
     // The following parameters are hard-coded in Flutter's test embedder. Since
     // we don't have an embedder yet this is the lowest-most layer we can put
     // this stuff in.
-    window.devicePixelRatio = 3.0;
-    window.physicalSize = const Size(2400, 1800);
+    window.devicePixelRatio = devicePixelRatio;
+    window.physicalSize = Size(800 * devicePixelRatio, 600 * devicePixelRatio);
     window.webOnlyScheduleFrameCallback = () {};
     domRenderer.debugIsInWidgetTest = true;
     // Only load the Ahem font once and await the same future in all tests.

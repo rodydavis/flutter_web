@@ -21,7 +21,9 @@ Widget buildFrame(
           reverse: reverse,
           physics: const BouncingScrollPhysics(),
           children: items.map<Widget>((int item) {
-            return Container(child: Text('$item'));
+            return Container(
+              child: Text('$item'),
+            );
           }).toList(),
         ),
       ),
@@ -35,7 +37,8 @@ void main() {
     await tester.pumpWidget(buildFrame(textDirection: TextDirection.ltr));
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('1'), const Offset(-300.0, 0.0));
+    await tester.drag(find.text('1'), const Offset(-300.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 1
@@ -52,7 +55,8 @@ void main() {
     // if item 3 was a bit wider, such that its center was past the 800px mark, this would fail,
     // because it wouldn't be hit tested when scrolling from its center, as drag() does.
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('3'), const Offset(-290.0, 0.0));
+    await tester.drag(find.text('3'), const Offset(-290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 2
@@ -66,7 +70,8 @@ void main() {
     expect(find.text('5'), findsNothing);
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('3'), const Offset(0.0, -290.0));
+    await tester.drag(find.text('3'), const Offset(0.0, -290.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // unchanged
     expect(find.text('0'), findsNothing);
@@ -77,7 +82,8 @@ void main() {
     expect(find.text('5'), findsNothing);
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('3'), const Offset(-290.0, 0.0));
+    await tester.drag(find.text('3'), const Offset(-290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 3
@@ -96,7 +102,8 @@ void main() {
     // to move item 3 entirely off screen therefore takes:
     //  60 + (290-60)*2 = 520 pixels
     // plus a couple more to be sure
-    await tester.drag(find.text('3'), const Offset(-522.0, 0.0));
+    await tester.drag(find.text('3'), const Offset(-522.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(); // just after release
     // screen is 800px wide, and has the following items:
     //   -11..279 = 4
@@ -122,7 +129,8 @@ void main() {
     await tester.pumpWidget(Container());
     await tester.pumpWidget(buildFrame(textDirection: TextDirection.ltr),
         const Duration(seconds: 1));
-    await tester.drag(find.text('2'), const Offset(-280.0, 0.0));
+    await tester.drag(find.text('2'), const Offset(-280.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //  -280..10  = 0
@@ -136,7 +144,8 @@ void main() {
     expect(find.text('4'), findsNothing);
     expect(find.text('5'), findsNothing);
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('2'), const Offset(-290.0, 0.0));
+    await tester.drag(find.text('2'), const Offset(-290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //  -280..10  = 1
@@ -168,7 +177,8 @@ void main() {
     expect(find.text('4'), findsNothing);
     expect(find.text('5'), findsNothing);
 
-    await tester.drag(find.text('0'), const Offset(300.0, 0.0));
+    await tester.drag(find.text('0'), const Offset(300.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -80..210 = 3
@@ -185,7 +195,8 @@ void main() {
     // if item 3 was a bit wider, such that its center was past the 800px mark, this would fail,
     // because it wouldn't be hit tested when scrolling from its center, as drag() does.
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('2'), const Offset(290.0, 0.0));
+    await tester.drag(find.text('2'), const Offset(290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 4
@@ -199,7 +210,8 @@ void main() {
     expect(find.text('5'), findsNothing);
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('2'), const Offset(0.0, 290.0));
+    await tester.drag(find.text('2'), const Offset(0.0, 290.0),
+        touchSlopY: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // unchanged
     expect(find.text('0'), findsNothing);
@@ -210,7 +222,8 @@ void main() {
     expect(find.text('5'), findsNothing);
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('3'), const Offset(290.0, 0.0));
+    await tester.drag(find.text('3'), const Offset(290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 5
@@ -229,7 +242,8 @@ void main() {
     // to move item 3 entirely off screen therefore takes:
     //  60 + (290-60)*2 = 520 pixels
     // plus a couple more to be sure
-    await tester.drag(find.text('4'), const Offset(522.0, 0.0));
+    await tester.drag(find.text('4'), const Offset(522.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(); // just after release
     // screen is 800px wide, and has the following items:
     //   280..570 = 5
@@ -269,7 +283,8 @@ void main() {
     expect(find.text('4'), findsNothing);
     expect(find.text('5'), findsNothing);
 
-    await tester.drag(find.text('0'), const Offset(300.0, 0.0));
+    await tester.drag(find.text('0'), const Offset(300.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -80..210 = 3
@@ -286,7 +301,8 @@ void main() {
     // if item 3 was a bit wider, such that its center was past the 800px mark, this would fail,
     // because it wouldn't be hit tested when scrolling from its center, as drag() does.
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('2'), const Offset(290.0, 0.0));
+    await tester.drag(find.text('2'), const Offset(290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 4
@@ -300,7 +316,8 @@ void main() {
     expect(find.text('5'), findsNothing);
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('2'), const Offset(0.0, 290.0));
+    await tester.drag(find.text('2'), const Offset(0.0, 290.0),
+        touchSlopY: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // unchanged
     expect(find.text('0'), findsNothing);
@@ -311,7 +328,8 @@ void main() {
     expect(find.text('5'), findsNothing);
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('3'), const Offset(290.0, 0.0));
+    await tester.drag(find.text('3'), const Offset(290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 5
@@ -330,7 +348,8 @@ void main() {
     // to move item 3 entirely off screen therefore takes:
     //  60 + (290-60)*2 = 520 pixels
     // plus a couple more to be sure
-    await tester.drag(find.text('4'), const Offset(522.0, 0.0));
+    await tester.drag(find.text('4'), const Offset(522.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(); // just after release
     // screen is 800px wide, and has the following items:
     //   280..570 = 5
@@ -360,7 +379,8 @@ void main() {
         buildFrame(reverse: true, textDirection: TextDirection.rtl));
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('1'), const Offset(-300.0, 0.0));
+    await tester.drag(find.text('1'), const Offset(-300.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 1
@@ -377,7 +397,8 @@ void main() {
     // if item 3 was a bit wider, such that its center was past the 800px mark, this would fail,
     // because it wouldn't be hit tested when scrolling from its center, as drag() does.
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('3'), const Offset(-290.0, 0.0));
+    await tester.drag(find.text('3'), const Offset(-290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 2
@@ -391,7 +412,8 @@ void main() {
     expect(find.text('5'), findsNothing);
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('3'), const Offset(0.0, -290.0));
+    await tester.drag(find.text('3'), const Offset(0.0, -290.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // unchanged
     expect(find.text('0'), findsNothing);
@@ -402,7 +424,8 @@ void main() {
     expect(find.text('5'), findsNothing);
 
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('3'), const Offset(-290.0, 0.0));
+    await tester.drag(find.text('3'), const Offset(-290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //   -10..280 = 3
@@ -421,7 +444,8 @@ void main() {
     // to move item 3 entirely off screen therefore takes:
     //  60 + (290-60)*2 = 520 pixels
     // plus a couple more to be sure
-    await tester.drag(find.text('3'), const Offset(-522.0, 0.0));
+    await tester.drag(find.text('3'), const Offset(-522.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(); // just after release
     // screen is 800px wide, and has the following items:
     //   -11..279 = 4
@@ -448,7 +472,8 @@ void main() {
     await tester.pumpWidget(
         buildFrame(reverse: true, textDirection: TextDirection.rtl),
         const Duration(seconds: 1));
-    await tester.drag(find.text('2'), const Offset(-280.0, 0.0));
+    await tester.drag(find.text('2'), const Offset(-280.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //  -280..10  = 0
@@ -462,7 +487,8 @@ void main() {
     expect(find.text('4'), findsNothing);
     expect(find.text('5'), findsNothing);
     await tester.pump(const Duration(seconds: 1));
-    await tester.drag(find.text('2'), const Offset(-290.0, 0.0));
+    await tester.drag(find.text('2'), const Offset(-290.0, 0.0),
+        touchSlopX: 0.0);
     await tester.pump(const Duration(seconds: 1));
     // screen is 800px wide, and has the following items:
     //  -280..10  = 1

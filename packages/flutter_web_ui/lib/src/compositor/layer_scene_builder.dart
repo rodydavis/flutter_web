@@ -54,7 +54,8 @@ class LayerSceneBuilder implements SceneBuilder {
   @override
   void addPerformanceOverlay(int enabledOptions, Rect bounds,
       {Object webOnlyPaintedBy}) {
-    // TODO: implement addPerformanceOverlay
+    // We don't plan to implement this on the web.
+    throw UnimplementedError();
   }
 
   @override
@@ -79,7 +80,17 @@ class LayerSceneBuilder implements SceneBuilder {
       double height = 0.0,
       bool freeze = false,
       Object webOnlyPaintedBy}) {
-    // TODO: implement addTexture
+    // TODO(b/128315641): implement addTexture.
+  }
+
+  @override
+  void addPlatformView(
+    int viewId, {
+    Offset offset = Offset.zero,
+    double width = 0.0,
+    double height = 0.0,
+  }) {
+    // TODO(b/128317425): implement addPlatformView.
   }
 
   @override

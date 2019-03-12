@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter_web/rendering.dart';
-import 'package:flutter_web/scheduler.dart';
+import 'package:flutter_web/gestures.dart';
+
 import 'automatic_keep_alive.dart';
 import 'basic.dart';
 import 'debug.dart';
@@ -23,6 +23,13 @@ const double _kDismissThreshold = 0.4;
 ///
 /// Used by [Dismissible.onDismissed].
 typedef DismissDirectionCallback = void Function(DismissDirection direction);
+
+/// Signature used by [Dismissible] to give the application an opportunity to
+/// confirm or veto a dismiss gesture.
+///
+/// Used by [Dismissible.confirmDismiss].
+typedef ConfirmDismissCallback = Future<bool> Function(
+    DismissDirection direction);
 
 /// The direction in which a [Dismissible] can be dismissed.
 enum DismissDirection {
@@ -77,6 +84,7 @@ class Dismissible extends StatefulWidget {
     @required this.child,
     this.background,
     this.secondaryBackground,
+    this.confirmDismiss,
     this.onResize,
     this.onDismissed,
     this.direction = DismissDirection.horizontal,
@@ -84,8 +92,10 @@ class Dismissible extends StatefulWidget {
     this.dismissThresholds = const <DismissDirection, double>{},
     this.movementDuration = const Duration(milliseconds: 200),
     this.crossAxisEndOffset = 0.0,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : assert(key != null),
         assert(secondaryBackground != null ? background != null : true),
+        assert(dragStartBehavior != null),
         super(key: key);
 
   /// The widget below this widget in the tree.
@@ -102,6 +112,15 @@ class Dismissible extends StatefulWidget {
   /// has been dragged up or to the left. It may only be specified when background
   /// has also been specified.
   final Widget secondaryBackground;
+
+  /// Gives the app an opportunity to confirm or veto a pending dismissal.
+  ///
+  /// If the returned Future<bool> completes true, then this widget will be
+  /// dismissed, otherwise it will be moved back to its original location.
+  ///
+  /// If the returned Future<bool> completes to false or null the [onResize]
+  /// and [onDismissed] callbacks will not run.
+  final ConfirmDismissCallback confirmDismiss;
 
   /// Called when the widget changes size (i.e., when contracting before being dismissed).
   final VoidCallback onResize;
@@ -144,13 +163,32 @@ class Dismissible extends StatefulWidget {
   /// it is positive or negative.
   final double crossAxisEndOffset;
 
+  /// Determines the way that drag start behavior is handled.
+  ///
+  /// If set to [DragStartBehavior.start], the drag gesture used to dismiss a
+  /// dismissible will begin upon the detection of a drag gesture. If set to
+  /// [DragStartBehavior.down] it will begin when a down event is first detected.
+  ///
+  /// In general, setting this to [DragStartBehavior.start] will make drag
+  /// animation smoother and setting it to [DragStartBehavior.down] will make
+  /// drag behavior feel slightly more reactive.
+  ///
+  /// By default, the drag start behavior is [DragStartBehavior.start].
+  ///
+  /// See also:
+  ///
+  ///  * [DragGestureRecognizer.dragStartBehavior], which gives an example for the different behaviors.
+  final DragStartBehavior dragStartBehavior;
+
   @override
   _DismissibleState createState() => _DismissibleState();
 }
 
 class _DismissibleClipper extends CustomClipper<Rect> {
-  _DismissibleClipper({@required this.axis, @required this.moveAnimation})
-      : assert(axis != null),
+  _DismissibleClipper({
+    @required this.axis,
+    @required this.moveAnimation,
+  })  : assert(axis != null),
         assert(moveAnimation != null),
         super(reclip: moveAnimation);
 
@@ -189,112 +227,8 @@ class _DismissibleClipper extends CustomClipper<Rect> {
 
 enum _FlingGestureKind { none, forward, reverse }
 
-abstract class TickerProviderStateMixInWithAutomaticKeepAlive<
-    T extends StatefulWidget> extends State<T> implements TickerProvider {
-  /// TickerProviderStateMix mixin code.
-  Set<Ticker> _tickers;
-
-  @override
-  Ticker createTicker(TickerCallback onTick) {
-    _tickers ??= new Set<_WidgetTicker>();
-    final _WidgetTicker result = new _WidgetTicker(onTick, this);
-    _tickers.add(result);
-    return result;
-  }
-
-  void _removeTicker(_WidgetTicker ticker) {
-    assert(_tickers != null);
-    assert(_tickers.contains(ticker));
-    _tickers.remove(ticker);
-  }
-
-  @override
-  void dispose() {
-    assert(() {
-      if (_tickers != null) {
-        for (Ticker ticker in _tickers) {
-          if (ticker.isActive) {
-            throw new FlutterError('$this was disposed with an active Ticker.\n'
-                '$runtimeType created a Ticker via its '
-                'TickerProviderStateMixin, but at the time dispose() was '
-                'called on the mixin, that Ticker was still active. All '
-                'Tickers must be disposed before calling super.dispose(). '
-                'Tickers used by AnimationControllers should be disposed by '
-                'calling dispose() on the AnimationController itself. '
-                'Otherwise, the ticker will leak.\n'
-                'The offending ticker was: ${ticker}');
-          }
-        }
-      }
-      return true;
-    }());
-    super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    final bool muted = !TickerMode.of(context);
-    if (_tickers != null) {
-      for (Ticker ticker in _tickers) ticker.muted = muted;
-    }
-    super.didChangeDependencies();
-  }
-
-  /// AutomaticKeepAlive mixin code.
-  KeepAliveHandle _keepAliveHandle;
-
-  void _ensureKeepAlive() {
-    assert(_keepAliveHandle == null);
-    _keepAliveHandle = new KeepAliveHandle();
-    new KeepAliveNotification(_keepAliveHandle).dispatch(context);
-  }
-
-  void _releaseKeepAlive() {
-    _keepAliveHandle.release();
-    _keepAliveHandle = null;
-  }
-
-  /// Whether the current instance should be kept alive.
-  ///
-  /// Call [updateKeepAlive] whenever this getter's value changes.
-  @protected
-  bool get wantKeepAlive;
-
-  /// Ensures that any [AutomaticKeepAlive] ancestors are in a good state, by
-  /// firing a [KeepAliveNotification] or triggering the [KeepAliveHandle] as
-  /// appropriate.
-  @protected
-  void updateKeepAlive() {
-    if (wantKeepAlive) {
-      if (_keepAliveHandle == null) _ensureKeepAlive();
-    } else {
-      if (_keepAliveHandle != null) _releaseKeepAlive();
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    if (wantKeepAlive) _ensureKeepAlive();
-  }
-
-  @override
-  void deactivate() {
-    if (_keepAliveHandle != null) _releaseKeepAlive();
-    super.deactivate();
-  }
-
-  @mustCallSuper
-  @override
-  Widget build(BuildContext context) {
-    if (wantKeepAlive && _keepAliveHandle == null) _ensureKeepAlive();
-    return null;
-  }
-}
-
-class _DismissibleState
-    extends TickerProviderStateMixInWithAutomaticKeepAlive<Dismissible> {
-  // ignore: MIXIN_INFERENCE_INCONSISTENT_MATCHING_CLASSES
+class _DismissibleState extends State<Dismissible>
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   @override
   void initState() {
     super.initState();
@@ -470,10 +404,11 @@ class _DismissibleState
     return _FlingGestureKind.reverse;
   }
 
-  void _handleDragEnd(DragEndDetails details) {
+  Future<void> _handleDragEnd(DragEndDetails details) async {
     if (!_isActive || _moveController.isAnimating) return;
     _dragUnderway = false;
-    if (_moveController.isCompleted) {
+    if (_moveController.isCompleted &&
+        await _confirmStartResizeAnimation() == true) {
       _startResizeAnimation();
       return;
     }
@@ -516,10 +451,23 @@ class _DismissibleState
     }
   }
 
-  void _handleDismissStatusChanged(AnimationStatus status) {
-    if (status == AnimationStatus.completed && !_dragUnderway)
-      _startResizeAnimation();
+  Future<void> _handleDismissStatusChanged(AnimationStatus status) async {
+    if (status == AnimationStatus.completed && !_dragUnderway) {
+      if (await _confirmStartResizeAnimation() == true)
+        _startResizeAnimation();
+      else
+        _moveController.reverse();
+    }
     updateKeepAlive();
+  }
+
+  Future<bool> _confirmStartResizeAnimation() async {
+    if (widget.confirmDismiss != null) {
+      final DismissDirection direction = _dismissDirection;
+      assert(direction != null);
+      return widget.confirmDismiss(direction);
+    }
+    return true;
   }
 
   void _startResizeAnimation() {
@@ -546,7 +494,10 @@ class _DismissibleState
               CurveTween(curve: _kResizeTimeCurve),
             )
             .drive(
-              Tween<double>(begin: 1.0, end: 0.0),
+              Tween<double>(
+                begin: 1.0,
+                end: 0.0,
+              ),
             );
       });
     }
@@ -592,59 +543,50 @@ class _DismissibleState
       }());
 
       return SizeTransition(
-          sizeFactor: _resizeAnimation,
-          axis: _directionIsXAxis ? Axis.vertical : Axis.horizontal,
-          child: SizedBox(
-              width: _sizePriorToCollapse.width,
-              height: _sizePriorToCollapse.height,
-              child: background));
+        sizeFactor: _resizeAnimation,
+        axis: _directionIsXAxis ? Axis.vertical : Axis.horizontal,
+        child: SizedBox(
+          width: _sizePriorToCollapse.width,
+          height: _sizePriorToCollapse.height,
+          child: background,
+        ),
+      );
     }
 
-    Widget content =
-        SlideTransition(position: _moveAnimation, child: widget.child);
+    Widget content = SlideTransition(
+      position: _moveAnimation,
+      child: widget.child,
+    );
 
     if (background != null) {
       final List<Widget> children = <Widget>[];
 
       if (!_moveAnimation.isDismissed) {
         children.add(Positioned.fill(
-            child: ClipRect(
-                clipper: _DismissibleClipper(
-                  axis: _directionIsXAxis ? Axis.horizontal : Axis.vertical,
-                  moveAnimation: _moveAnimation,
-                ),
-                child: background)));
+          child: ClipRect(
+            clipper: _DismissibleClipper(
+              axis: _directionIsXAxis ? Axis.horizontal : Axis.vertical,
+              moveAnimation: _moveAnimation,
+            ),
+            child: background,
+          ),
+        ));
       }
 
       children.add(content);
       content = Stack(children: children);
     }
-
     // We are not resizing but we may be being dragging in widget.direction.
     return GestureDetector(
-        onHorizontalDragStart: _directionIsXAxis ? _handleDragStart : null,
-        onHorizontalDragUpdate: _directionIsXAxis ? _handleDragUpdate : null,
-        onHorizontalDragEnd: _directionIsXAxis ? _handleDragEnd : null,
-        onVerticalDragStart: _directionIsXAxis ? null : _handleDragStart,
-        onVerticalDragUpdate: _directionIsXAxis ? null : _handleDragUpdate,
-        onVerticalDragEnd: _directionIsXAxis ? null : _handleDragEnd,
-        behavior: HitTestBehavior.opaque,
-        child: content);
-  }
-}
-
-// This class should really be called _DisposingTicker or some such, but this
-// class name leaks into stack traces and error messages and that name would be
-// confusing. Instead we use the less precise but more anodyne "_WidgetTicker",
-// which attracts less attention.
-class _WidgetTicker extends Ticker {
-  _WidgetTicker(TickerCallback onTick, this._creator) : super(onTick);
-
-  final TickerProviderStateMixInWithAutomaticKeepAlive _creator;
-
-  @override
-  void dispose() {
-    _creator._removeTicker(this);
-    super.dispose();
+      onHorizontalDragStart: _directionIsXAxis ? _handleDragStart : null,
+      onHorizontalDragUpdate: _directionIsXAxis ? _handleDragUpdate : null,
+      onHorizontalDragEnd: _directionIsXAxis ? _handleDragEnd : null,
+      onVerticalDragStart: _directionIsXAxis ? null : _handleDragStart,
+      onVerticalDragUpdate: _directionIsXAxis ? null : _handleDragUpdate,
+      onVerticalDragEnd: _directionIsXAxis ? null : _handleDragEnd,
+      behavior: HitTestBehavior.opaque,
+      child: content,
+      dragStartBehavior: widget.dragStartBehavior,
+    );
   }
 }

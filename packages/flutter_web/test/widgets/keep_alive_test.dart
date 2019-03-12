@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter_web/io.dart' show Platform;
+
 import 'package:flutter_web_test/flutter_web_test.dart';
 import 'package:flutter_web/widgets.dart';
 
@@ -297,7 +299,7 @@ void main() {
     expect(
         tester.binding.renderView.toStringDeep(minLevel: DiagnosticLevel.info),
         equalsIgnoringHashCodes('RenderView#00000\n'
-            ' │ debug mode enabled - android\n'
+            ' │ debug mode enabled - ${Platform.operatingSystem}\n'
             ' │ window size: Size(2400.0, 1800.0) (in physical pixels)\n'
             ' │ device pixel ratio: 3.0 (physical pixels per logical pixel)\n'
             ' │ configuration: Size(800.0, 600.0) at 3.0x (in logical pixels)\n'
@@ -426,7 +428,7 @@ void main() {
     expect(
         tester.binding.renderView.toStringDeep(minLevel: DiagnosticLevel.info),
         equalsIgnoringHashCodes('RenderView#00000\n'
-            ' │ debug mode enabled - android\n'
+            ' │ debug mode enabled - ${Platform.operatingSystem}\n'
             ' │ window size: Size(2400.0, 1800.0) (in physical pixels)\n'
             ' │ device pixel ratio: 3.0 (physical pixels per logical pixel)\n'
             ' │ configuration: Size(800.0, 600.0) at 3.0x (in logical pixels)\n'

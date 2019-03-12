@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter_web_ui/ui.dart' as ui;
 import 'package:flutter_web/cupertino.dart';
 import 'package:flutter_web/material.dart';
 import 'package:flutter_web/rendering.dart';
-import 'package:flutter_web_ui/ui.dart' as ui;
 import 'package:flutter_web/src/foundation/diagnostics.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
 
@@ -22,17 +22,22 @@ void main() {
   testWidgets('PopupMenu inherits app theme', (WidgetTester tester) async {
     final Key popupMenuButtonKey = UniqueKey();
     await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(brightness: Brightness.dark),
-        home: Scaffold(
-            appBar: AppBar(actions: <Widget>[
-          PopupMenuButton<String>(
+      theme: ThemeData(brightness: Brightness.dark),
+      home: Scaffold(
+        appBar: AppBar(
+          actions: <Widget>[
+            PopupMenuButton<String>(
               key: popupMenuButtonKey,
               itemBuilder: (BuildContext context) {
                 return <PopupMenuItem<String>>[
-                  const PopupMenuItem<String>(child: Text('menuItem'))
+                  const PopupMenuItem<String>(child: Text('menuItem')),
                 ];
-              }),
-        ]))));
+              },
+            ),
+          ],
+        ),
+      ),
+    ));
 
     await tester.tap(find.byKey(popupMenuButtonKey));
     await tester.pump(const Duration(seconds: 1));
@@ -82,19 +87,25 @@ void main() {
     // Regression test for https://github.com/flutter/flutter/issues/5572
     final Key popupMenuButtonKey = UniqueKey();
     await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(brightness: Brightness.dark),
-        home: Theme(
-            data: ThemeData(brightness: Brightness.light),
-            child: Scaffold(
-                appBar: AppBar(actions: <Widget>[
+      theme: ThemeData(brightness: Brightness.dark),
+      home: Theme(
+        data: ThemeData(brightness: Brightness.light),
+        child: Scaffold(
+          appBar: AppBar(
+            actions: <Widget>[
               PopupMenuButton<String>(
-                  key: popupMenuButtonKey,
-                  itemBuilder: (BuildContext context) {
-                    return <PopupMenuItem<String>>[
-                      const PopupMenuItem<String>(child: Text('menuItem'))
-                    ];
-                  }),
-            ])))));
+                key: popupMenuButtonKey,
+                itemBuilder: (BuildContext context) {
+                  return <PopupMenuItem<String>>[
+                    const PopupMenuItem<String>(child: Text('menuItem')),
+                  ];
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    ));
 
     await tester.tap(find.byKey(popupMenuButtonKey));
     await tester.pump(const Duration(seconds: 1));
@@ -107,11 +118,12 @@ void main() {
       (WidgetTester tester) async {
     final Key dropdownMenuButtonKey = UniqueKey();
     await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(brightness: Brightness.dark),
-        home: Theme(
-            data: ThemeData(brightness: Brightness.light),
-            child: Scaffold(
-                appBar: AppBar(actions: <Widget>[
+      theme: ThemeData(brightness: Brightness.dark),
+      home: Theme(
+        data: ThemeData(brightness: Brightness.light),
+        child: Scaffold(
+          appBar: AppBar(
+            actions: <Widget>[
               DropdownButton<String>(
                 key: dropdownMenuButtonKey,
                 onChanged: (String newValue) {},
@@ -122,8 +134,12 @@ void main() {
                     child: Text('menuItem'),
                   ),
                 ],
-              )
-            ])))));
+              ),
+            ],
+          ),
+        ),
+      ),
+    ));
 
     await tester.tap(find.byKey(dropdownMenuButtonKey));
     await tester.pump(const Duration(seconds: 1));
@@ -135,11 +151,12 @@ void main() {
   testWidgets('ModalBottomSheet inherits shadowed app theme',
       (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(brightness: Brightness.dark),
-        home: Theme(
-            data: ThemeData(brightness: Brightness.light),
-            child: Scaffold(
-                body: Center(child: Builder(builder: (BuildContext context) {
+      theme: ThemeData(brightness: Brightness.dark),
+      home: Theme(
+        data: ThemeData(brightness: Brightness.light),
+        child: Scaffold(
+          body: Center(
+            child: Builder(builder: (BuildContext context) {
               return RaisedButton(
                 onPressed: () {
                   showModalBottomSheet<void>(
@@ -150,7 +167,11 @@ void main() {
                 },
                 child: const Text('SHOW'),
               );
-            }))))));
+            }),
+          ),
+        ),
+      ),
+    ));
 
     await tester.tap(find.text('SHOW'));
     await tester.pump(const Duration(seconds: 1));
@@ -165,22 +186,27 @@ void main() {
       (WidgetTester tester) async {
     final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
     await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(brightness: Brightness.dark),
-        home: Theme(
-            data: ThemeData(brightness: Brightness.light),
-            child: Scaffold(
-                key: scaffoldKey,
-                body: Center(child: Builder(builder: (BuildContext context) {
-                  return RaisedButton(
-                    onPressed: () {
-                      showDialog<void>(
-                        context: context,
-                        builder: (BuildContext context) => const Text('dialog'),
-                      );
-                    },
-                    child: const Text('SHOW'),
+      theme: ThemeData(brightness: Brightness.dark),
+      home: Theme(
+        data: ThemeData(brightness: Brightness.light),
+        child: Scaffold(
+          key: scaffoldKey,
+          body: Center(
+            child: Builder(builder: (BuildContext context) {
+              return RaisedButton(
+                onPressed: () {
+                  showDialog<void>(
+                    context: context,
+                    builder: (BuildContext context) => const Text('dialog'),
                   );
-                }))))));
+                },
+                child: const Text('SHOW'),
+              );
+            }),
+          ),
+        ),
+      ),
+    ));
 
     await tester.tap(find.text('SHOW'));
     await tester.pump(const Duration(seconds: 1));
@@ -681,6 +707,8 @@ class _TextStyleProxy implements TextStyle {
   @override
   Color get color => _delegate.color;
   @override
+  Color get backgroundColor => _delegate.backgroundColor;
+  @override
   String get debugLabel => _delegate.debugLabel;
   @override
   TextDecoration get decoration => _delegate.decoration;
@@ -715,7 +743,7 @@ class _TextStyleProxy implements TextStyle {
   @override
   double get wordSpacing => _delegate.wordSpacing;
   @override
-  List<ui.Shadow> get shadows => _delegate.shadows;
+  List<Shadow> get shadows => _delegate.shadows;
 
   @override
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.debug}) =>
@@ -734,6 +762,7 @@ class _TextStyleProxy implements TextStyle {
   @override
   TextStyle apply(
       {Color color,
+      Color backgroundColor,
       TextDecoration decoration,
       Color decorationColor,
       TextDecorationStyle decorationStyle,
@@ -759,6 +788,7 @@ class _TextStyleProxy implements TextStyle {
   @override
   TextStyle copyWith(
       {Color color,
+      Color backgroundColor,
       String fontFamily,
       List<String> fontFamilyFallback,
       double fontSize,
@@ -771,7 +801,7 @@ class _TextStyleProxy implements TextStyle {
       Locale locale,
       ui.Paint foreground,
       ui.Paint background,
-      List<ui.Shadow> shadows,
+      List<Shadow> shadows,
       TextDecoration decoration,
       Color decorationColor,
       TextDecorationStyle decorationStyle,
@@ -792,7 +822,13 @@ class _TextStyleProxy implements TextStyle {
       double textScaleFactor = 1.0,
       String ellipsis,
       int maxLines,
-      Locale locale}) {
+      Locale locale,
+      String fontFamily,
+      double fontSize,
+      FontWeight fontWeight,
+      FontStyle fontStyle,
+      double height,
+      StrutStyle strutStyle}) {
     throw UnimplementedError();
   }
 

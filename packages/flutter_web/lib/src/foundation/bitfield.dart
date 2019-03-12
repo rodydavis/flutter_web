@@ -10,7 +10,11 @@ import 'package:flutter_web_ui/ui.dart' as ui show kMaxUnsignedSMI;
 ///
 /// When compiling to JavaScript, this value is not supported since it is
 /// larger than the maximum safe 32bit integer.
+// The value of this const in Flutter is commented out below. JavaScript has a
+// different maximum integer that we are now pulling from dart:ui.
+// TODO(b/128337555): Upstream this change to Flutter.
 const int kMaxUnsignedSMI = ui.kMaxUnsignedSMI;
+//const int kMaxUnsignedSMI = 0x3FFFFFFFFFFFFFFF;
 
 /// A BitField over an enum (or other class whose values implement "index").
 /// Only the first 62 values of the enum can be used as indices.

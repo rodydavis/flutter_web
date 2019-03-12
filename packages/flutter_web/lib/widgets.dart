@@ -24,7 +24,7 @@ export 'src/widgets/binding.dart';
 export 'src/widgets/bottom_navigation_bar_item.dart';
 export 'src/widgets/container.dart';
 export 'src/widgets/debug.dart';
-export 'src/widgets/dismissable.dart';
+export 'src/widgets/dismissible.dart';
 export 'src/widgets/drag_target.dart';
 export 'src/widgets/editable_text.dart';
 export 'src/widgets/fade_in_image.dart';

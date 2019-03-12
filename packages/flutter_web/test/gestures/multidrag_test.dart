@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter_web/gestures.dart';
-import 'package:flutter_web_ui/ui.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
+import 'package:flutter_web/gestures.dart';
 
 import 'gesture_tester.dart';
 
@@ -15,15 +14,15 @@ void main() {
 
   testGesture('MultiDrag: moving before delay rejects', (GestureTester tester) {
     final DelayedMultiDragGestureRecognizer drag =
-        new DelayedMultiDragGestureRecognizer();
+        DelayedMultiDragGestureRecognizer();
 
     bool didStartDrag = false;
     drag.onStart = (Offset position) {
       didStartDrag = true;
-      return new TestDrag();
+      return TestDrag();
     };
 
-    final TestPointer pointer = new TestPointer(5);
+    final TestPointer pointer = TestPointer(5);
     final PointerDownEvent down = pointer.down(const Offset(10.0, 10.0));
     drag.addPointer(down);
     tester.closeArena(5);
@@ -43,15 +42,15 @@ void main() {
 
   testGesture('MultiDrag: delay triggers', (GestureTester tester) {
     final DelayedMultiDragGestureRecognizer drag =
-        new DelayedMultiDragGestureRecognizer();
+        DelayedMultiDragGestureRecognizer();
 
     bool didStartDrag = false;
     drag.onStart = (Offset position) {
       didStartDrag = true;
-      return new TestDrag();
+      return TestDrag();
     };
 
-    final TestPointer pointer = new TestPointer(5);
+    final TestPointer pointer = TestPointer(5);
     final PointerDownEvent down = pointer.down(const Offset(10.0, 10.0));
     drag.addPointer(down);
     tester.closeArena(5);
@@ -66,6 +65,37 @@ void main() {
     tester.route(pointer.move(const Offset(
         30.0, 70.0))); // move more than touch slop after delay expires
     expect(didStartDrag, isTrue);
+    drag.dispose();
+  });
+
+  testGesture('MultiDrag: can filter based on device kind',
+      (GestureTester tester) {
+    final DelayedMultiDragGestureRecognizer drag =
+        DelayedMultiDragGestureRecognizer(kind: PointerDeviceKind.touch);
+
+    bool didStartDrag = false;
+    drag.onStart = (Offset position) {
+      didStartDrag = true;
+      return TestDrag();
+    };
+
+    final TestPointer mousePointer = TestPointer(5, PointerDeviceKind.mouse);
+    final PointerDownEvent down = mousePointer.down(const Offset(10.0, 10.0));
+    drag.addPointer(down);
+    tester.closeArena(5);
+    expect(didStartDrag, isFalse);
+    tester.async.flushMicrotasks();
+    expect(didStartDrag, isFalse);
+    tester.route(mousePointer.move(const Offset(
+        20.0, 20.0))); // move less than touch slop before delay expires
+    expect(didStartDrag, isFalse);
+    tester.async.elapse(kLongPressTimeout * 2); // expire delay
+    // Still false because it shouldn't recognize mouse events.
+    expect(didStartDrag, isFalse);
+    tester.route(mousePointer.move(const Offset(
+        30.0, 70.0))); // move more than touch slop after delay expires
+    // And still false.
+    expect(didStartDrag, isFalse);
     drag.dispose();
   });
 }

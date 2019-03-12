@@ -44,28 +44,28 @@ abstract class EngineCanvas {
 
   void drawColor(Color color, BlendMode blendMode);
 
-  void drawLine(Offset p1, Offset p2, Paint paint);
+  void drawLine(Offset p1, Offset p2, PaintData paint);
 
-  void drawPaint(Paint paint);
+  void drawPaint(PaintData paint);
 
-  void drawRect(Rect rect, Paint paint);
+  void drawRect(Rect rect, PaintData paint);
 
-  void drawRRect(RRect rrect, Paint paint);
+  void drawRRect(RRect rrect, PaintData paint);
 
-  void drawDRRect(RRect outer, RRect inner, Paint paint);
+  void drawDRRect(RRect outer, RRect inner, PaintData paint);
 
-  void drawOval(Rect rect, Paint paint);
+  void drawOval(Rect rect, PaintData paint);
 
-  void drawCircle(Offset c, double radius, Paint paint);
+  void drawCircle(Offset c, double radius, PaintData paint);
 
-  void drawPath(Path path, Paint paint);
+  void drawPath(Path path, PaintData paint);
 
   void drawShadow(
       Path path, Color color, double elevation, bool transparentOccluder);
 
-  void drawImage(Image image, Offset p, Paint paint);
+  void drawImage(Image image, Offset p, PaintData paint);
 
-  void drawImageRect(Image image, Rect src, Rect dst, Paint paint);
+  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint);
 
   void drawParagraph(Paragraph paragraph, Offset offset);
 }

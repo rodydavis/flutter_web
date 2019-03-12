@@ -11,6 +11,7 @@ import 'package:flutter_web_ui/ui.dart' as ui
     show Paragraph, ParagraphBuilder, ParagraphConstraints, ParagraphStyle;
 
 import 'basic_types.dart';
+import 'strut_style.dart';
 import 'text_span.dart';
 
 export 'package:flutter_web/services.dart' show TextRange, TextSelection;
@@ -49,6 +50,7 @@ class TextPainter {
     int maxLines,
     String ellipsis,
     Locale locale,
+    StrutStyle strutStyle,
   })  : assert(text == null || text.debugAssertIsValid()),
         assert(textAlign != null),
         assert(textScaleFactor != null),
@@ -59,7 +61,8 @@ class TextPainter {
         _textScaleFactor = textScaleFactor,
         _maxLines = maxLines,
         _ellipsis = ellipsis,
-        _locale = locale;
+        _locale = locale,
+        _strutStyle = strutStyle;
 
   ui.Paragraph _paragraph;
   bool _needsLayout = true;
@@ -84,8 +87,7 @@ class TextPainter {
   ///
   /// After this is set, you must call [layout] before the next call to [paint].
   ///
-  /// The [textAlign] property must not be null. It defaults to
-  /// [TextAlign.start].
+  /// The [textAlign] property must not be null. It defaults to [TextAlign.start].
   TextAlign get textAlign => _textAlign;
   TextAlign _textAlign;
   set textAlign(TextAlign value) {
@@ -117,8 +119,8 @@ class TextPainter {
     if (_textDirection == value) return;
     _textDirection = value;
     _paragraph = null;
-    // Shouldn't really matter, but for strict correctness...
-    _layoutTemplate = null;
+    _layoutTemplate =
+        null; // Shouldn't really matter, but for strict correctness...
     _needsLayout = true;
   }
 
@@ -185,12 +187,32 @@ class TextPainter {
   int get maxLines => _maxLines;
   int _maxLines;
 
-  /// The value may be null. If it is not null, then it must be greater than
-  /// zero.
+  /// The value may be null. If it is not null, then it must be greater than zero.
   set maxLines(int value) {
     assert(value == null || value > 0);
     if (_maxLines == value) return;
     _maxLines = value;
+    _paragraph = null;
+    _needsLayout = true;
+  }
+
+  /// {@template flutter.painting.textPainter.strutStyle}
+  /// The strut style to use. Strut style defines the strut, which sets minimum
+  /// vertical layout metrics.
+  ///
+  /// Omitting or providing null will disable strut.
+  ///
+  /// Omitting or providing null for any properties of [StrutStyle] will result in
+  /// default values being used. It is highly recommended to at least specify a
+  /// [fontSize].
+  ///
+  /// See [StrutStyle] for details.
+  /// {@endtemplate}
+  StrutStyle get strutStyle => _strutStyle;
+  StrutStyle _strutStyle;
+  set strutStyle(StrutStyle value) {
+    if (_strutStyle == value) return;
+    _strutStyle = value;
     _paragraph = null;
     _needsLayout = true;
   }
@@ -202,10 +224,8 @@ class TextPainter {
     // The defaultTextDirection argument is used for preferredLineHeight in case
     // textDirection hasn't yet been set.
     assert(textAlign != null);
-    assert(
-        textDirection != null || defaultTextDirection != null,
-        'TextPainter.textDirection must be set to a non-null value'
-        ' before using the TextPainter.');
+    assert(textDirection != null || defaultTextDirection != null,
+        'TextPainter.textDirection must be set to a non-null value before using the TextPainter.');
     return _text.style?.getParagraphStyle(
           textAlign: textAlign,
           textDirection: textDirection ?? defaultTextDirection,
@@ -213,6 +233,7 @@ class TextPainter {
           maxLines: _maxLines,
           ellipsis: _ellipsis,
           locale: _locale,
+          strutStyle: _strutStyle,
         ) ??
         ui.ParagraphStyle(
           textAlign: textAlign,
@@ -245,7 +266,7 @@ class TextPainter {
             text.style.getTextStyle(textScaleFactor: textScaleFactor));
       builder.addText(' ');
       _layoutTemplate = builder.build()
-        ..layout(ui.ParagraphConstraints(width: double.infinity));
+        ..layout(const ui.ParagraphConstraints(width: double.infinity));
     }
     return _layoutTemplate.height;
   }
@@ -253,10 +274,10 @@ class TextPainter {
   // Unfortunately, using full precision floating point here causes bad layouts
   // because floating point math isn't associative. If we add and subtract
   // padding, for example, we'll get different values when we estimate sizes and
-  // when we actually compute layout because the operations will end up
-  // associated differently. To work around this problem for now, we round
-  // fractional pixel values up to the nearest whole pixel value. The right
-  // long-term fix is to do layout using fixed precision arithmetic.
+  // when we actually compute layout because the operations will end up associated
+  // differently. To work around this problem for now, we round fractional pixel
+  // values up to the nearest whole pixel value. The right long-term fix is to do
+  // layout using fixed precision arithmetic.
   double _applyFloatingPointHack(double layoutValue) {
     return layoutValue.ceilToDouble();
   }
@@ -270,8 +291,7 @@ class TextPainter {
     return _applyFloatingPointHack(_paragraph.minIntrinsicWidth);
   }
 
-  /// The width at which increasing the width of the text no longer decreases
-  /// the height.
+  /// The width at which increasing the width of the text no longer decreases the height.
   ///
   /// Valid only after [layout] has been called.
   double get maxIntrinsicWidth {
@@ -341,20 +361,16 @@ class TextPainter {
   /// Computes the visual position of the glyphs for painting the text.
   ///
   /// The text will layout with a width that's as close to its max intrinsic
-  /// width as possible while still being greater than or equal to `minWidth`
-  /// and less than or equal to `maxWidth`.
+  /// width as possible while still being greater than or equal to `minWidth` and
+  /// less than or equal to `maxWidth`.
   ///
   /// The [text] and [textDirection] properties must be non-null before this is
   /// called.
   void layout({double minWidth = 0.0, double maxWidth = double.infinity}) {
-    assert(
-        text != null,
-        'TextPainter.text must be set to a non-null value before '
-        'using the TextPainter.');
-    assert(
-        textDirection != null,
-        'TextPainter.textDirection must be set to a non-null value '
-        'before using the TextPainter.');
+    assert(text != null,
+        'TextPainter.text must be set to a non-null value before using the TextPainter.');
+    assert(textDirection != null,
+        'TextPainter.textDirection must be set to a non-null value before using the TextPainter.');
     if (!_needsLayout && minWidth == _lastMinWidth && maxWidth == _lastMaxWidth)
       return;
     _needsLayout = false;
@@ -390,10 +406,8 @@ class TextPainter {
     assert(() {
       if (_needsLayout) {
         throw FlutterError(
-            'TextPainter.paint called when text geometry was not yet '
-            'calculated.\n'
-            'Please call layout() before paint() to position the text before '
-            'painting it.');
+            'TextPainter.paint called when text geometry was not yet calculated.\n'
+            'Please call layout() before paint() to position the text before painting it.');
       }
       return true;
     }());
@@ -415,7 +429,7 @@ class TextPainter {
     return _isUtf16Surrogate(nextCodeUnit) ? offset + 2 : offset + 1;
   }
 
-  /// Returns the closest offset before `offset` at which the inout cursor can
+  /// Returns the closest offset before `offset` at which the input cursor can
   /// be positioned.
   int getOffsetBefore(int offset) {
     final int prevCodeUnit = _text.codeUnitAt(offset - 1);

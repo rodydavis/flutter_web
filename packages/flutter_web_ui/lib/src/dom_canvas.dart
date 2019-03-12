@@ -58,15 +58,15 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
     currentElement.append(box);
   }
 
-  void drawLine(Offset p1, Offset p2, Paint paint) {
+  void drawLine(Offset p1, Offset p2, PaintData paint) {
     throw UnimplementedError();
   }
 
-  void drawPaint(Paint paint) {
+  void drawPaint(PaintData paint) {
     throw UnimplementedError();
   }
 
-  void drawRect(Rect rect, Paint paint) {
+  void drawRect(Rect rect, PaintData paint) {
     assert(paint.shader == null);
     final rectangle = html.Element.tag('draw-rect');
     assert(() {
@@ -100,23 +100,23 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
     currentElement.append(rectangle);
   }
 
-  void drawRRect(RRect rrect, Paint paint) {
+  void drawRRect(RRect rrect, PaintData paint) {
     throw UnimplementedError();
   }
 
-  void drawDRRect(RRect outer, RRect inner, Paint paint) {
+  void drawDRRect(RRect outer, RRect inner, PaintData paint) {
     throw UnimplementedError();
   }
 
-  void drawOval(Rect rect, Paint paint) {
+  void drawOval(Rect rect, PaintData paint) {
     throw UnimplementedError();
   }
 
-  void drawCircle(Offset c, double radius, Paint paint) {
+  void drawCircle(Offset c, double radius, PaintData paint) {
     throw UnimplementedError();
   }
 
-  void drawPath(Path path, Paint paint) {
+  void drawPath(Path path, PaintData paint) {
     throw UnimplementedError();
   }
 
@@ -125,11 +125,11 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
     throw UnimplementedError();
   }
 
-  void drawImage(Image image, Offset p, Paint paint) {
+  void drawImage(Image image, Offset p, PaintData paint) {
     throw UnimplementedError();
   }
 
-  void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
+  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
     throw UnimplementedError();
   }
 

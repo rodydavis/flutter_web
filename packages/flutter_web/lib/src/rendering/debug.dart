@@ -4,19 +4,21 @@
 
 import 'package:flutter_web/foundation.dart';
 import 'package:flutter_web/painting.dart';
-import 'package:flutter_web_ui/ui.dart';
 
-// Any changes to this file should be reflected in the
-// debugAssertAllRenderVarsUnset() function below.
+import 'object.dart';
+
+export 'package:flutter_web/foundation.dart' show debugPrint;
+
+// Any changes to this file should be reflected in the debugAssertAllRenderVarsUnset()
+// function below.
 
 const HSVColor _kDebugDefaultRepaintColor =
-    const HSVColor.fromAHSV(0.4, 60.0, 1.0, 1.0);
+    HSVColor.fromAHSV(0.4, 60.0, 1.0, 1.0);
 
 /// Causes each RenderBox to paint a box around its bounds, and some extra
 /// boxes, such as [RenderPadding], to draw construction lines.
 ///
-/// The edges of the boxes are painted as a one-pixel-thick
-/// `const Color(0xFF00FFFF)` outline.
+/// The edges of the boxes are painted as a one-pixel-thick `const Color(0xFF00FFFF)` outline.
 ///
 /// Spacing is painted as a solid `const Color(0x90909090)` area.
 ///
@@ -39,6 +41,11 @@ bool debugPaintLayerBordersEnabled = false;
 bool debugPaintPointersEnabled = false;
 
 /// Overlay a rotating set of colors when repainting layers in checked mode.
+///
+/// See also:
+///
+///  * [RepaintBoundary], which can be used to contain repaints when unchanged
+///    areas are being excessively repainted.
 bool debugRepaintRainbowEnabled = false;
 
 /// Overlay a rotating set of colors when repainting text in checked mode.
@@ -77,10 +84,8 @@ bool debugPrintMarkNeedsPaintStacks = false;
 ///
 ///  * [debugProfilePaintsEnabled], which does something similar for
 ///    painting but using the timeline view.
-///
 ///  * [debugPrintRebuildDirtyWidgets], which does something similar for widgets
 ///    being rebuilt.
-///
 ///  * The discussion at [RendererBinding.drawFrame].
 bool debugPrintLayouts = false;
 
@@ -104,13 +109,32 @@ bool debugCheckIntrinsicSizes = false;
 ///
 ///  * [debugPrintLayouts], which does something similar for layout but using
 ///    console output.
-///
 ///  * [debugProfileBuildsEnabled], which does something similar for widgets
 ///    being rebuilt, and [debugPrintRebuildDirtyWidgets], its console
 ///    equivalent.
-///
 ///  * The discussion at [RendererBinding.drawFrame].
+///  * [RepaintBoundary], which can be used to contain repaints when unchanged
+///    areas are being excessively repainted.
 bool debugProfilePaintsEnabled = false;
+
+/// Signature for [debugOnProfilePaint] implementations.
+typedef ProfilePaintCallback = void Function(RenderObject renderObject);
+
+/// Callback invoked for every [RenderObject] painted each frame.
+///
+/// This callback is only invoked in debug builds.
+///
+/// See also:
+///
+///  * [debugProfilePaintsEnabled], which does something similar but adds
+///    [dart:developer.Timeline] events instead of invoking a callback.
+///  * [debugOnRebuildDirtyWidget], which does something similar for widgets
+///    being built.
+///  * [WidgetInspectorService], which uses the [debugOnProfilePaint]
+///    callback to generate aggregate profile statistics describing what paints
+///    occurred when the `ext.flutter.inspector.trackRepaintWidgets` service
+///    extension is enabled.
+ProfilePaintCallback debugOnProfilePaint;
 
 /// Setting to true will cause all clipping effects from the layer tree to be
 /// ignored.
@@ -151,11 +175,11 @@ bool debugDisableOpacityLayers = false;
 
 void _debugDrawDoubleRect(
     Canvas canvas, Rect outerRect, Rect innerRect, Color color) {
-  final Path path = new Path()
+  final Path path = Path()
     ..fillType = PathFillType.evenOdd
     ..addRect(outerRect)
     ..addRect(innerRect);
-  final Paint paint = new Paint()..color = color;
+  final Paint paint = Paint()..color = color;
   canvas.drawPath(path, paint);
 }
 
@@ -175,15 +199,14 @@ void debugPaintPadding(Canvas canvas, Rect outerRect, Rect innerRect,
           innerRect,
           const Color(0xFF0090FF));
     } else {
-      final Paint paint = new Paint()..color = const Color(0x90909090);
+      final Paint paint = Paint()..color = const Color(0x90909090);
       canvas.drawRect(outerRect, paint);
     }
     return true;
   }());
 }
 
-/// Returns true if none of the rendering library debug variables have been
-/// changed.
+/// Returns true if none of the rendering library debug variables have been changed.
 ///
 /// This function is used by the test framework to ensure that debug variables
 /// haven't been inadvertently changed.
@@ -208,8 +231,9 @@ bool debugAssertAllRenderVarsUnset(String reason,
         debugPrintMarkNeedsPaintStacks ||
         debugPrintLayouts ||
         debugCheckIntrinsicSizes != debugCheckIntrinsicSizesOverride ||
-        debugProfilePaintsEnabled) {
-      throw new FlutterError(reason);
+        debugProfilePaintsEnabled ||
+        debugOnProfilePaint != null) {
+      throw FlutterError(reason);
     }
     return true;
   }());

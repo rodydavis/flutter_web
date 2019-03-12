@@ -844,11 +844,43 @@ enum Clip {
   antiAliasWithSaveLayer,
 }
 
+/// Private Paint context data used for recording canvas commands allowing
+/// Paint to be mutated post canvas draw operations.
+class PaintData {
+  BlendMode blendMode;
+  PaintingStyle style;
+  double strokeWidth;
+  StrokeCap strokeCap;
+  bool isAntiAlias = true;
+  Color color;
+  Shader shader;
+  MaskFilter maskFilter;
+  FilterQuality filterQuality;
+  ColorFilter colorFilter;
+
+  // Internal for recording canvas use.
+  PaintData clone() {
+    return new PaintData()
+      ..blendMode = blendMode
+      ..filterQuality = filterQuality
+      ..maskFilter = maskFilter
+      ..shader = shader
+      ..isAntiAlias = isAntiAlias
+      ..color = color
+      ..colorFilter = colorFilter
+      ..strokeWidth = strokeWidth
+      ..style = style
+      ..strokeCap = strokeCap;
+  }
+}
+
 /// A description of the style to use when drawing on a [Canvas].
 ///
 /// Most APIs on [Canvas] take a [Paint] object to describe the style
 /// to use for that operation.
 class Paint {
+  PaintData _paintData = new PaintData();
+
   /// A blend mode to apply when a shape is drawn or a layer is composited.
   ///
   /// The source colors are from the shape being drawn (e.g. from
@@ -866,10 +898,13 @@ class Paint {
   ///  * [Canvas.saveLayer], which uses its [Paint]'s [blendMode] to composite
   ///    the layer when [restore] is called.
   ///  * [BlendMode], which discusses the user of [saveLayer] with [blendMode].
-  BlendMode get blendMode => _blendMode ?? BlendMode.srcOver;
+  BlendMode get blendMode => _paintData.blendMode ?? BlendMode.srcOver;
   set blendMode(BlendMode value) {
-    _blendMode = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.blendMode = value;
   }
 
   BlendMode _blendMode;
@@ -877,13 +912,14 @@ class Paint {
   /// Whether to paint inside shapes, the edges of shapes, or both.
   ///
   /// If null, defaults to [PaintingStyle.fill].
-  PaintingStyle get style => _paintingStyle ?? PaintingStyle.fill;
+  PaintingStyle get style => _paintData.style ?? PaintingStyle.fill;
   set style(PaintingStyle value) {
-    _paintingStyle = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.style = value;
   }
-
-  PaintingStyle _paintingStyle;
 
   /// How wide to make edges drawn when [style] is set to
   /// [PaintingStyle.stroke] or [PaintingStyle.strokeAndFill]. The
@@ -891,43 +927,49 @@ class Paint {
   /// orthogonal to the direction of the path.
   ///
   /// The values null and 0.0 correspond to a hairline width.
-  double get strokeWidth => _strokeWidth ?? 0.0;
+  double get strokeWidth => _paintData.strokeWidth ?? 0.0;
   set strokeWidth(double value) {
-    _strokeWidth = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.strokeWidth = value;
   }
-
-  double _strokeWidth;
 
   /// The kind of finish to place on the end of lines drawn when
   /// [style] is set to [PaintingStyle.stroke] or
   /// [PaintingStyle.strokeAndFill].
   ///
   /// If null, defaults to [StrokeCap.butt], i.e. no caps.
-  StrokeCap get strokeCap => _strokeCap;
+  StrokeCap get strokeCap => _paintData.strokeCap;
   set strokeCap(StrokeCap value) {
-    _strokeCap = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.strokeCap = value;
   }
-
-  StrokeCap _strokeCap;
 
   /// Whether to apply anti-aliasing to lines and images drawn on the
   /// canvas.
   ///
   /// Defaults to true. The value null is treated as false.
-  bool get isAntiAlias => _isAntiAlias;
+  bool get isAntiAlias => _paintData.isAntiAlias;
   set isAntiAlias(bool value) {
-    _isAntiAlias = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.isAntiAlias = value;
   }
 
-  bool _isAntiAlias = true;
-
-  Color get color => _color;
+  Color get color => _paintData.color;
   set color(Color value) {
-    _color = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.color = value;
   }
 
   Color _color = _defaultPaintColor;
@@ -943,25 +985,27 @@ class Paint {
   ///  * [ImageShader], a shader that tiles an [Image].
   ///  * [colorFilter], which overrides [shader].
   ///  * [color], which is used if [shader] and [colorFilter] are null.
-  Shader get shader => _shader;
+  Shader get shader => _paintData.shader;
   set shader(Shader value) {
-    _shader = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.shader = value;
   }
-
-  Shader _shader;
 
   /// A mask filter (for example, a blur) to apply to a shape after it has been
   /// drawn but before it has been composited into the image.
   ///
   /// See [MaskFilter] for details.
-  MaskFilter get maskFilter => _maskFilter;
+  MaskFilter get maskFilter => _paintData.maskFilter;
   set maskFilter(MaskFilter value) {
-    _maskFilter = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.maskFilter = value;
   }
-
-  MaskFilter _maskFilter;
 
   /// Controls the performance vs quality trade-off to use when applying
   /// filters, such as [maskFilter], or when drawing images, as with
@@ -969,13 +1013,14 @@ class Paint {
   ///
   /// Defaults to [FilterQuality.none].
   // TODO(ianh): verify that the image drawing methods actually respect this
-  FilterQuality get filterQuality => _filterQuality;
+  FilterQuality get filterQuality => _paintData.filterQuality;
   set filterQuality(FilterQuality value) {
-    _filterQuality = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.filterQuality = value;
   }
-
-  FilterQuality _filterQuality;
 
   /// A color filter to apply when a shape is drawn or when a layer is
   /// composited.
@@ -983,23 +1028,25 @@ class Paint {
   /// See [ColorFilter] for details.
   ///
   /// When a shape is being drawn, [colorFilter] overrides [color] and [shader].
-  ColorFilter get colorFilter => _colorFilter;
+  ColorFilter get colorFilter => _paintData.colorFilter;
   set colorFilter(ColorFilter value) {
-    _colorFilter = value;
-    _isDirty = true;
+    if (_frozen) {
+      _paintData = _paintData.clone();
+      _frozen = false;
+    }
+    _paintData.colorFilter = value;
   }
 
-  ColorFilter _colorFilter;
-
-  // True if Paint has been mutated since last use in RecordingCanvas.
-  bool _isDirty = true;
+  // True if Paint instance has used in RecordingCanvas.
+  bool _frozen = false;
 
   // Marks this paint object as previously used.
-  void webOnlyMarkUsed() {
-    _isDirty = false;
+  PaintData get webOnlyPaintData {
+    // Flip bit so next time object gets mutated we create a clone of
+    // current paint data.
+    _frozen = true;
+    return _paintData;
   }
-
-  bool get webOnlyIsDirty => _isDirty;
 
   @override
   String toString() {
@@ -1033,19 +1080,6 @@ class Paint {
     } else {
       return super.toString();
     }
-  }
-
-  // Internal for recording canvas use.
-  static Paint webOnlyClone(Paint paint) {
-    return new Paint()
-      .._filterQuality = paint._filterQuality
-      .._maskFilter = paint._maskFilter
-      .._shader = paint._shader
-      .._isAntiAlias = paint._isAntiAlias
-      .._color = paint._color
-      .._colorFilter = paint._colorFilter
-      .._strokeWidth = paint._strokeWidth
-      .._strokeCap = paint._strokeCap;
   }
 }
 
@@ -1507,7 +1541,15 @@ enum FilterQuality {
 ///  * [BackdropFilter], a widget that applies [ImageFilter] to its rendering.
 ///  * [SceneBuilder.pushBackdropFilter], which is the low-level API for using
 ///    this class.
-class ImageFilter {}
+class ImageFilter {
+  /// Creates an image filter that applies a Gaussian blur.
+  ImageFilter.blur({double sigmaX: 0.0, double sigmaY: 0.0}) {
+    _initBlur(sigmaX, sigmaY);
+  }
+  void _initBlur(double sigmaX, double sigmaY) {
+    // TODO(b/128318717): Implement me.
+  }
+}
 
 /// The format in which image bytes should be returned when using
 /// [Image.toByteData].

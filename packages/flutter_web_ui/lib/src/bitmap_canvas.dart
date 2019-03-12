@@ -52,16 +52,6 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   /// Prepare to reuse this canvas by clearing it's current contents.
   void clear() {
     super.clear();
-    // Flutter emits paint operations positioned relative to the parent layer's
-    // coordinate system. However, canvas' coordinate system's origin is always
-    // in the top-left corner of the canvas. We therefore need to inject an
-    // initial translation so the paint operations are positioned as expected.
-    if (bounds.left != 0.0 || bounds.top != 0.0) {
-      rootElement.style.transform =
-          'translate(${bounds.left.toInt()}px, ${bounds.top.toInt()}px)';
-    } else {
-      rootElement.style.transform = null;
-    }
     _paragraphs.forEach((p) => p.remove());
     _paragraphs.clear();
     _cachedLastStyle = null;
@@ -80,18 +70,32 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   void _initializeCanvas() {
     rootElement.style.position = 'absolute';
-    double boundsWidth = size.width;
-    double boundsHeight = size.height;
-    _width = (boundsWidth * html.window.devicePixelRatio).toInt();
-    _height = (boundsHeight * html.window.devicePixelRatio).toInt();
+
+    // Adds one extra pixel to the requested size. This is to compensate for
+    // _initializeViewport() snapping canvas position to 1 pixel, causing
+    // painting to overflow by at most 1 pixel.
+    final double boundsWidth = size.width + 1;
+    final double boundsHeight = size.height + 1;
+    _width = (boundsWidth * html.window.devicePixelRatio).ceil();
+    _height = (boundsHeight * html.window.devicePixelRatio).ceil();
+
+    // Compute the final CSS canvas size given the actual pixel count we
+    // allocated. This is done for the following reasons:
+    //
+    // * To satisfy the invariant: pixel size = css size * device pixel ratio.
+    // * To make sure that when we scale the canvas by devicePixelRatio (see
+    //   _initializeViewport below) the pixels line up.
+    final double cssWidth = _width / html.window.devicePixelRatio;
+    final double cssHeight = _height / html.window.devicePixelRatio;
+
     _canvas = new html.CanvasElement(
       width: _width,
       height: _height,
     );
     _canvas.style
       ..position = 'absolute'
-      ..width = '${boundsWidth.toInt()}px'
-      ..height = '${boundsHeight.toInt()}px';
+      ..width = '${cssWidth}px'
+      ..height = '${cssHeight}px';
     _ctx = _canvas.context2D;
     rootElement.append(_canvas);
     _initializeViewport();
@@ -113,9 +117,30 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     // number of bitmap pixels.
     _ctx.scale(html.window.devicePixelRatio, html.window.devicePixelRatio);
 
-    // This compensates for the translate on the `rootElement`.
+    // Flutter emits paint operations positioned relative to the parent layer's
+    // coordinate system. However, canvas' coordinate system's origin is always
+    // in the top-left corner of the canvas. We therefore need to inject an
+    // initial translation so the paint operations are positioned as expected.
     if (bounds.left != 0.0 || bounds.top != 0.0) {
-      translate(-bounds.left, -bounds.top);
+      // The flooring of the value is to ensure that canvas' top-left corner
+      // lands on the physical pixel.
+      final int canvasPositionX = bounds.left.floor();
+      final int canvasPositionY = bounds.top.floor();
+      final double canvasPositionCorrectionX =
+          bounds.left - canvasPositionX.toDouble();
+      final double canvasPositionCorrectionY =
+          bounds.top - canvasPositionY.toDouble();
+
+      rootElement.style.transform =
+          'translate(${canvasPositionX}px, ${canvasPositionY}px)';
+
+      // This compensates for the translate on the `rootElement`.
+      translate(
+        -bounds.left + canvasPositionCorrectionX,
+        -bounds.top + canvasPositionCorrectionY,
+      );
+    } else {
+      rootElement.style.transform = null;
     }
   }
 
@@ -130,7 +155,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   /// Sets the global paint styles to correspond to [paint].
-  void _applyPaint(Paint paint) {
+  void _applyPaint(PaintData paint) {
     ctx.globalCompositeOperation =
         _stringForBlendMode(paint.blendMode) ?? 'source-over';
     ctx.lineWidth = paint.strokeWidth ?? 1.0;
@@ -149,7 +174,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     }
   }
 
-  void _strokeOrFill(Paint paint, {bool resetPaint = true}) {
+  void _strokeOrFill(PaintData paint, {bool resetPaint = true}) {
     switch (paint.style) {
       case PaintingStyle.stroke:
         ctx.stroke();
@@ -294,7 +319,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     ctx.fillRect(0, 0, size.width, size.height);
   }
 
-  void drawLine(Offset p1, Offset p2, Paint paint) {
+  void drawLine(Offset p1, Offset p2, PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.moveTo(p1.dx, p1.dy);
@@ -303,21 +328,21 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _resetPaint();
   }
 
-  void drawPaint(Paint paint) {
+  void drawPaint(PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.fillRect(0, 0, size.width, size.height);
     _resetPaint();
   }
 
-  void drawRect(Rect rect, Paint paint) {
+  void drawRect(Rect rect, PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.rect(rect.left, rect.top, rect.width, rect.height);
     _strokeOrFill(paint);
   }
 
-  void drawRRect(RRect rrect, Paint paint) {
+  void drawRRect(RRect rrect, PaintData paint) {
     _applyPaint(paint);
     _drawRRectPath(rrect);
     _strokeOrFill(paint);
@@ -506,14 +531,14 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     );
   }
 
-  void drawDRRect(RRect outer, RRect inner, Paint paint) {
+  void drawDRRect(RRect outer, RRect inner, PaintData paint) {
     _applyPaint(paint);
     _drawRRectPath(outer);
     _drawRRectPathReverse(inner, startNewPath: false);
     _strokeOrFill(paint);
   }
 
-  void drawOval(Rect rect, Paint paint) {
+  void drawOval(Rect rect, PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.ellipse(rect.center.dx, rect.center.dy, rect.width / 2, rect.height / 2,
@@ -521,14 +546,14 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _strokeOrFill(paint);
   }
 
-  void drawCircle(Offset c, double radius, Paint paint) {
+  void drawCircle(Offset c, double radius, PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.ellipse(c.dx, c.dy, radius, radius, 0, 0, 2.0 * math.pi, false);
     _strokeOrFill(paint);
   }
 
-  void drawPath(Path path, Paint paint) {
+  void drawPath(Path path, PaintData paint) {
     _applyPaint(paint);
     _runPath(path);
     _strokeOrFill(paint);
@@ -552,16 +577,17 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, shadow.blur);
         _ctx.save();
         _ctx.translate(shadow.offsetX, shadow.offsetY);
-        _applyPaint(paint);
+        PaintData paintData = paint.webOnlyPaintData;
+        _applyPaint(paintData);
         _runPath(path);
-        _strokeOrFill(paint, resetPaint: false);
+        _strokeOrFill(paintData, resetPaint: false);
         _ctx.restore();
       }
       _resetPaint();
     }
   }
 
-  void drawImage(Image image, Offset p, Paint paint) {
+  void drawImage(Image image, Offset p, PaintData paint) {
     _applyPaint(paint);
     html.Element imgElement = (image as HtmlImage).imgElement.clone(true);
     imgElement.style
@@ -570,7 +596,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     rootElement.append(imgElement);
   }
 
-  void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
+  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
     // TODO(het): Check if the src rect is the entire image, and if so just
     // append the imgElement and set it's height and width.
     ctx.drawImageScaledFromSource(
@@ -595,7 +621,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
         ctx.font = style.cssFontString;
         _cachedLastStyle = style;
       }
-      _applyPaint(paragraph.webOnlyGetPaint());
+      _applyPaint(paragraph.webOnlyGetPaint().webOnlyPaintData);
       ctx.fillText(
           paragraph.webOnlyGetPlainText(),
           offset.dx + paragraph.webOnlyAlignOffset,

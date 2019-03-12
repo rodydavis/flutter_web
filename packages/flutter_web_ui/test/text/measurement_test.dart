@@ -9,12 +9,12 @@ import 'package:flutter_web_test/flutter_web_test.dart';
 
 void main() {
   group('$TextMeasurementService', () {
-    const ui.ParagraphStyle s1 = ui.ParagraphStyle(fontFamily: 'sans-serif');
-    const ui.ParagraphStyle s2 = ui.ParagraphStyle(
+    ui.ParagraphStyle s1 = ui.ParagraphStyle(fontFamily: 'sans-serif');
+    ui.ParagraphStyle s2 = ui.ParagraphStyle(
       fontWeight: ui.FontWeight.bold,
     );
-    const ui.ParagraphStyle s3 = ui.ParagraphStyle(fontSize: 22.0);
-    const ui.ParagraphStyle ahemStyle = ui.ParagraphStyle(
+    ui.ParagraphStyle s3 = ui.ParagraphStyle(fontSize: 22.0);
+    ui.ParagraphStyle ahemStyle = ui.ParagraphStyle(
       fontFamily: 'ahem',
       fontSize: 10,
     );

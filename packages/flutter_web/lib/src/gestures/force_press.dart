@@ -102,32 +102,37 @@ typedef GestureForceInterpolation = double Function(
 /// force touch functionality, with the exception of the iPhone XR. In addition,
 /// a small handful of Android devices have this functionality as well.
 ///
-/// Reported pressure will always be in the range [0.0, 1.0], where 1.0 is
-/// maximum pressure and 0.0 is minimum pressure. If using a non-linear
-/// interpolation equation, the pressure reported will correspond with the
-/// custom curve. (ie. if the interpolation maps t(0.5) -> 0.1, a value of 0.1
-/// will be reported at a device pressure value of 0.5).
+/// Devices with faux screen pressure sensors like the Pixel 2 and 3 will not
+/// send any force press related callbacks.
 ///
+/// Reported pressure will always be in the range 0.0 to 1.0, where 1.0 is
+/// maximum pressure and 0.0 is minimum pressure. If using a custom
+/// [interpolation] callback, the pressure reported will correspond to that
+/// custom curve.
 class ForcePressGestureRecognizer extends OneSequenceGestureRecognizer {
   /// Creates a force press gesture recognizer.
   ///
   /// The [startPressure] defaults to 0.4, and [peakPressure] defaults to 0.85
   /// where a value of 0.0 is no pressure and a value of 1.0 is maximum pressure.
   ///
-  /// [startPressure], [peakPressure] and [interpolation] must not be null.
-  /// [peakPressure] must be greater than [startPressure]. [interpolation] must
-  /// always return a value in the range [0.0, 1.0] where
-  /// pressureMin <= pressure <= pressureMax.
+  /// The [startPressure], [peakPressure] and [interpolation] arguments must not
+  /// be null. The [peakPressure] argument must be greater than [startPressure].
+  /// The [interpolation] callback must always return a value in the range 0.0
+  /// to 1.0 for values of `pressure` that are between `pressureMin` and
+  /// `pressureMax`.
+  ///
+  /// {@macro flutter.gestures.gestureRecognizer.kind}
   ForcePressGestureRecognizer({
     this.startPressure = 0.4,
     this.peakPressure = 0.85,
     this.interpolation = _inverseLerp,
     Object debugOwner,
+    PointerDeviceKind kind,
   })  : assert(startPressure != null),
         assert(peakPressure != null),
         assert(interpolation != null),
         assert(peakPressure > startPressure),
-        super(debugOwner: debugOwner);
+        super(debugOwner: debugOwner, kind: kind);
 
   /// A pointer is in contact with the screen and has just pressed with a force
   /// exceeding the [startPressure]. Consequently, if there were other gesture
@@ -176,21 +181,22 @@ class ForcePressGestureRecognizer extends OneSequenceGestureRecognizer {
   final double peakPressure;
 
   /// The function used to convert the raw device pressure values into a value
-  /// in the range [0, 1].
+  /// in the range 0.0 to 1.0.
   ///
-  /// The function takes in the device's min, max and raw touch
-  /// pressure and returns a value in the range [0.0, 1.0] denoting the
-  /// interpolated touch pressure.
+  /// The function takes in the device's minimum, maximum and raw touch pressure
+  /// and returns a value in the range 0.0 to 1.0 denoting the interpolated
+  /// touch pressure.
   ///
-  /// This function must always return values in the range [0, 1] when
-  /// pressureMin <= pressure <= pressureMax.
+  /// This function must always return values in the range 0.0 to 1.0 given a
+  /// pressure that is between the minimum and maximum pressures. It may return
+  /// [double.NaN] for values that it does not want to support.
   ///
-  /// By default, the the function is a simple linear interpolation, however,
-  /// changing the function could be useful to accommodate variations in the way
-  /// different devices respond to pressure, change how animations from pressure
-  /// feedback are rendered or for other custom functionality.
+  /// By default, the function is a linear interpolation; however, changing the
+  /// function could be useful to accommodate variations in the way different
+  /// devices respond to pressure, or to change how animations from pressure
+  /// feedback are rendered.
   ///
-  /// For example, an ease in curve can be used to determine the interpolated
+  /// For example, an ease-in curve can be used to determine the interpolated
   /// value:
   ///
   /// ```dart
@@ -206,11 +212,18 @@ class ForcePressGestureRecognizer extends OneSequenceGestureRecognizer {
   _ForceState _state = _ForceState.ready;
 
   @override
-  void addPointer(PointerEvent event) {
-    startTrackingPointer(event.pointer);
-    if (_state == _ForceState.ready) {
-      _state = _ForceState.possible;
-      _lastPosition = event.position;
+  void addAllowedPointer(PointerEvent event) {
+    // If the device has a maximum pressure of less than or equal to 1, it
+    // doesn't have touch pressure sensing capabilities. Do not participate
+    // in the gesture arena.
+    if (!(event is PointerUpEvent) && event.pressureMax <= 1.0) {
+      resolve(GestureDisposition.rejected);
+    } else {
+      startTrackingPointer(event.pointer);
+      if (_state == _ForceState.ready) {
+        _state = _ForceState.possible;
+        _lastPosition = event.position;
+      }
     }
   }
 
@@ -219,9 +232,27 @@ class ForcePressGestureRecognizer extends OneSequenceGestureRecognizer {
     assert(_state != _ForceState.ready);
     // A static pointer with changes in pressure creates PointerMoveEvent events.
     if (event is PointerMoveEvent || event is PointerDownEvent) {
+      if (event.pressure > event.pressureMax ||
+          event.pressure < event.pressureMin) {
+        debugPrint(
+          'The reported device pressure ' +
+              event.pressure.toString() +
+              ' is outside of the device pressure range where: ' +
+              event.pressureMin.toString() +
+              ' <= pressure <= ' +
+              event.pressureMax.toString(),
+        );
+      }
+
       final double pressure =
           interpolation(event.pressureMin, event.pressureMax, event.pressure);
-      assert(pressure.isNaN ? true : (pressure <= 1.0 && pressure >= 0.0));
+      assert((pressure >= 0.0 &&
+                  pressure <=
+                      1.0) || // Interpolated pressure must be between 1.0 and 0.0...
+              pressure
+                  .isNaN // and interpolation may return NaN for values it doesn't want to support...
+          );
+
       _lastPosition = event.position;
       _lastPressure = pressure;
 
@@ -260,6 +291,7 @@ class ForcePressGestureRecognizer extends OneSequenceGestureRecognizer {
         }
       }
       if (onUpdate != null &&
+          !pressure.isNaN &&
           (_state == _ForceState.started || _state == _ForceState.peaked)) {
         if (onUpdate != null) {
           invokeCallback<void>(
@@ -316,7 +348,13 @@ class ForcePressGestureRecognizer extends OneSequenceGestureRecognizer {
   }
 
   static double _inverseLerp(double min, double max, double t) {
-    return (t - min) / (max - min);
+    assert(min <= max);
+    double value = (t - min) / (max - min);
+
+    // If the device incorrectly reports a pressure outside of pressureMin
+    // and pressureMax, we still want this recognizer to respond normally.
+    if (!value.isNaN) value = value.clamp(0.0, 1.0);
+    return value;
   }
 
   @override

@@ -441,6 +441,33 @@ class SceneBuilder {
     throw new UnimplementedError();
   }
 
+  /// Adds a platform view (e.g an iOS UIView) to the scene.
+  ///
+  /// Only supported on iOS, this is currently a no-op on other platforms.
+  ///
+  /// On iOS this layer splits the current output surface into two surfaces, one for the scene nodes
+  /// preceding the platform view, and one for the scene nodes following the platform view.
+  ///
+  /// ## Performance impact
+  ///
+  /// Adding an additional surface doubles the amount of graphics memory directly used by Flutter
+  /// for output buffers. Quartz might allocated extra buffers for compositing the Flutter surfaces
+  /// and the platform view.
+  ///
+  /// With a platform view in the scene, Quartz has to composite the two Flutter surfaces and the
+  /// embedded UIView. In addition to that, on iOS versions greater than 9, the Flutter frames are
+  /// synchronized with the UIView frames adding additional performance overhead.
+  void addPlatformView(int viewId,
+      {Offset offset: Offset.zero, double width: 0.0, double height: 0.0}) {
+    assert(offset != null, 'Offset argument was null');
+    _addPlatformView(offset.dx, offset.dy, width, height, viewId);
+  }
+
+  void _addPlatformView(
+      double dx, double dy, double width, double height, int viewId) {
+    throw new UnimplementedError();
+  }
+
   /// (Fuchsia-only) Adds a scene rendered by another application to the scene
   /// for this application.
   void addChildScene(

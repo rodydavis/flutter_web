@@ -5,7 +5,7 @@
 import 'dart:async';
 
 import 'package:flutter_web/foundation.dart';
-import 'package:flutter_web_ui/ui.dart';
+import 'package:flutter_web_ui/ui.dart' show Offset;
 
 import 'arena.dart';
 import 'binding.dart';
@@ -16,9 +16,8 @@ import 'events.dart';
 import 'recognizer.dart';
 import 'velocity_tracker.dart';
 
-/// Signature for when [MultiDragGestureRecognizer] recognizes the start of a
-/// drag gesture.
-typedef Drag GestureMultiDragStartCallback(Offset position);
+/// Signature for when [MultiDragGestureRecognizer] recognizes the start of a drag gesture.
+typedef GestureMultiDragStartCallback = Drag Function(Offset position);
 
 /// Per-pointer state for a [MultiDragGestureRecognizer].
 ///
@@ -30,15 +29,13 @@ abstract class MultiDragPointerState {
   /// The [initialPosition] argument must not be null.
   MultiDragPointerState(this.initialPosition) : assert(initialPosition != null);
 
-  /// The global coordinates of the pointer when the pointer contacted the
-  /// screen.
+  /// The global coordinates of the pointer when the pointer contacted the screen.
   final Offset initialPosition;
 
-  final VelocityTracker _velocityTracker = new VelocityTracker();
+  final VelocityTracker _velocityTracker = VelocityTracker();
   Drag _client;
 
-  /// The offset of the pointer from the last position that was reported to the
-  /// client.
+  /// The offset of the pointer from the last position that was reported to the client.
   ///
   /// After the pointer contacts the screen, the pointer might move some
   /// distance before this movement will be recognized as a drag. This field
@@ -57,8 +54,7 @@ abstract class MultiDragPointerState {
     _arenaEntry = entry;
   }
 
-  /// Resolve this pointer's entry in the [GestureArenaManager] with the given
-  /// disposition.
+  /// Resolve this pointer's entry in the [GestureArenaManager] with the given disposition.
   @protected
   @mustCallSuper
   void resolve(GestureDisposition disposition) {
@@ -72,7 +68,7 @@ abstract class MultiDragPointerState {
     if (_client != null) {
       assert(pendingDelta == null);
       // Call client last to avoid reentrancy.
-      _client.update(new DragUpdateDetails(
+      _client.update(DragUpdateDetails(
         sourceTimeStamp: event.timeStamp,
         delta: event.delta,
         globalPosition: event.position,
@@ -85,11 +81,9 @@ abstract class MultiDragPointerState {
     }
   }
 
-  /// Override this to call resolve() if the drag should be accepted or
-  /// rejected.
-  ///
-  /// This is called when a pointer movement is received, but only if the
-  /// gesture has not yet been resolved.
+  /// Override this to call resolve() if the drag should be accepted or rejected.
+  /// This is called when a pointer movement is received, but only if the gesture
+  /// has not yet been resolved.
   @protected
   void checkForResolutionAfterMove() {}
 
@@ -120,7 +114,7 @@ abstract class MultiDragPointerState {
     assert(client != null);
     assert(pendingDelta != null);
     _client = client;
-    final DragUpdateDetails details = new DragUpdateDetails(
+    final DragUpdateDetails details = DragUpdateDetails(
       sourceTimeStamp: _lastPendingEventTimestamp,
       delta: pendingDelta,
       globalPosition: initialPosition,
@@ -136,7 +130,7 @@ abstract class MultiDragPointerState {
     if (_client != null) {
       assert(pendingDelta == null);
       final DragEndDetails details =
-          new DragEndDetails(velocity: _velocityTracker.getVelocity());
+          DragEndDetails(velocity: _velocityTracker.getVelocity());
       final Drag client = _client;
       _client = null;
       // Call client last to avoid reentrancy.
@@ -199,8 +193,10 @@ abstract class MultiDragPointerState {
 abstract class MultiDragGestureRecognizer<T extends MultiDragPointerState>
     extends GestureRecognizer {
   /// Initialize the object.
-  MultiDragGestureRecognizer({@required Object debugOwner})
-      : super(debugOwner: debugOwner);
+  MultiDragGestureRecognizer({
+    @required Object debugOwner,
+    PointerDeviceKind kind,
+  }) : super(debugOwner: debugOwner, kind: kind);
 
   /// Called when this class recognizes the start of a drag gesture.
   ///
@@ -211,7 +207,7 @@ abstract class MultiDragGestureRecognizer<T extends MultiDragPointerState>
   Map<int, T> _pointers = <int, T>{};
 
   @override
-  void addPointer(PointerDownEvent event) {
+  void addAllowedPointer(PointerDownEvent event) {
     assert(_pointers != null);
     assert(event.pointer != null);
     assert(event.position != null);
@@ -249,9 +245,9 @@ abstract class MultiDragGestureRecognizer<T extends MultiDragPointerState>
       // We might be disposed here.
       _removeState(event.pointer);
     } else if (event is! PointerDownEvent) {
-      // we get the PointerDownEvent that resulted in our addPointer getting
-      // called since we add ourselves to the pointer router then (before the
-      // pointer router has heard of the event).
+      // we get the PointerDownEvent that resulted in our addPointer getting called since we
+      // add ourselves to the pointer router then (before the pointer router has heard of
+      // the event).
       assert(false);
     }
   }
@@ -260,11 +256,8 @@ abstract class MultiDragGestureRecognizer<T extends MultiDragPointerState>
   void acceptGesture(int pointer) {
     assert(_pointers != null);
     final T state = _pointers[pointer];
-    if (state == null) {
-      // We might already have canceled this drag if the up comes before the
-      // accept.
-      return;
-    }
+    if (state == null)
+      return; // We might already have canceled this drag if the up comes before the accept.
     state.accepted(
         (Offset initialPosition) => _startDrag(initialPosition, pointer));
   }
@@ -351,12 +344,14 @@ class _ImmediatePointerState extends MultiDragPointerState {
 class ImmediateMultiDragGestureRecognizer
     extends MultiDragGestureRecognizer<_ImmediatePointerState> {
   /// Create a gesture recognizer for tracking multiple pointers at once.
-  ImmediateMultiDragGestureRecognizer({Object debugOwner})
-      : super(debugOwner: debugOwner);
+  ImmediateMultiDragGestureRecognizer({
+    Object debugOwner,
+    PointerDeviceKind kind,
+  }) : super(debugOwner: debugOwner, kind: kind);
 
   @override
   _ImmediatePointerState createNewPointerState(PointerDownEvent event) {
-    return new _ImmediatePointerState(event.position);
+    return _ImmediatePointerState(event.position);
   }
 
   @override
@@ -398,12 +393,14 @@ class HorizontalMultiDragGestureRecognizer
     extends MultiDragGestureRecognizer<_HorizontalPointerState> {
   /// Create a gesture recognizer for tracking multiple pointers at once
   /// but only if they first move horizontally.
-  HorizontalMultiDragGestureRecognizer({Object debugOwner})
-      : super(debugOwner: debugOwner);
+  HorizontalMultiDragGestureRecognizer({
+    Object debugOwner,
+    PointerDeviceKind kind,
+  }) : super(debugOwner: debugOwner, kind: kind);
 
   @override
   _HorizontalPointerState createNewPointerState(PointerDownEvent event) {
-    return new _HorizontalPointerState(event.position);
+    return _HorizontalPointerState(event.position);
   }
 
   @override
@@ -445,12 +442,14 @@ class VerticalMultiDragGestureRecognizer
     extends MultiDragGestureRecognizer<_VerticalPointerState> {
   /// Create a gesture recognizer for tracking multiple pointers at once
   /// but only if they first move vertically.
-  VerticalMultiDragGestureRecognizer({Object debugOwner})
-      : super(debugOwner: debugOwner);
+  VerticalMultiDragGestureRecognizer({
+    Object debugOwner,
+    PointerDeviceKind kind,
+  }) : super(debugOwner: debugOwner, kind: kind);
 
   @override
   _VerticalPointerState createNewPointerState(PointerDownEvent event) {
-    return new _VerticalPointerState(event.position);
+    return _VerticalPointerState(event.position);
   }
 
   @override
@@ -461,7 +460,7 @@ class _DelayedPointerState extends MultiDragPointerState {
   _DelayedPointerState(Offset initialPosition, Duration delay)
       : assert(delay != null),
         super(initialPosition) {
-    _timer = new Timer(delay, _delayPassed);
+    _timer = Timer(delay, _delayPassed);
   }
 
   Timer _timer;
@@ -549,8 +548,9 @@ class DelayedMultiDragGestureRecognizer
   DelayedMultiDragGestureRecognizer({
     this.delay = kLongPressTimeout,
     Object debugOwner,
+    PointerDeviceKind kind,
   })  : assert(delay != null),
-        super(debugOwner: debugOwner);
+        super(debugOwner: debugOwner, kind: kind);
 
   /// The amount of time the pointer must remain in the same place for the drag
   /// to be recognized.
@@ -558,7 +558,7 @@ class DelayedMultiDragGestureRecognizer
 
   @override
   _DelayedPointerState createNewPointerState(PointerDownEvent event) {
-    return new _DelayedPointerState(event.position, delay);
+    return _DelayedPointerState(event.position, delay);
   }
 
   @override

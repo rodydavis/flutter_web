@@ -10,7 +10,10 @@ const Size _kTestViewSize = Size(800.0, 600.0);
 
 class OffscreenRenderView extends RenderView {
   OffscreenRenderView()
-      : super(configuration: const ViewConfiguration(size: _kTestViewSize));
+      : super(
+          configuration: const ViewConfiguration(size: _kTestViewSize),
+          window: WidgetsBinding.instance.window,
+        );
 
   @override
   void compositeFrame() {
@@ -31,8 +34,10 @@ class OffscreenWidgetTree {
 
   void pumpWidget(Widget app) {
     root = RenderObjectToWidgetAdapter<RenderBox>(
-            container: renderView, debugShortDescription: '[root]', child: app)
-        .attachToRenderTree(buildOwner, root);
+      container: renderView,
+      debugShortDescription: '[root]',
+      child: app,
+    ).attachToRenderTree(buildOwner, root);
     pumpFrame();
   }
 

@@ -18,85 +18,103 @@ bool transitionFromUserGestures = false;
 
 final Map<String, WidgetBuilder> routes = <String, WidgetBuilder>{
   '/': (BuildContext context) => Material(
-          child: ListView(key: homeRouteKey, children: <Widget>[
-        Container(height: 100.0, width: 100.0),
-        Card(
-            child: Hero(
-          tag: 'a',
-          transitionOnUserGestures: transitionFromUserGestures,
-          child: Container(height: 100.0, width: 100.0, key: firstKey),
-        )),
-        Container(height: 100.0, width: 100.0),
-        FlatButton(
-            child: const Text('two'),
-            onPressed: () {
-              Navigator.pushNamed(context, '/two');
-            }),
-        FlatButton(
-            child: const Text('twoInset'),
-            onPressed: () {
-              Navigator.pushNamed(context, '/twoInset');
-            }),
-      ])),
-  '/two': (BuildContext context) => Material(
-          child: ListView(key: routeTwoKey, children: <Widget>[
-        FlatButton(
-            child: const Text('pop'),
-            onPressed: () {
-              Navigator.pop(context);
-            }),
-        Container(height: 150.0, width: 150.0),
-        Card(
-            child: Hero(
-          tag: 'a',
-          transitionOnUserGestures: transitionFromUserGestures,
-          child: Container(height: 150.0, width: 150.0, key: secondKey),
-        )),
-        Container(height: 150.0, width: 150.0),
-        FlatButton(
-          child: const Text('three'),
-          onPressed: () {
-            Navigator.push(context, ThreeRoute());
-          },
+        child: ListView(
+          key: homeRouteKey,
+          children: <Widget>[
+            Container(height: 100.0, width: 100.0),
+            Card(
+                child: Hero(
+              tag: 'a',
+              transitionOnUserGestures: transitionFromUserGestures,
+              child: Container(height: 100.0, width: 100.0, key: firstKey),
+            )),
+            Container(height: 100.0, width: 100.0),
+            FlatButton(
+              child: const Text('two'),
+              onPressed: () {
+                Navigator.pushNamed(context, '/two');
+              },
+            ),
+            FlatButton(
+              child: const Text('twoInset'),
+              onPressed: () {
+                Navigator.pushNamed(context, '/twoInset');
+              },
+            ),
+          ],
         ),
-      ])),
+      ),
+  '/two': (BuildContext context) => Material(
+        child: ListView(
+          key: routeTwoKey,
+          children: <Widget>[
+            FlatButton(
+              child: const Text('pop'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            Container(height: 150.0, width: 150.0),
+            Card(
+                child: Hero(
+              tag: 'a',
+              transitionOnUserGestures: transitionFromUserGestures,
+              child: Container(height: 150.0, width: 150.0, key: secondKey),
+            )),
+            Container(height: 150.0, width: 150.0),
+            FlatButton(
+              child: const Text('three'),
+              onPressed: () {
+                Navigator.push(context, ThreeRoute());
+              },
+            ),
+          ],
+        ),
+      ),
   // This route is the same as /two except that Hero 'a' is shifted to the right by
   // 50 pixels. When the hero's in-flight bounds between / and /twoInset are animated
   // using MaterialRectArcTween (the default) they'll follow a different path
   // then when the flight starts at /twoInset and returns to /.
   '/twoInset': (BuildContext context) => Material(
-          child: ListView(key: routeTwoKey, children: <Widget>[
-        FlatButton(
-            child: const Text('pop'),
-            onPressed: () {
-              Navigator.pop(context);
-            }),
-        Container(height: 150.0, width: 150.0),
-        Card(
-          child: Padding(
-              padding: const EdgeInsets.only(left: 50.0),
-              child: Hero(
-                tag: 'a',
-                transitionOnUserGestures: transitionFromUserGestures,
-                child: Container(height: 150.0, width: 150.0, key: secondKey),
-              )),
+        child: ListView(
+          key: routeTwoKey,
+          children: <Widget>[
+            FlatButton(
+              child: const Text('pop'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            Container(height: 150.0, width: 150.0),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 50.0),
+                child: Hero(
+                  tag: 'a',
+                  transitionOnUserGestures: transitionFromUserGestures,
+                  child: Container(height: 150.0, width: 150.0, key: secondKey),
+                ),
+              ),
+            ),
+            Container(height: 150.0, width: 150.0),
+            FlatButton(
+              child: const Text('three'),
+              onPressed: () {
+                Navigator.push(context, ThreeRoute());
+              },
+            ),
+          ],
         ),
-        Container(height: 150.0, width: 150.0),
-        FlatButton(
-          child: const Text('three'),
-          onPressed: () {
-            Navigator.push(context, ThreeRoute());
-          },
-        ),
-      ])),
+      ),
 };
 
 class ThreeRoute extends MaterialPageRoute<void> {
   ThreeRoute()
       : super(builder: (BuildContext context) {
           return Material(
-              key: routeThreeKey,
-              child: ListView(children: <Widget>[
+            key: routeThreeKey,
+            child: ListView(
+              children: <Widget>[
                 Container(height: 200.0, width: 200.0),
                 Card(
                     child: Hero(
@@ -104,7 +122,9 @@ class ThreeRoute extends MaterialPageRoute<void> {
                         child: Container(
                             height: 200.0, width: 200.0, key: thirdKey))),
                 Container(height: 200.0, width: 200.0),
-              ]));
+              ],
+            ),
+          );
         });
 }
 
@@ -247,15 +267,19 @@ void main() {
     final MutatingRoute route = MutatingRoute();
 
     await tester.pumpWidget(MaterialApp(
-        home: Material(
-            child: ListView(children: <Widget>[
-      const Hero(tag: 'a', child: Text('foo')),
-      Builder(builder: (BuildContext context) {
-        return FlatButton(
-            child: const Text('two'),
-            onPressed: () => Navigator.push(context, route));
-      })
-    ]))));
+      home: Material(
+        child: ListView(
+          children: <Widget>[
+            const Hero(tag: 'a', child: Text('foo')),
+            Builder(builder: (BuildContext context) {
+              return FlatButton(
+                  child: const Text('two'),
+                  onPressed: () => Navigator.push(context, route));
+            }),
+          ],
+        ),
+      ),
+    ));
 
     await tester.tap(find.text('two'));
     await tester.pump(const Duration(milliseconds: 10));
@@ -284,53 +308,70 @@ void main() {
     const double epsilon = 0.001;
 
     await tester.pump(duration * 0.25);
-    expect(tester.getSize(find.byKey(secondKey)).height,
-        closeTo(curve.transform(0.25) * deltaHeight + initialHeight, epsilon));
+    expect(
+      tester.getSize(find.byKey(secondKey)).height,
+      closeTo(curve.transform(0.25) * deltaHeight + initialHeight, epsilon),
+    );
 
     await tester.pump(duration * 0.25);
-    expect(tester.getSize(find.byKey(secondKey)).height,
-        closeTo(curve.transform(0.50) * deltaHeight + initialHeight, epsilon));
+    expect(
+      tester.getSize(find.byKey(secondKey)).height,
+      closeTo(curve.transform(0.50) * deltaHeight + initialHeight, epsilon),
+    );
 
     await tester.pump(duration * 0.25);
-    expect(tester.getSize(find.byKey(secondKey)).height,
-        closeTo(curve.transform(0.75) * deltaHeight + initialHeight, epsilon));
+    expect(
+      tester.getSize(find.byKey(secondKey)).height,
+      closeTo(curve.transform(0.75) * deltaHeight + initialHeight, epsilon),
+    );
 
     await tester.pump(duration * 0.25);
-    expect(tester.getSize(find.byKey(secondKey)).height,
-        closeTo(curve.transform(1.0) * deltaHeight + initialHeight, epsilon));
+    expect(
+      tester.getSize(find.byKey(secondKey)).height,
+      closeTo(curve.transform(1.0) * deltaHeight + initialHeight, epsilon),
+    );
   });
 
   testWidgets('Heroes are not interactive', (WidgetTester tester) async {
     final List<String> log = <String>[];
 
     await tester.pumpWidget(MaterialApp(
-        home: Center(
+      home: Center(
+        child: Hero(
+          tag: 'foo',
+          child: GestureDetector(
+            onTap: () {
+              log.add('foo');
+            },
+            child: Container(
+              width: 100.0,
+              height: 100.0,
+              child: const Text('foo'),
+            ),
+          ),
+        ),
+      ),
+      routes: <String, WidgetBuilder>{
+        '/next': (BuildContext context) {
+          return Align(
+            alignment: Alignment.topLeft,
             child: Hero(
-                tag: 'foo',
-                child: GestureDetector(
-                    onTap: () {
-                      log.add('foo');
-                    },
-                    child: Container(
-                        width: 100.0,
-                        height: 100.0,
-                        child: const Text('foo'))))),
-        routes: <String, WidgetBuilder>{
-          '/next': (BuildContext context) {
-            return Align(
-                alignment: Alignment.topLeft,
-                child: Hero(
-                    tag: 'foo',
-                    child: GestureDetector(
-                        onTap: () {
-                          log.add('bar');
-                        },
-                        child: Container(
-                            width: 100.0,
-                            height: 150.0,
-                            child: const Text('bar')))));
-          }
-        }));
+              tag: 'foo',
+              child: GestureDetector(
+                onTap: () {
+                  log.add('bar');
+                },
+                child: Container(
+                  width: 100.0,
+                  height: 150.0,
+                  child: const Text('bar'),
+                ),
+              ),
+            ),
+          );
+        },
+      },
+    ));
 
     expect(log, isEmpty);
     await tester.tap(find.text('foo'));
@@ -622,28 +663,30 @@ void main() {
     final MaterialPageRoute<void> route = MaterialPageRoute<void>(
       builder: (BuildContext context) {
         return Material(
-            child: ListView(
-          children: <Widget>[
-            StatefulBuilder(
-              builder: (BuildContext context, StateSetter setState) {
-                heroCardSetState = setState;
-                return Card(
-                  child: routeIncludesHero
-                      ? Hero(
-                          tag: 'H',
-                          child: Container(
-                              key: routeHeroKey, height: 200.0, width: 200.0))
-                      : Container(height: 200.0, width: 200.0),
-                );
-              },
-            ),
-            FlatButton(
+          child: ListView(
+            children: <Widget>[
+              StatefulBuilder(
+                builder: (BuildContext context, StateSetter setState) {
+                  heroCardSetState = setState;
+                  return Card(
+                    child: routeIncludesHero
+                        ? Hero(
+                            tag: 'H',
+                            child: Container(
+                                key: routeHeroKey, height: 200.0, width: 200.0))
+                        : Container(height: 200.0, width: 200.0),
+                  );
+                },
+              ),
+              FlatButton(
                 child: const Text('POP'),
                 onPressed: () {
                   Navigator.pop(context);
-                }),
-          ],
-        ));
+                },
+              ),
+            ],
+          ),
+        );
       },
     );
 
@@ -662,10 +705,11 @@ void main() {
                           key: homeHeroKey, height: 100.0, width: 100.0)),
                 ),
                 FlatButton(
-                    child: const Text('PUSH'),
-                    onPressed: () {
-                      Navigator.push(context, route);
-                    }),
+                  child: const Text('PUSH'),
+                  onPressed: () {
+                    Navigator.push(context, route);
+                  },
+                ),
               ],
             );
           },
@@ -731,24 +775,27 @@ void main() {
     final MaterialPageRoute<void> route = MaterialPageRoute<void>(
       builder: (BuildContext context) {
         return Material(
-            child: ListView(
-          children: <Widget>[
-            const SizedBox(height: 100.0),
-            // This container will appear at Y=100
-            Container(
+          child: ListView(
+            children: <Widget>[
+              const SizedBox(height: 100.0),
+              // This container will appear at Y=100
+              Container(
                 key: routeContainerKey,
                 child: Hero(
                     tag: 'H',
                     child: Container(
-                        key: routeHeroKey, height: 200.0, width: 200.0))),
-            FlatButton(
+                        key: routeHeroKey, height: 200.0, width: 200.0)),
+              ),
+              FlatButton(
                 child: const Text('POP'),
                 onPressed: () {
                   Navigator.pop(context);
-                }),
-            const SizedBox(height: 600.0),
-          ],
-        ));
+                },
+              ),
+              const SizedBox(height: 600.0),
+            ],
+          ),
+        );
       },
     );
 
@@ -769,10 +816,11 @@ void main() {
                           key: homeHeroKey, height: 100.0, width: 100.0)),
                 ),
                 FlatButton(
-                    child: const Text('PUSH'),
-                    onPressed: () {
-                      Navigator.push(context, route);
-                    }),
+                  child: const Text('PUSH'),
+                  onPressed: () {
+                    Navigator.push(context, route);
+                  },
+                ),
                 const SizedBox(height: 600.0),
               ],
             );
@@ -819,20 +867,22 @@ void main() {
     final MaterialPageRoute<void> route = MaterialPageRoute<void>(
       builder: (BuildContext context) {
         return Material(
-            child: ListView(
-          cacheExtent: 0.0,
-          children: <Widget>[
-            const SizedBox(height: 100.0),
-            // This container will appear at Y=100
-            Container(
+          child: ListView(
+            cacheExtent: 0.0,
+            children: <Widget>[
+              const SizedBox(height: 100.0),
+              // This container will appear at Y=100
+              Container(
                 key: routeContainerKey,
                 child: Hero(
                     tag: 'H',
                     child: Container(
-                        key: routeHeroKey, height: 200.0, width: 200.0))),
-            const SizedBox(height: 800.0),
-          ],
-        ));
+                        key: routeHeroKey, height: 200.0, width: 200.0)),
+              ),
+              const SizedBox(height: 800.0),
+            ],
+          ),
+        );
       },
     );
 
@@ -853,10 +903,11 @@ void main() {
                           key: homeHeroKey, height: 100.0, width: 100.0)),
                 ),
                 FlatButton(
-                    child: const Text('PUSH'),
-                    onPressed: () {
-                      Navigator.push(context, route);
-                    }),
+                  child: const Text('PUSH'),
+                  onPressed: () {
+                    Navigator.push(context, route);
+                  },
+                ),
               ],
             );
           },
@@ -902,16 +953,17 @@ void main() {
     final MaterialPageRoute<void> routeC = MaterialPageRoute<void>(
       builder: (BuildContext context) {
         return Material(
-            child: ListView(
-          children: <Widget>[
-            // This container will appear at Y=0
-            Container(
+          child: ListView(
+            children: <Widget>[
+              // This container will appear at Y=0
+              Container(
                 child: Hero(
-                    tag: 'BC',
-                    child: Container(key: heroBCKey, height: 150.0))),
-            const SizedBox(height: 800.0),
-          ],
-        ));
+                    tag: 'BC', child: Container(key: heroBCKey, height: 150.0)),
+              ),
+              const SizedBox(height: 800.0),
+            ],
+          ),
+        );
       },
     );
 
@@ -919,23 +971,27 @@ void main() {
     final MaterialPageRoute<void> routeB = MaterialPageRoute<void>(
       builder: (BuildContext context) {
         return Material(
-            child: ListView(
-          children: <Widget>[
-            const SizedBox(height: 100.0),
-            // This container will appear at Y=100
-            Container(
+          child: ListView(
+            children: <Widget>[
+              const SizedBox(height: 100.0),
+              // This container will appear at Y=100
+              Container(
                 child: Hero(
-                    tag: 'AB',
-                    child: Container(key: heroABKey, height: 200.0))),
-            FlatButton(
+                    tag: 'AB', child: Container(key: heroABKey, height: 200.0)),
+              ),
+              FlatButton(
                 child: const Text('PUSH C'),
                 onPressed: () {
                   Navigator.push(context, routeC);
-                }),
-            Container(child: Hero(tag: 'BC', child: Container(height: 150.0))),
-            const SizedBox(height: 800.0),
-          ],
-        ));
+                },
+              ),
+              Container(
+                child: Hero(tag: 'BC', child: Container(height: 150.0)),
+              ),
+              const SizedBox(height: 800.0),
+            ],
+          ),
+        );
       },
     );
 
@@ -954,10 +1010,11 @@ void main() {
                       tag: 'AB', child: Container(height: 100.0, width: 100.0)),
                 ),
                 FlatButton(
-                    child: const Text('PUSH B'),
-                    onPressed: () {
-                      Navigator.push(context, routeB);
-                    }),
+                  child: const Text('PUSH B'),
+                  onPressed: () {
+                    Navigator.push(context, routeB);
+                  },
+                ),
               ],
             );
           },
@@ -1006,24 +1063,26 @@ void main() {
     final MaterialPageRoute<void> route = MaterialPageRoute<void>(
       builder: (BuildContext context) {
         return Material(
-            child: ListView(
-          children: <Widget>[
-            const Card(
-              child: Hero(
-                tag: 'H',
-                child: SizedBox(
-                  height: 200.0,
-                  child: MyStatefulWidget(value: '456'),
+          child: ListView(
+            children: <Widget>[
+              const Card(
+                child: Hero(
+                  tag: 'H',
+                  child: SizedBox(
+                    height: 200.0,
+                    child: MyStatefulWidget(value: '456'),
+                  ),
                 ),
               ),
-            ),
-            FlatButton(
+              FlatButton(
                 child: const Text('POP'),
                 onPressed: () {
                   Navigator.pop(context);
-                }),
-          ],
-        ));
+                },
+              ),
+            ],
+          ),
+        );
       },
     );
 
@@ -1044,10 +1103,11 @@ void main() {
                   ),
                 ),
                 FlatButton(
-                    child: const Text('PUSH'),
-                    onPressed: () {
-                      Navigator.push(context, route);
-                    }),
+                  child: const Text('PUSH'),
+                  onPressed: () {
+                    Navigator.push(context, route);
+                  },
+                ),
               ],
             );
           },
@@ -1092,20 +1152,23 @@ void main() {
     final Map<String, WidgetBuilder> createRectTweenHeroRoutes =
         <String, WidgetBuilder>{
       '/': (BuildContext context) => Material(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
                 Hero(
                   tag: 'a',
                   createRectTween: createRectTween,
                   child: Container(height: 100.0, width: 100.0, key: firstKey),
                 ),
                 FlatButton(
-                    child: const Text('two'),
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/two');
-                    }),
-              ])),
+                  child: const Text('two'),
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/two');
+                  },
+                ),
+              ],
+            ),
+          ),
       '/two': (BuildContext context) => Material(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -1113,10 +1176,11 @@ void main() {
                 SizedBox(
                   height: 200.0,
                   child: FlatButton(
-                      child: const Text('pop'),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      }),
+                    child: const Text('pop'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
                 ),
                 Hero(
                   tag: 'a',
@@ -1417,7 +1481,10 @@ void main() {
 
     final TestGesture gesture =
         await tester.startGesture(const Offset(5.0, 200.0));
-    await gesture.moveBy(const Offset(200.0, 0.0));
+    await gesture.moveBy(const Offset(20.0, 0.0));
+    await gesture.moveBy(const Offset(180.0, 0.0));
+    await gesture.up();
+    await tester.pump();
 
     await tester.pump();
 
