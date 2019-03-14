@@ -11,6 +11,7 @@ import 'src/binding.dart' show WebOnlyMockAssetManager;
 export 'dart:async' show Future;
 
 export 'src/binding.dart';
+export 'src/controller.dart';
 export 'src/finders.dart';
 export 'src/matchers.dart';
 export 'src/nonconst.dart';

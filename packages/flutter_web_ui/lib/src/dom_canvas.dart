@@ -75,26 +75,41 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
       return true;
     }());
     String effectiveTransform;
+    bool isStroke = paint.style == PaintingStyle.stroke;
     if (currentTransform.isIdentity()) {
-      effectiveTransform = 'translate(${rect.left}px, ${rect.top}px)';
+      if (isStroke) {
+        effectiveTransform =
+            'translate(${rect.left - (paint.strokeWidth / 2.0)}px, ${rect.top - (paint.strokeWidth / 2.0)}px)';
+      } else {
+        effectiveTransform = 'translate(${rect.left}px, ${rect.top}px)';
+      }
     } else {
       // Clone to avoid mutating _transform.
       Matrix4 translated = currentTransform.clone();
-      translated.translate(rect.left, rect.top);
+      if (isStroke) {
+        translated.translate(rect.left - (paint.strokeWidth / 2.0),
+            rect.top - (paint.strokeWidth / 2.0));
+      } else {
+        translated.translate(rect.left, rect.top);
+      }
       effectiveTransform = matrix4ToCssTransform(translated);
     }
     var style = rectangle.style;
     style
       ..position = 'absolute'
       ..transformOrigin = '0 0 0'
-      ..transform = effectiveTransform
-      ..width = '${rect.width}px'
-      ..height = '${rect.height}px';
-    if (paint.style == PaintingStyle.stroke) {
-      style.border = '${paint.strokeWidth}px solid '
-          '${paint.color.toCssString()}';
+      ..transform = effectiveTransform;
+    if (isStroke) {
+      style
+        ..width = '${rect.width - paint.strokeWidth}px'
+        ..height = '${rect.height - paint.strokeWidth}px'
+        ..border = '${paint.strokeWidth}px solid '
+            '${paint.color.toCssString()}';
     } else {
-      style.backgroundColor = paint.color.toCssString();
+      style
+        ..width = '${rect.width}px'
+        ..height = '${rect.height}px'
+        ..backgroundColor = paint.color.toCssString();
     }
 
     currentElement.append(rectangle);

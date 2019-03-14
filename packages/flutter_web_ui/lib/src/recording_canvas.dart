@@ -185,10 +185,10 @@ class RecordingCanvas {
     }
     _didDraw = true;
     if (paint.strokeWidth != null && paint.strokeWidth != 0) {
-      double strokeWidth = paint.strokeWidth;
-      rect = rect.translate(-strokeWidth, -strokeWidth);
+      _paintBounds.grow(rect.inflate(paint.strokeWidth / 2.0));
+    } else {
+      _paintBounds.grow(rect);
     }
-    _paintBounds.grow(rect);
     _commands.add(new PaintDrawRect(rect, paint.webOnlyPaintData));
   }
 
