@@ -99,17 +99,19 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
       ..position = 'absolute'
       ..transformOrigin = '0 0 0'
       ..transform = effectiveTransform;
+
+    final String cssColor = paint.color?.toCssString() ?? '#000000';
+
     if (isStroke) {
       style
         ..width = '${rect.width - paint.strokeWidth}px'
         ..height = '${rect.height - paint.strokeWidth}px'
-        ..border = '${paint.strokeWidth}px solid '
-            '${paint.color.toCssString()}';
+        ..border = '${paint.strokeWidth}px solid ${cssColor}';
     } else {
       style
         ..width = '${rect.width}px'
         ..height = '${rect.height}px'
-        ..backgroundColor = paint.color.toCssString();
+        ..backgroundColor = cssColor;
     }
 
     currentElement.append(rectangle);

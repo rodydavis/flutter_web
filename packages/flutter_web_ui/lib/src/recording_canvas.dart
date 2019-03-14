@@ -161,7 +161,14 @@ class RecordingCanvas {
   }
 
   void drawLine(Offset p1, Offset p2, Paint paint) {
-    var strokeWidth = paint.strokeWidth == null ? 0 : paint.strokeWidth;
+    final double strokeWidth = math.max(paint.strokeWidth, 1.0);
+    // TODO(yjbanov): This can be optimized. Currently we create a box around
+    //                the line and then apply the transform on the box to get
+    //                the bounding box. If you have a 45-degree line and a
+    //                45-degree transform, the bounding box should be the length
+    //                of the line long and stroke width wide, but our current
+    //                algorithm produces a square with each side of the length
+    //                matching the length of the line.
     _paintBounds.growLTRB(
         math.min(p1.dx, p2.dx) - strokeWidth,
         math.min(p1.dy, p2.dy) - strokeWidth,
@@ -1310,7 +1317,14 @@ class _PaintBounds {
 
   void skew(double sx, double sy) {
     _currentMatrixIsIdentity = false;
-    _currentMatrix.multiply(new Matrix4.skew(sx, sy));
+
+    // DO NOT USE Matrix4.skew(sx, sy)! It treats sx and sy values as radians,
+    // but in our case they are transform matrix values.
+    final Matrix4 skewMatrix = Matrix4.identity();
+    final Float64List storage = skewMatrix.storage;
+    storage[1] = sy;
+    storage[4] = sx;
+    _currentMatrix.multiply(skewMatrix);
   }
 
   void clipRect(Rect rect) {
@@ -1366,14 +1380,61 @@ class _PaintBounds {
     var transformedPointTop = top;
     var transformedPointRight = right;
     var transformedPointBottom = bottom;
+
     if (!_currentMatrixIsIdentity) {
-      Vector3 leftTop = _currentMatrix.transform3(Vector3(left, top, 0.0));
-      transformedPointLeft = leftTop.x;
-      transformedPointTop = leftTop.y;
-      Vector3 rightBottom =
-          _currentMatrix.transform3(Vector3(right, bottom, 0.0));
-      transformedPointRight = rightBottom.x;
-      transformedPointBottom = rightBottom.y;
+      // Construct a matrix where each row represents a vector pointing at
+      // one of the four corners of the (left, top, right, bottom) rectangle.
+      // Using the row-major order allows us to multiply the matrix by in-place
+      // by the transposed current transformation matrix. The vector_math
+      // library has a convenience function `multiplyTranspose` that perform the
+      // multiplication without copying. This way we compute the positions of
+      // all four points in a single matrix-by-matrix multiplication at the cost
+      // of one `Matrix4` instance and one `Float64List` instance.
+      //
+      // The rejected alternative was to use `Vector3` for each point and
+      // multiply by the current transform. However, that would cost us four
+      // `Vector3` instances, four `Float64List` instances, and four
+      // matrix-by-vector multiplications.
+      //
+      // `Float64List` initializes the array with zeros, so we do not have to
+      // fill in every single element.
+      final Float64List pointData = Float64List(16);
+
+      // Row 0: top-left
+      pointData[0] = left;
+      pointData[4] = top;
+      pointData[12] = 1;
+
+      // Row 1: top-right
+      pointData[1] = right;
+      pointData[5] = top;
+      pointData[13] = 1;
+
+      // Row 2: bottom-left
+      pointData[2] = left;
+      pointData[6] = bottom;
+      pointData[14] = 1;
+
+      // Row 3: bottom-right
+      pointData[3] = right;
+      pointData[7] = bottom;
+      pointData[15] = 1;
+
+      final Matrix4 pointMatrix = Matrix4.fromFloat64List(pointData);
+      pointMatrix.multiplyTranspose(_currentMatrix);
+
+      transformedPointLeft = math.min(
+          math.min(math.min(pointData[0], pointData[1]), pointData[2]),
+          pointData[3]);
+      transformedPointTop = math.min(
+          math.min(math.min(pointData[4], pointData[5]), pointData[6]),
+          pointData[7]);
+      transformedPointRight = math.max(
+          math.max(math.max(pointData[0], pointData[1]), pointData[2]),
+          pointData[3]);
+      transformedPointBottom = math.max(
+          math.max(math.max(pointData[4], pointData[5]), pointData[6]),
+          pointData[7]);
     }
 
     if (_clipRectInitialized) {
@@ -1468,5 +1529,15 @@ class _PaintBounds {
       math.min(right, maxRight),
       math.min(bottom, maxBottom),
     );
+  }
+
+  @override
+  String toString() {
+    if (assertionsEnabled) {
+      final Rect bounds = computeBounds();
+      return '_PaintBounds(${bounds} of size ${bounds.size})';
+    } else {
+      return super.toString();
+    }
   }
 }

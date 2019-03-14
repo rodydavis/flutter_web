@@ -159,7 +159,18 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     ctx.globalCompositeOperation =
         _stringForBlendMode(paint.blendMode) ?? 'source-over';
     ctx.lineWidth = paint.strokeWidth ?? 1.0;
-    ctx.lineCap = _stringForStrokeCap(paint.strokeCap) ?? 'butt';
+    var cap = paint.strokeCap;
+    if (cap != null) {
+      ctx.lineCap = _stringForStrokeCap(cap);
+    } else {
+      ctx.lineCap = 'butt';
+    }
+    var join = paint.strokeJoin;
+    if (join != null) {
+      ctx.lineJoin = _stringForStrokeJoin(join);
+    } else {
+      ctx.lineJoin = 'miter';
+    }
     if (paint.shader != null) {
       var paintStyle = paint.shader.createPaintStyle(ctx);
       ctx.fillStyle = paintStyle;
@@ -247,7 +258,16 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   void skew(double sx, double sy) {
     super.skew(sx, sy);
-    ctx.transform(0, sx, sy, 0, 0, 0);
+    ctx.transform(1, sy, sx, 1, 0, 0);
+    //            |  |   |   |  |  |
+    //            |  |   |   |  |  f - vertical translation
+    //            |  |   |   |  e - horizontal translation
+    //            |  |   |   d - vertical scaling
+    //            |  |   c - horizontal skewing
+    //            |  b - vertical skewing
+    //            a - horizontal scaling
+    //
+    // Source: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/transform
   }
 
   void transform(Float64List matrix4) {
@@ -793,5 +813,18 @@ String _stringForStrokeCap(StrokeCap strokeCap) {
     case StrokeCap.square:
     default:
       return 'square';
+  }
+}
+
+String _stringForStrokeJoin(StrokeJoin strokeJoin) {
+  assert(strokeJoin != null);
+  switch (strokeJoin) {
+    case StrokeJoin.round:
+      return 'round';
+    case StrokeJoin.bevel:
+      return 'bevel';
+    case StrokeJoin.miter:
+    default:
+      return 'miter';
   }
 }

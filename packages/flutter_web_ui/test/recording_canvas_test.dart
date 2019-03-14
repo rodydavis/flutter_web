@@ -23,14 +23,17 @@ void main() {
   test('Computes paint bounds for draw line', () {
     RecordingCanvas rc = new RecordingCanvas(screenRect);
     rc.drawLine(Offset(50, 100), Offset(120, 140), testPaint);
-    expect(rc.computePaintBounds(), Rect.fromLTRB(50, 100, 120, 140));
+    // The off by one is due to the minimum stroke width of 1.
+    expect(rc.computePaintBounds(), Rect.fromLTRB(49, 99, 121, 141));
   });
 
   test('Computes paint bounds for draw line when line exceeds limits', () {
     // Uses max bounds when computing paint bounds
     RecordingCanvas rc = new RecordingCanvas(screenRect);
     rc.drawLine(Offset(50, 100), Offset(screenWidth + 100.0, 140), testPaint);
-    expect(rc.computePaintBounds(), Rect.fromLTRB(50, 100, screenWidth, 140));
+    // The off by one is due to the minimum stroke width of 1.
+    expect(
+        rc.computePaintBounds(), Rect.fromLTRB(49.0, 99.0, screenWidth, 141.0));
   });
 
   test('Computes paint bounds for draw rect', () {
@@ -68,18 +71,27 @@ void main() {
 
   test('Computes paint bounds for rotate', () {
     RecordingCanvas rc = new RecordingCanvas(screenRect);
-    rc.rotate(-math.pi / 4.0);
-    rc.drawLine(Offset(10, 20), Offset(50, 100), testPaint);
+    rc.rotate(math.pi / 4.0);
+    rc.drawLine(Offset(1, 0), Offset(50 * math.sqrt(2) - 1, 0), testPaint);
+    // The extra 0.7 is due to stroke width of 1 rotated by 45 degrees.
     expect(rc.computePaintBounds(),
-        within(distance: 0.1, from: Rect.fromLTRB(21.2, 7.1, 106.1, 35.4)));
+        within(distance: 0.1, from: Rect.fromLTRB(0, 0, 50.7, 50.7)));
   });
 
-  test('Computes paint bounds for skew', () {
+  test('Computes paint bounds for horizontal skew', () {
     RecordingCanvas rc = new RecordingCanvas(screenRect);
-    rc.skew(1.2, 1.4);
-    rc.drawRect(Rect.fromLTRB(10, 20, 30, 40), testPaint);
+    rc.skew(1.0, 0.0);
+    rc.drawRect(Rect.fromLTRB(20, 20, 40, 40), testPaint);
     expect(rc.computePaintBounds(),
-        within(distance: 0.1, from: Rect.fromLTRB(61.4, 78.0, 132.9, 213.9)));
+        within(distance: 0.1, from: Rect.fromLTRB(40.0, 20.0, 80.0, 40.0)));
+  });
+
+  test('Computes paint bounds for vertical skew', () {
+    RecordingCanvas rc = new RecordingCanvas(screenRect);
+    rc.skew(0.0, 1.0);
+    rc.drawRect(Rect.fromLTRB(20, 20, 40, 40), testPaint);
+    expect(rc.computePaintBounds(),
+        within(distance: 0.1, from: Rect.fromLTRB(20.0, 40.0, 40.0, 80.0)));
   });
 
   test('Computes paint bounds for transform', () {
@@ -104,7 +116,7 @@ void main() {
     matrix[15] = 1.0;
     rc.transform(matrix);
     rc.drawRect(Rect.fromLTRB(10, 20, 30, 40), testPaint);
-    expect(rc.computePaintBounds(), Rect.fromLTRB(196.0, 283.6, 196.0, 368.4));
+    expect(rc.computePaintBounds(), Rect.fromLTRB(168.0, 283.6, 224.0, 368.4));
   });
 
   test('drawPaint should cover full size', () {
@@ -183,7 +195,9 @@ void main() {
 
     expect(rc.computePaintBounds(), Rect.zero);
     rc.drawLine(Offset(52, 53), Offset(55, 56), testPaint);
-    expect(rc.computePaintBounds(), Rect.fromLTRB(52, 53, 55, 56));
+
+    // Extra pixel due to default line length
+    expect(rc.computePaintBounds(), Rect.fromLTRB(51, 52, 56, 57));
   });
 
   test('Should include range inside clipRect', () {
@@ -214,6 +228,35 @@ void main() {
     path.addRect(Rect.fromLTRB(20, 30, 100, 110));
     rc.drawShadow(path, Color(0xFFFF0000), 2.0, false);
     expect(rc.computePaintBounds(), Rect.fromLTRB(20.0, 30.0, 106.0, 117.0));
+  });
+
+  test('Clip with negative scale reports correct paint bounds', () {
+    // The following draws a filled rectangle that occupies the bottom half of
+    // the canvas. Notice that both the clip and the rectangle are drawn
+    // forward. What makes them appear at the bottom is the translation and a
+    // vertical flip via a negative scale. This replicates the Material
+    // overscroll glow effect at the bottom of a list, where it is drawn upside
+    // down.
+    RecordingCanvas rc = new RecordingCanvas(Rect.fromLTRB(0, 0, 100, 100));
+    rc
+      ..translate(0, 100)
+      ..scale(1, -1)
+      ..clipRect(Rect.fromLTRB(0, 0, 100, 50))
+      ..drawRect(Rect.fromLTRB(0, 0, 100, 100), Paint());
+    expect(rc.computePaintBounds(), Rect.fromLTRB(0.0, 50.0, 100.0, 100.0));
+  });
+
+  test('Clip with a rotation reports correct paint bounds', () {
+    RecordingCanvas rc = new RecordingCanvas(Rect.fromLTRB(0, 0, 100, 100));
+    rc
+      ..translate(50, 50)
+      ..rotate(math.pi / 4.0)
+      ..clipRect(Rect.fromLTWH(-20, -20, 40, 40))
+      ..drawRect(Rect.fromLTWH(-80, -80, 160, 160), Paint());
+    expect(
+      rc.computePaintBounds(),
+      Rect.fromCircle(center: Offset(50, 50), radius: 20 * math.sqrt(2)),
+    );
   });
 }
 

@@ -31,7 +31,7 @@ export 'package:flutter_web_ui/ui.dart'
         Shader,
         Size,
         StrokeCap,
-// TODO(yjbanov):  StrokeJoin,
+        StrokeJoin,
         TextAffinity,
         TextAlign,
         TextBaseline,
