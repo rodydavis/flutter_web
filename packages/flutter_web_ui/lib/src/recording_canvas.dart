@@ -1384,12 +1384,12 @@ class _PaintBounds {
     if (!_currentMatrixIsIdentity) {
       // Construct a matrix where each row represents a vector pointing at
       // one of the four corners of the (left, top, right, bottom) rectangle.
-      // Using the row-major order allows us to multiply the matrix by in-place
+      // Using the row-major order allows us to multiply the matrix in-place
       // by the transposed current transformation matrix. The vector_math
-      // library has a convenience function `multiplyTranspose` that perform the
-      // multiplication without copying. This way we compute the positions of
-      // all four points in a single matrix-by-matrix multiplication at the cost
-      // of one `Matrix4` instance and one `Float64List` instance.
+      // library has a convenience function `multiplyTranspose` that performs
+      // the multiplication without copying. This way we compute the positions
+      // of all four points in a single matrix-by-matrix multiplication at the
+      // cost of one `Matrix4` instance and one `Float64List` instance.
       //
       // The rejected alternative was to use `Vector3` for each point and
       // multiply by the current transform. However, that would cost us four

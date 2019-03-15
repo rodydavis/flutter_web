@@ -123,12 +123,16 @@ class HybridTextEditing {
         break;
 
       case 'TextInput.show':
-        _startEditing(_lastEditingState);
+        if (!_isEditing) {
+          _startEditing(_lastEditingState);
+        }
         break;
 
       case 'TextInput.clearClient':
       case 'TextInput.hide':
-        _stopEditing();
+        if (_isEditing) {
+          _stopEditing();
+        }
         break;
     }
   }
@@ -157,7 +161,7 @@ class HybridTextEditing {
       ..add(document.onSelectionChange.listen((_) {
         _syncEditingStateToFlutter();
       }))
-      ..add(element.onChange.listen((_) {
+      ..add(element.onInput.listen((_) {
         _syncEditingStateToFlutter();
       }));
   }
@@ -239,7 +243,6 @@ class HybridTextEditing {
       // Remove any new lines.
       final String newText = text.replaceAll('\n', '');
       final int newSelectionExtent = newText.length - offsetFromEnd;
-      print('newSelExtent: $newSelectionExtent');
       editingState
         ..['text'] = newText
         ..['selectionBase'] = newSelectionExtent

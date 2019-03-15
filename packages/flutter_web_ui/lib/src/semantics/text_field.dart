@@ -117,10 +117,12 @@ class TextField extends RoleManager {
 
   @override
   void update() {
-    // TODO(yjbanov): could this be interfering with the text editing state? We
-    //                might want to update only when we're not currently
-    //                editing.
-    _textFieldElement.text = semanticsObject.value ?? '';
+    // TODO(yjbanov): This interferes with the editing state because it resets
+    // the selection state in [_textFieldElement].
+    if (semanticsObject.owner.gestureMode == GestureMode.browserGestures &&
+        browserEngine != BrowserEngine.webkit) {
+      _textFieldElement.text = semanticsObject.value ?? '';
+    }
   }
 
   @override

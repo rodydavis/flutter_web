@@ -4390,8 +4390,6 @@ void main() {
       // Selected text shows 3 toolbar buttons.
       expect(find.byType(FlatButton), findsNWidgets(3));
     },
-    // TODO(b/123352265): Fix issues with iOS text fields
-    skip: true,
   );
 
   testWidgets(
@@ -4493,8 +4491,6 @@ void main() {
       // No toolbar.
       expect(find.byType(CupertinoButton), findsNothing);
     },
-    // TODO(b/123352265): Fix issues with iOS text fields
-    skip: true,
   );
 
   testWidgets(
@@ -4605,8 +4601,6 @@ void main() {
       // Collapsed toolbar shows 2 buttons.
       expect(find.byType(CupertinoButton), findsNothing);
     },
-    // TODO(b/123352265): Fix issues with iOS text fields
-    skip: true,
   );
 
   testWidgets(
@@ -5094,9 +5088,7 @@ void main() {
     await tester.pump();
     // Single taps shouldn't trigger the toolbar.
     expect(find.byType(CupertinoButton), findsNothing);
-  }, skip: true);
-
-  /// REENABLE PLEASE!
+  });
 
   testWidgets('default TextField debugFillProperties',
       (WidgetTester tester) async {
@@ -5188,9 +5180,6 @@ void main() {
         const Size(800, 40),
       );
     },
-    skip: true,
-
-    /// REENABLE PLEASE!
   );
 
   testWidgets(
