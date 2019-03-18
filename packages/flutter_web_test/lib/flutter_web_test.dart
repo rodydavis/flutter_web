@@ -119,11 +119,24 @@ String canonicalizeHtml(String html,
       case 'flt-opacity':
         replacementTag = 'o';
         break;
-      case 'flt-clip-rect':
-        replacementTag = 'clip';
+      case 'flt-clip':
+        final String clipType = original.attributes['clip-type'];
+        switch (clipType) {
+          case 'rect':
+            replacementTag = 'clip';
+            break;
+          case 'rrect':
+            replacementTag = 'rclip';
+            break;
+          case 'physical-shape':
+            replacementTag = 'pshape';
+            break;
+          default:
+            throw Exception('Unknown clip type: ${clipType}');
+        }
         break;
-      case 'flt-clip-rrect':
-        replacementTag = 'rclip';
+      case 'flt-clip-interior':
+        replacementTag = 'clip-i';
         break;
       case 'flt-picture':
         replacementTag = 'pic';
@@ -286,8 +299,9 @@ String canonicalizeHtml(String html,
 /// * <flt-scene> is interchangeable with <s>
 /// * <flt-transform> is interchangeable with <t>
 /// * <flt-opacity> is interchangeable with <o>
-/// * <flt-clip-rect> is interchangeable with <clip>
-/// * <flt-clip-rrect> is interchangeable with <rclip>
+/// * <flt-clip clip-type="rect"> is interchangeable with <clip>
+/// * <flt-clip clip-type="rrect"> is interchangeable with <rclip>
+/// * <flt-clip clip-type="physical-shape"> is interchangeable with <pshape>
 /// * <flt-picture> is interchangeable with <pic>
 /// * <flt-canvas> is interchangeable with <c>
 ///

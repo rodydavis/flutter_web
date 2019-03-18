@@ -171,37 +171,7 @@ class SceneBuilder {
       {Clip clipBehavior = Clip.antiAlias, @required Object webOnlyPaintedBy}) {
     assert(clipBehavior != null);
     assert(clipBehavior != Clip.none);
-    final left = rect.left;
-    final top = rect.top;
-    _pushSurface(_PersistedClipRect(webOnlyPaintedBy, left - _lastOffsetX,
-        top - _lastOffsetY, rect.right, rect.bottom));
-    _pushSurfaceOffset(left, top);
-  }
-
-  /// Stacks the offsets of clip rectangles and physical shapes.
-  ///
-  /// In Flutter a clip rectangle does not alter the coordinate system of its
-  /// children. However, on the Web we use HTML elements with hidden overflow as
-  /// clip rectangles, which do reset the coordinate system of their children
-  /// such that coordinate (0, 0) coincides with the parent element's top-left
-  /// corner. To undo this effect, when adding a picture or texture we
-  /// subtract the clip offset from its offset to get the correct position of
-  /// the surface inside the clipping parent.
-  List<double> _offsetStackX = <double>[0.0];
-  List<double> _offsetStackY = <double>[0.0];
-
-  /// The currently active total surface offset.
-  double get _lastOffsetX => _offsetStackX.last;
-  double get _lastOffsetY => _offsetStackY.last;
-
-  void _pushSurfaceOffset(double x, double y) {
-    _offsetStackX.add(x);
-    _offsetStackY.add(y);
-  }
-
-  void _popSurfaceOffset() {
-    _offsetStackX.removeLast();
-    _offsetStackY.removeLast();
+    _pushSurface(_PersistedClipRect(webOnlyPaintedBy, rect));
   }
 
   /// Pushes a rounded-rectangular clip operation onto the operation stack.
@@ -211,7 +181,6 @@ class SceneBuilder {
   /// See [pop] for details about the operation stack.
   void pushClipRRect(RRect rrect,
       {Clip clipBehavior, @required Object webOnlyPaintedBy}) {
-    _pushSurfaceOffset(rrect.left, rrect.top);
     _pushSurface(_PersistedClipRRect(webOnlyPaintedBy, rrect, clipBehavior));
   }
 
@@ -311,22 +280,7 @@ class SceneBuilder {
   }) {
     _pushPhysicalShape(path, elevation, color.value,
         shadowColor?.value ?? 0xFF000000, clipBehavior, webOnlyPaintedBy);
-    Rect bounds = _boundsFromPath(path);
-    if (bounds != null) {
-      _pushSurfaceOffset(bounds.left, bounds.top);
-    }
     return null; // this does not return an engine layer yet.
-  }
-
-  Rect _boundsFromPath(Path path) {
-    Rect rect = path.webOnlyPathAsRect;
-    if (rect != null) return rect;
-    RRect roundRect = path.webOnlyPathAsRoundedRect;
-    if (roundRect != null) {
-      return Rect.fromLTWH(
-          roundRect.left, roundRect.top, roundRect.width, roundRect.height);
-    }
-    return throw new UnimplementedError();
   }
 
   void _pushPhysicalShape(Path path, double elevation, int color,
@@ -347,19 +301,6 @@ class SceneBuilder {
   /// stack.
   void pop() {
     assert(_surfaceStack.isNotEmpty);
-
-    // If we're closing out an an element that has an offset, we need
-    // to stop its effect on the relative offset.
-    if (_currentSurface is _PersistedClipRect ||
-        _currentSurface is _PersistedClipRRect ||
-        _currentSurface is _PersistedPhysicalShape) {
-      final surface = _currentSurface;
-      if (surface is! _PersistedPhysicalShape ||
-          surface is _PersistedPhysicalShape &&
-              _boundsFromPath(surface.path) != null) {
-        _popSurfaceOffset();
-      }
-    }
     _surfaceStack.removeLast();
   }
 
@@ -413,10 +354,6 @@ class SceneBuilder {
 
   void _addPicture(double dx, double dy, Picture picture, int hints,
       {@required Object webOnlyPaintedBy}) {
-    // If we're inside a clipping parent element, we need to undo its effect on
-    // the coordinate system.
-    dx = dx - _lastOffsetX;
-    dy = dy - _lastOffsetY;
     _addSurface(
         persistedPictureFactory(webOnlyPaintedBy, dx, dy, picture, hints));
   }
@@ -562,7 +499,7 @@ class SceneBuilder {
       return true;
     }());
     _lastFrameScene = _persistedScene;
-    return new Scene._(_persistedScene.element);
+    return new Scene._(_persistedScene.rootElement);
   }
 }
 
@@ -669,10 +606,18 @@ abstract class _PersistedSurface {
   /// [paintedBy] points to the object that painted this surface.
   _PersistedSurface(this.paintedBy) : assert(paintedBy != null);
 
-  /// The DOM element that represents this surface.
+  /// The root element that renders this surface to the DOM.
   ///
-  /// This element can be reused across frames.
-  html.Element element;
+  /// This element can be reused across frames. See also, [childContainer],
+  /// which is the element used to manage child nodes.
+  html.Element rootElement;
+
+  /// The element that contains child surface elements.
+  ///
+  /// By default this is the same as the [rootElement]. However, specialized
+  /// surface implementations may choose to override this and provide a
+  /// different element for nesting children.
+  html.Element get childContainer => rootElement;
 
   /// This surface's immediate parent.
   _PersistedContainerSurface parent;
@@ -710,8 +655,21 @@ abstract class _PersistedSurface {
   @protected
   @mustCallSuper
   void build() {
-    element = createElement();
+    rootElement = createElement();
     apply();
+  }
+
+  /// Instructs this surface to adopt HTML DOM elements of another surface.
+  ///
+  /// This is done for efficiency. Instead of creating new DOM elements on every
+  /// frame, we reuse old ones as much as possible. This method should only be
+  /// called when [isTotalMatchFor] returns true for the [oldSurface]. Otherwise
+  /// adopting the [oldSurface]'s elements could lead to correctness issues.
+  @protected
+  @mustCallSuper
+  void adoptElements(covariant _PersistedSurface oldSurface) {
+    rootElement = oldSurface.rootElement;
+    _debugDidReuseElement = true;
   }
 
   /// Updates the attributes of this surface's element.
@@ -724,15 +682,14 @@ abstract class _PersistedSurface {
     assert(oldSurface != null);
 
     if (isTotalMatchFor(oldSurface)) {
-      element = oldSurface.element;
-      _debugDidReuseElement = true;
+      adoptElements(oldSurface);
     } else {
       build();
     }
 
     // We took ownership of the old element.
-    oldSurface.element = null;
-    assert(element != null);
+    oldSurface.rootElement = null;
+    assert(rootElement != null);
   }
 
   /// Removes the [element] of this surface from the tree.
@@ -742,14 +699,14 @@ abstract class _PersistedSurface {
   @protected
   @mustCallSuper
   void recycle() {
-    element.remove();
-    element = null;
+    rootElement.remove();
+    rootElement = null;
   }
 
   @protected
   @mustCallSuper
   void debugValidate(List<String> validationErrors) {
-    if (element == null) {
+    if (rootElement == null) {
       validationErrors.add('$runtimeType has null element.');
     }
   }
@@ -808,16 +765,16 @@ abstract class _PersistedSurface {
 
   /// Prints this surface into a [buffer] in a human-readable format.
   void debugPrint(StringBuffer buffer, int indent) {
-    if (element != null) {
-      buffer.write('${'  ' * indent}<${element.tagName.toLowerCase()} ');
+    if (rootElement != null) {
+      buffer.write('${'  ' * indent}<${rootElement.tagName.toLowerCase()} ');
     } else {
       buffer.write('${'  ' * indent}<$runtimeType recycled ');
     }
     debugPrintAttributes(buffer);
     buffer.writeln('>');
     debugPrintChildren(buffer, indent);
-    if (element != null) {
-      buffer.writeln('${'  ' * indent}</${element.tagName.toLowerCase()}>');
+    if (rootElement != null) {
+      buffer.writeln('${'  ' * indent}</${rootElement.tagName.toLowerCase()}>');
     } else {
       buffer.writeln('${'  ' * indent}</$runtimeType>');
     }
@@ -826,8 +783,8 @@ abstract class _PersistedSurface {
   @protected
   @mustCallSuper
   void debugPrintAttributes(StringBuffer buffer) {
-    if (element != null) {
-      buffer.write('@${element.hashCode} ');
+    if (rootElement != null) {
+      buffer.write('@${rootElement.hashCode} ');
     }
     buffer.write('painted-by="${paintedBy.runtimeType}"');
   }
@@ -894,25 +851,28 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
   @override
   void build() {
     super.build();
+    // Memoize length for efficiency.
     final len = _children.length;
+    // Memoize container element for efficiency. [childContainer] is polymorphic
+    final html.Element containerElement = childContainer;
     for (int i = 0; i < len; i++) {
       final _PersistedSurface child = _children[i];
       child.build();
-      element.append(child.element);
+      containerElement.append(child.rootElement);
     }
   }
 
   void _updateChild(_PersistedSurface newChild, _PersistedSurface oldChild) {
-    assert(newChild.element == null);
+    assert(newChild.rootElement == null);
     assert(oldChild.isTotalMatchFor(newChild));
-    final html.Element oldElement = oldChild.element;
+    final html.Element oldElement = oldChild.rootElement;
     assert(oldElement != null);
     newChild.update(oldChild);
     // When the new surface reuses an existing element it takes ownership of it
     // so we null it out in the old surface. This prevents the element from
     // being reused more than once, which would be a serious bug.
-    assert(oldChild.element == null);
-    assert(identical(newChild.element, oldElement));
+    assert(oldChild.rootElement == null);
+    assert(identical(newChild.rootElement, oldElement));
   }
 
   @override
@@ -934,6 +894,9 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
     int bottomInNew = _children.length - 1;
     int bottomInOld = oldContainer._children.length - 1;
 
+    // Memoize container element for efficiency. [childContainer] is polymorphic
+    final html.Element containerElement = childContainer;
+
     while (bottomInNew >= 0 && bottomInOld >= 0) {
       final newChild = _children[bottomInNew];
       if (oldContainer._children[bottomInOld].isTotalMatchFor(newChild)) {
@@ -950,7 +913,7 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
         // (e.g. maps).
         while (searchPointer >= 0) {
           final candidate = oldContainer._children[searchPointer];
-          final isNotYetReused = candidate.element != null;
+          final isNotYetReused = candidate.rootElement != null;
           if (isNotYetReused && candidate.isTotalMatchFor(newChild)) {
             match = candidate;
             break;
@@ -967,12 +930,13 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
 
         if (bottomInNew + 1 < _children.length) {
           final nextSibling = _children[bottomInNew + 1];
-          element.insertBefore(newChild.element, nextSibling.element);
+          containerElement.insertBefore(
+              newChild.rootElement, nextSibling.rootElement);
         } else {
-          element.append(newChild.element);
+          containerElement.append(newChild.rootElement);
         }
       }
-      assert(newChild.element != null);
+      assert(newChild.rootElement != null);
       bottomInNew--;
     }
 
@@ -986,19 +950,20 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
 
       if (bottomInNew + 1 < _children.length) {
         final nextSibling = _children[bottomInNew + 1];
-        element.insertBefore(newChild.element, nextSibling.element);
+        containerElement.insertBefore(
+            newChild.rootElement, nextSibling.rootElement);
       } else {
-        element.append(newChild.element);
+        containerElement.append(newChild.rootElement);
       }
       bottomInNew--;
-      assert(newChild.element != null);
+      assert(newChild.rootElement != null);
     }
 
     // Remove elements that were not reused this frame.
     final len = oldContainer._children.length;
     for (int i = 0; i < len; i++) {
       _PersistedSurface oldChild = oldContainer._children[i];
-      if (oldChild.element != null) {
+      if (oldChild.rootElement != null) {
         oldChild.recycle();
       }
     }
@@ -1007,11 +972,12 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
     // should be attached to this container's element.
     assert(() {
       for (int i = 0; i < oldContainer._children.length; i++) {
-        assert(oldContainer._children[i].element == null);
+        assert(oldContainer._children[i].rootElement == null);
+        assert(oldContainer._children[i].childContainer == null);
       }
       for (int i = 0; i < _children.length; i++) {
-        assert(_children[i].element != null);
-        assert(_children[i].element.parent == element);
+        assert(_children[i].rootElement != null);
+        assert(_children[i].rootElement.parent == containerElement);
       }
       return true;
     }());
@@ -1076,7 +1042,7 @@ class _PersistedTransform extends _PersistedContainerSurface {
 
   @override
   void apply() {
-    element.style.transform = float64ListToCssTransform(matrix4);
+    rootElement.style.transform = float64ListToCssTransform(matrix4);
   }
 
   @override
@@ -1118,7 +1084,7 @@ class _PersistedOffset extends _PersistedContainerSurface {
 
   @override
   void apply() {
-    element.style.transform = 'translate(${dx}px, ${dy}px)';
+    rootElement.style.transform = 'translate(${dx}px, ${dy}px)';
   }
 
   @override
@@ -1131,45 +1097,80 @@ class _PersistedOffset extends _PersistedContainerSurface {
   }
 }
 
-/// A surface that creates a rectangular clip.
-class _PersistedClipRect extends _PersistedContainerSurface {
-  _PersistedClipRect(
-      Object paintedBy, this.left, this.top, this.width, this.height)
-      : super(paintedBy);
+/// Mixin used by surfaces that clip their contents using an overflowing DOM
+/// element.
+mixin _DomClip on _PersistedContainerSurface {
+  /// The dedicated child container element that's separate from the
+  /// [rootElement] is used to compensate for the coordinate system shift
+  /// introduced by the [rootElement] translation.
+  @override
+  html.Element get childContainer => _childContainer;
+  html.Element _childContainer;
 
-  final double left;
-  final double top;
-  final double width;
-  final double height;
+  @override
+  void adoptElements(_DomClip oldSurface) {
+    super.adoptElements(oldSurface);
+    _childContainer = oldSurface._childContainer;
+    oldSurface._childContainer = null;
+  }
 
   @override
   html.Element createElement() {
-    return defaultCreateElement('flt-clip-rect');
+    final html.Element element = defaultCreateElement('flt-clip');
+    element.style.overflow = 'hidden';
+    _childContainer = html.Element.tag('flt-clip-interior');
+    _childContainer.style.position = 'absolute';
+    element.append(_childContainer);
+    return element;
+  }
+
+  @override
+  void recycle() {
+    super.recycle();
+
+    // Do not detach the child container from the root. It is permanently
+    // attached. The elements are reused together and are detached from the DOM
+    // together.
+    _childContainer = null;
+  }
+}
+
+/// A surface that creates a rectangular clip.
+class _PersistedClipRect extends _PersistedContainerSurface with _DomClip {
+  _PersistedClipRect(Object paintedBy, this.rect) : super(paintedBy);
+
+  final Rect rect;
+
+  @override
+  html.Element createElement() {
+    return super.createElement()..setAttribute('clip-type', 'rect');
   }
 
   @override
   void apply() {
-    element.style
-      ..transform = 'translate(${left}px, ${top}px)'
-      ..width = '${width}px'
-      ..height = '${height}px'
-      ..overflow = 'hidden';
+    rootElement.style
+      ..transform = 'translate(${rect.left}px, ${rect.top}px)'
+      ..width = '${rect.right - rect.left}px'
+      ..height = '${rect.bottom - rect.top}px';
+
+    // Translate the child container in the opposite direction to compensate for
+    // the shift in the coordinate system introduced by the translation of the
+    // rootElement. Clipping in Flutter has no effect on the coordinate system.
+    childContainer.style.transform =
+        'translate(${-rect.left}px, ${-rect.top}px)';
   }
 
   @override
   void update(_PersistedClipRect oldSurface) {
     super.update(oldSurface);
-    if (left != oldSurface.left ||
-        top != oldSurface.top ||
-        width != oldSurface.width ||
-        height != oldSurface.height) {
+    if (rect != oldSurface.rect) {
       apply();
     }
   }
 }
 
 /// A surface that creates a rounded rectangular clip.
-class _PersistedClipRRect extends _PersistedContainerSurface {
+class _PersistedClipRRect extends _PersistedContainerSurface with _DomClip {
   _PersistedClipRRect(Object paintedBy, this.rrect, this.clipBehavior)
       : super(paintedBy);
 
@@ -1179,12 +1180,12 @@ class _PersistedClipRRect extends _PersistedContainerSurface {
 
   @override
   html.Element createElement() {
-    return defaultCreateElement('flt-clip-rrect')..style.overflow = 'hidden';
+    return super.createElement()..setAttribute('clip-type', 'rrect');
   }
 
   @override
   void apply() {
-    element.style
+    rootElement.style
       ..transform = 'translate(${rrect.left}px, ${rrect.top}px)'
       ..width = '${rrect.width}px'
       ..height = '${rrect.height}px'
@@ -1192,6 +1193,12 @@ class _PersistedClipRRect extends _PersistedContainerSurface {
       ..borderTopRightRadius = '${rrect.trRadiusX}px'
       ..borderBottomRightRadius = '${rrect.brRadiusX}px'
       ..borderBottomLeftRadius = '${rrect.blRadiusX}px';
+
+    // Translate the child container in the opposite direction to compensate for
+    // the shift in the coordinate system introduced by the translation of the
+    // rootElement. Clipping in Flutter has no effect on the coordinate system.
+    childContainer.style.transform =
+        'translate(${-rrect.left}px, ${-rrect.top}px)';
   }
 
   @override
@@ -1218,8 +1225,8 @@ class _PersistedOpacity extends _PersistedContainerSurface {
 
   @override
   void apply() {
-    element.style.opacity = '${alpha / 255}';
-    element.style.transform = 'translate(${offset.dx}px, ${offset.dy}px)';
+    rootElement.style.opacity = '${alpha / 255}';
+    rootElement.style.transform = 'translate(${offset.dx}px, ${offset.dy}px)';
   }
 
   @override
@@ -1315,8 +1322,8 @@ class _PersistedHoudiniPicture extends _PersistedPicture {
     _recycleCanvas(oldCanvas);
     final HoudiniCanvas canvas = HoudiniCanvas(_computeCanvasBounds());
     _canvas = canvas;
-    domRenderer.clearDom(element);
-    element.append(_canvas.rootElement);
+    domRenderer.clearDom(rootElement);
+    rootElement.append(_canvas.rootElement);
     picture.recordingCanvas.apply(_canvas);
     canvas.commit();
   }
@@ -1342,8 +1349,8 @@ class _PersistedStandardPicture extends _PersistedPicture {
   void _applyDomPaint(EngineCanvas oldCanvas) {
     _recycleCanvas(oldCanvas);
     _canvas = DomCanvas();
-    domRenderer.clearDom(element);
-    element.append(_canvas.rootElement);
+    domRenderer.clearDom(rootElement);
+    rootElement.append(_canvas.rootElement);
     picture.recordingCanvas.apply(_canvas);
   }
 
@@ -1361,8 +1368,8 @@ class _PersistedStandardPicture extends _PersistedPicture {
       // tree then reuse canvases that were freed up.
       _paintQueue.add(() {
         _canvas = _findOrCreateCanvas(bounds);
-        domRenderer.clearDom(element);
-        element.append(_canvas.rootElement);
+        domRenderer.clearDom(rootElement);
+        rootElement.append(_canvas.rootElement);
         picture.recordingCanvas.apply(_canvas);
       });
     } else {
@@ -1474,7 +1481,7 @@ abstract class _PersistedPicture extends _PersistedLeafSurface {
   void _applyPaint(EngineCanvas oldCanvas) {
     if (!picture.recordingCanvas.didDraw) {
       _recycleCanvas(oldCanvas);
-      domRenderer.clearDom(element);
+      domRenderer.clearDom(rootElement);
       return;
     }
 
@@ -1485,7 +1492,7 @@ abstract class _PersistedPicture extends _PersistedLeafSurface {
   void applyPaint(EngineCanvas oldCanvas);
 
   void _applyTranslate() {
-    element.style.transform = 'translate(${dx}px, ${dy}px)';
+    rootElement.style.transform = 'translate(${dx}px, ${dy}px)';
   }
 
   @override
@@ -1521,10 +1528,10 @@ abstract class _PersistedPicture extends _PersistedLeafSurface {
   @override
   void debugPrintChildren(StringBuffer buffer, int indent) {
     super.debugPrintChildren(buffer, indent);
-    if (element != null) {
+    if (rootElement != null) {
       final canvasTag =
-          (element.firstChild as html.Element).tagName.toLowerCase();
-      final canvasHash = element.firstChild.hashCode;
+          (rootElement.firstChild as html.Element).tagName.toLowerCase();
+      final canvasHash = rootElement.firstChild.hashCode;
       buffer.writeln('${'  ' * (indent + 1)}<$canvasTag @$canvasHash />');
     } else {
       buffer.writeln('${'  ' * (indent + 1)}<canvas recycled />');
@@ -1532,7 +1539,7 @@ abstract class _PersistedPicture extends _PersistedLeafSurface {
   }
 }
 
-class _PersistedPhysicalShape extends _PersistedContainerSurface {
+class _PersistedPhysicalShape extends _PersistedContainerSurface with _DomClip {
   _PersistedPhysicalShape(Object paintedBy, this.path, this.elevation,
       int color, int shadowColor, this.clipBehavior)
       : this.color = Color(color),
@@ -1546,16 +1553,16 @@ class _PersistedPhysicalShape extends _PersistedContainerSurface {
   final Clip clipBehavior;
 
   void _applyColor() {
-    element.style.backgroundColor = color.toCssString();
+    rootElement.style.backgroundColor = color.toCssString();
   }
 
   void _applyShadow() {
-    ElevationShadow.applyShadow(element.style, elevation, shadowColor);
+    ElevationShadow.applyShadow(rootElement.style, elevation, shadowColor);
   }
 
   @override
   html.Element createElement() {
-    return defaultCreateElement('flt-physical-shape');
+    return super.createElement()..setAttribute('clip-type', 'physical-shape');
   }
 
   @override
@@ -1573,12 +1580,14 @@ class _PersistedPhysicalShape extends _PersistedContainerSurface {
     if (roundRect != null) {
       final borderRadius = '${roundRect.tlRadiusX}px ${roundRect.trRadiusX}px '
           '${roundRect.blRadiusX}px ${roundRect.brRadiusX}px';
-      var style = element.style;
+      var style = rootElement.style;
       style
         ..transform = 'translate(${roundRect.left}px, ${roundRect.top}px)'
         ..width = '${roundRect.width}px'
         ..height = '${roundRect.height}px'
         ..borderRadius = borderRadius;
+      childContainer.style.transform =
+          'translate(${-roundRect.left}px, ${-roundRect.top}px)';
       if (clipBehavior != Clip.none) {
         style.overflow = 'hidden';
       }
@@ -1586,11 +1595,13 @@ class _PersistedPhysicalShape extends _PersistedContainerSurface {
     } else {
       Rect rect = path.webOnlyPathAsRect;
       if (rect != null) {
-        final style = element.style;
+        final style = rootElement.style;
         style
           ..transform = 'translate(${rect.left}px, ${rect.top}px)'
           ..width = '${rect.width}px'
           ..height = '${rect.height}px';
+        childContainer.style.transform =
+            'translate(${-rect.left}px, ${-rect.top}px)';
         if (clipBehavior != Clip.none) {
           style.overflow = 'hidden';
         }

@@ -50,19 +50,23 @@ class RecordingCanvas {
     return _paintBounds.computeBounds();
   }
 
+  /// Applies the recorded commands onto an [engineCanvas].
   void apply(EngineCanvas engineCanvas, {bool clearFirst = true}) {
     if (_debugDumpPaintCommands) {
-      print('--- Applying RecordingCanvas to ${engineCanvas.runtimeType} '
+      final StringBuffer debugBuf = StringBuffer();
+      debugBuf.writeln(
+          '--- Applying RecordingCanvas to ${engineCanvas.runtimeType} '
           'with bounds $_paintBounds');
       if (clearFirst) {
         engineCanvas.clear();
       }
       for (var i = 0; i < _commands.length; i++) {
         var command = _commands[i];
-        print('  - $command');
+        debugBuf.writeln('ctx.$command;');
         command.apply(engineCanvas);
       }
-      print('--- End of command stream');
+      debugBuf.writeln('--- End of command stream');
+      print(debugBuf);
     } else {
       if (clearFirst) {
         engineCanvas.clear();
@@ -71,6 +75,19 @@ class RecordingCanvas {
         _commands[i].apply(engineCanvas);
       }
     }
+  }
+
+  /// Prints recorded commands.
+  String debugPrintCommands() {
+    if (assertionsEnabled) {
+      final StringBuffer debugBuf = StringBuffer();
+      for (var i = 0; i < _commands.length; i++) {
+        var command = _commands[i];
+        debugBuf.writeln('ctx.$command;');
+      }
+      return debugBuf.toString();
+    }
+    return null;
   }
 
   void save() {
@@ -322,7 +339,7 @@ class PaintSave extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'Save';
+      return 'save()';
     } else {
       return super.toString();
     }
@@ -344,7 +361,7 @@ class PaintRestore extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'Restore';
+      return 'restore()';
     } else {
       return super.toString();
     }
@@ -369,7 +386,7 @@ class PaintTranslate extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'Translate($dx, $dy)';
+      return 'translate($dx, $dy)';
     } else {
       return super.toString();
     }
@@ -394,7 +411,7 @@ class PaintScale extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'Scale($sx, $sy)';
+      return 'scale($sx, $sy)';
     } else {
       return super.toString();
     }
@@ -418,7 +435,7 @@ class PaintRotate extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'Rotate($radians)';
+      return 'rotate($radians)';
     } else {
       return super.toString();
     }
@@ -442,7 +459,7 @@ class PaintTransform extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'Transform(${matrix4.join(', ')})';
+      return 'transform(Matrix4.fromFloat64List(Float64List.fromList(<double>[${matrix4.join(', ')}])))';
     } else {
       return super.toString();
     }
@@ -467,7 +484,7 @@ class PaintSkew extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'Skew($sx, $sy)';
+      return 'skew($sx, $sy)';
     } else {
       return super.toString();
     }
@@ -491,7 +508,7 @@ class PaintClipRect extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'ClipRect($rect)';
+      return 'clipRect($rect)';
     } else {
       return super.toString();
     }
@@ -515,7 +532,7 @@ class PaintClipRRect extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'ClipRRect($rrect)';
+      return 'clipRRect($rrect)';
     } else {
       return super.toString();
     }
@@ -542,7 +559,7 @@ class PaintClipPath extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'ClipPath($path)';
+      return 'clipPath($path)';
     } else {
       return super.toString();
     }
@@ -567,7 +584,7 @@ class PaintDrawColor extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawColor($color, $blendMode)';
+      return 'drawColor($color, $blendMode)';
     } else {
       return super.toString();
     }
@@ -593,7 +610,7 @@ class PaintDrawLine extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawLine($p1, $p2, $paint)';
+      return 'drawLine($p1, $p2, $paint)';
     } else {
       return super.toString();
     }
@@ -618,7 +635,7 @@ class PaintDrawPaint extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawPaint($paint)';
+      return 'drawPaint($paint)';
     } else {
       return super.toString();
     }
@@ -643,7 +660,7 @@ class PaintDrawRect extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawRect($rect, $paint)';
+      return 'drawRect($rect, $paint)';
     } else {
       return super.toString();
     }
@@ -669,7 +686,7 @@ class PaintDrawRRect extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawRRect($rrect, $paint)';
+      return 'drawRRect($rrect, $paint)';
     } else {
       return super.toString();
     }
@@ -699,7 +716,7 @@ class PaintDrawDRRect extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawDRRect($outer, $inner, $paint)';
+      return 'drawDRRect($outer, $inner, $paint)';
     } else {
       return super.toString();
     }
@@ -729,7 +746,7 @@ class PaintDrawOval extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawOval($rect, $paint)';
+      return 'drawOval($rect, $paint)';
     } else {
       return super.toString();
     }
@@ -759,7 +776,7 @@ class PaintDrawCircle extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawCircle($c, $radius, $paint)';
+      return 'drawCircle($c, $radius, $paint)';
     } else {
       return super.toString();
     }
@@ -790,7 +807,7 @@ class PaintDrawPath extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawPath($path, $paint)';
+      return 'drawPath($path, $paint)';
     } else {
       return super.toString();
     }
@@ -822,7 +839,7 @@ class PaintDrawShadow extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawShadow($path, $color, $elevation, $transparentOccluder)';
+      return 'drawShadow($path, $color, $elevation, $transparentOccluder)';
     } else {
       return super.toString();
     }
@@ -859,7 +876,7 @@ class PaintDrawImage extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawImage($image, $offset, $paint)';
+      return 'drawImage($image, $offset, $paint)';
     } else {
       return super.toString();
     }
@@ -888,7 +905,7 @@ class PaintDrawImageRect extends PaintCommand {
   @override
   String toString() {
     if (assertionsEnabled) {
-      return 'DrawImageRect($image, $src, $dst, $paint)';
+      return 'drawImageRect($image, $src, $dst, $paint)';
     } else {
       return super.toString();
     }

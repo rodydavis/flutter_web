@@ -14,19 +14,24 @@ import 'measurement.dart';
 /// Contains the subset of [ui.ParagraphStyle] properties that affect layout.
 class ParagraphGeometricStyle {
   ParagraphGeometricStyle({
-    ui.FontWeight fontWeight,
-    ui.FontStyle fontStyle,
-    String fontFamily,
-    double fontSize,
-  })  : fontWeight = fontWeight,
-        fontStyle = fontStyle,
-        fontFamily = fontFamily,
-        fontSize = fontSize;
+    this.fontWeight,
+    this.fontStyle,
+    this.fontFamily,
+    this.fontSize,
+    this.lineHeight,
+    this.letterSpacing,
+    this.wordSpacing,
+    this.decoration,
+  });
 
   final ui.FontWeight fontWeight;
   final ui.FontStyle fontStyle;
   final String fontFamily;
   final double fontSize;
+  final double lineHeight;
+  final double letterSpacing;
+  final double wordSpacing;
+  final String decoration;
 
   /// Returns the font-family that should be used to style the paragraph. It may
   /// or may not be different from [fontFamily]:
@@ -85,8 +90,26 @@ class ParagraphGeometricStyle {
       result.write(DomRenderer.defaultFontSize);
     }
     result.write(' ');
-
     result.write(effectiveFontFamily);
+
+    if (lineHeight != null && lineHeight != 1.0) {
+      result.write(' ');
+      result.write('line-height: $lineHeight');
+    }
+    if (letterSpacing != null && letterSpacing != 0) {
+      result.write(' ');
+      result.write('letter-spacing: ${letterSpacing}px');
+    }
+    if (wordSpacing != null && wordSpacing != 0) {
+      result.write(' ');
+      result.write('word-spacing: ${wordSpacing}px');
+    }
+    if (decoration == true) {
+      // Unline line-through, wavy decoration combined with overline/underline
+      // does change rendering size.
+      result.write(' ');
+      result.write('text-decoration: $decoration');
+    }
     return result.toString();
   }
 
@@ -98,7 +121,11 @@ class ParagraphGeometricStyle {
     if (fontWeight != typedOther.fontWeight ||
         fontStyle != typedOther.fontStyle ||
         fontFamily != typedOther.fontFamily ||
-        fontSize != typedOther.fontSize) return false;
+        fontSize != typedOther.fontSize ||
+        lineHeight != typedOther.lineHeight ||
+        letterSpacing != typedOther.letterSpacing ||
+        wordSpacing != typedOther.wordSpacing ||
+        decoration != typedOther.decoration) return false;
     return true;
   }
 
@@ -108,13 +135,21 @@ class ParagraphGeometricStyle {
         fontStyle,
         fontFamily,
         fontSize,
+        lineHeight,
+        letterSpacing,
+        wordSpacing,
+        decoration,
       );
 
   @override
   String toString() {
     if (assertionsEnabled) {
       return '$runtimeType(fontWeight: $fontWeight, fontStyle: $fontStyle,'
-          ' fontFamily: $fontFamily, fontSize: $fontSize)';
+          ' fontFamily: $fontFamily, fontSize: $fontSize,'
+          ' lineHeight: $lineHeight)'
+          ' letterSpacing: $letterSpacing)'
+          ' wordSpacing: $wordSpacing)'
+          ' decoration: $decoration)';
     } else {
       return super.toString();
     }
@@ -311,6 +346,9 @@ class ParagraphRuler {
       ..fontStyle = style.fontStyle != null
           ? style.fontStyle == ui.FontStyle.normal ? 'normal' : 'italic'
           : null;
+    if (style.lineHeight != null) {
+      element.style.lineHeight = style.lineHeight.toString();
+    }
   }
 
   /// Attempts to efficiently copy text from [from] into [into].

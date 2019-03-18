@@ -32,8 +32,8 @@ void main() {
           const Offset(400.0, 0.0));
 
       expectCurrentHtml('''
-<clip style="overflow: hidden"></clip>
-<clip style="overflow: hidden"></clip>
+<clip style="overflow: hidden"><clip-i></clip-i></clip>
+<clip style="overflow: hidden"><clip-i></clip-i></clip>
       ''');
     });
   });
@@ -63,8 +63,8 @@ void main() {
           const Offset(0.0, 300.0));
 
       expectCurrentHtml('''
-<clip style="overflow: hidden"></clip>
-<clip style="overflow: hidden"></clip>
+<clip style="overflow: hidden"><clip-i></clip-i></clip>
+<clip style="overflow: hidden"><clip-i></clip-i></clip>
       ''');
     });
   });

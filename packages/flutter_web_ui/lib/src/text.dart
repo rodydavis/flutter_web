@@ -1276,9 +1276,13 @@ class Paragraph {
   /// Returns `true` if this paragraph can be directly painted to the canvas.
   ///
   /// For now, we can only draw paragraphs onto the canvas directly if they
-  /// are on a single line and do not use rich text.
+  /// are on a single line and do not use rich text. We also use fallback
+  /// for decorations, since Canvas doesn't support them.
   // TODO(yjbanov): This is Engine-internal API. We should make it private.
-  bool get webOnlyDrawOnCanvas => _webOnlyIsSingleLine && _plainText != null;
+  bool get webOnlyDrawOnCanvas =>
+      _webOnlyIsSingleLine &&
+      _plainText != null &&
+      _paragraphGeometricStyle.decoration == null;
 
   /// Whether this paragraph has been laid out.
   // TODO(yjbanov): This is Engine-internal API. We should make it private.
@@ -1644,6 +1648,10 @@ class ParagraphBuilder {
           fontWeight: fontWeight,
           fontStyle: fontStyle,
           fontSize: fontSize,
+          lineHeight: height,
+          letterSpacing: letterSpacing,
+          wordSpacing: wordSpacing,
+          decoration: _textDecorationToCssString(decoration, decorationStyle),
         ),
         plainText: '',
         paint: paint,
@@ -1676,6 +1684,12 @@ class ParagraphBuilder {
     final String plainText = plainTextBuffer.toString();
     domRenderer.appendText(_paragraphElement, plainText);
     applyTextStyleToElement(element: _paragraphElement, style: cumulativeStyle);
+    // Since this is a plain paragraph apply background color to paragraph tag
+    // instead of individual spans.
+    if (cumulativeStyle._background != null) {
+      applyTextBackgroundToElement(
+          element: _paragraphElement, style: cumulativeStyle);
+    }
     return new Paragraph._(
       paragraphElement: _paragraphElement,
       paragraphGeometricStyle: ParagraphGeometricStyle(
@@ -1683,6 +1697,10 @@ class ParagraphBuilder {
         fontWeight: fontWeight,
         fontStyle: fontStyle,
         fontSize: fontSize,
+        lineHeight: height,
+        letterSpacing: letterSpacing,
+        wordSpacing: wordSpacing,
+        decoration: _textDecorationToCssString(decoration, decorationStyle),
       ),
       plainText: plainText,
       paint: paint,
@@ -1701,6 +1719,9 @@ class ParagraphBuilder {
       if (op is TextStyle) {
         var span = domRenderer.createElement('span');
         applyTextStyleToElement(element: span, style: op);
+        if (op._background != null) {
+          applyTextBackgroundToElement(element: span, style: op);
+        }
         domRenderer.append(currentElement(), span);
         elementStack.add(span);
       } else if (op is String) {
@@ -1715,16 +1736,37 @@ class ParagraphBuilder {
     return new Paragraph._(
       paragraphElement: _paragraphElement,
       paragraphGeometricStyle: ParagraphGeometricStyle(
-        fontFamily: _paragraphStyle._fontFamily,
-        fontWeight: _paragraphStyle._fontWeight,
-        fontStyle: _paragraphStyle._fontStyle,
-        fontSize: _paragraphStyle._fontSize,
-      ),
+          fontFamily: _paragraphStyle._fontFamily,
+          fontWeight: _paragraphStyle._fontWeight,
+          fontStyle: _paragraphStyle._fontStyle,
+          fontSize: _paragraphStyle._fontSize,
+          lineHeight: _paragraphStyle._height),
       plainText: null,
       paint: null,
       textAlign: _paragraphStyle._textAlign,
       textDirection: _paragraphStyle._textDirection,
     );
+  }
+}
+
+/// Applies background color properties in text style to paragraph or span
+/// elements.
+void applyTextBackgroundToElement({
+  @required HtmlElement element,
+  @required TextStyle style,
+  TextStyle previousStyle,
+}) {
+  var newBackground = style._background;
+  if (previousStyle == null) {
+    if (newBackground != null) {
+      domRenderer.setElementStyle(
+          element, 'background-color', newBackground.color.toCssString());
+    }
+  } else {
+    if (newBackground != previousStyle._background) {
+      domRenderer.setElementStyle(
+          element, 'background-color', newBackground.color?.toCssString());
+    }
   }
 }
 
@@ -1739,10 +1781,12 @@ void applyTextStyleToElement({
 }) {
   assert(element != null);
   assert(style != null);
-
+  bool updateDecoration = false;
   if (previousStyle == null) {
-    if (style._color != null) {
-      domRenderer.setElementStyle(element, 'color', style._color.toCssString());
+    var color = style._color;
+    if (style._foreground?.color != null) color = style._foreground.color;
+    if (color != null) {
+      domRenderer.setElementStyle(element, 'color', color.toCssString());
     }
     if (style._fontSize != null) {
       domRenderer.setElementStyle(
@@ -1759,10 +1803,25 @@ void applyTextStyleToElement({
     if (style._fontFamily != null) {
       domRenderer.setElementStyle(element, 'font-family', style._fontFamily);
     }
-  } else {
-    if (style._color != previousStyle._color) {
+    if (style._letterSpacing != null) {
       domRenderer.setElementStyle(
-          element, 'color', style._color?.toCssString());
+          element, 'letter-spacing', '${style._letterSpacing}px');
+    }
+    if (style._wordSpacing != null) {
+      domRenderer.setElementStyle(
+          element, 'word-spacing', '${style._wordSpacing}px');
+    }
+    if (style._decoration != null) {
+      updateDecoration = true;
+    }
+  } else {
+    if (style._color != previousStyle._color ||
+        style._foreground != previousStyle._foreground) {
+      var color = style._color;
+      if (style._foreground?.color != null) {
+        color = style._foreground.color;
+      }
+      domRenderer.setElementStyle(element, 'color', color?.toCssString());
     }
 
     if (style._fontSize != previousStyle._fontSize) {
@@ -1783,10 +1842,75 @@ void applyTextStyleToElement({
               ? style._fontStyle == FontStyle.normal ? 'normal' : 'italic'
               : null);
     }
-
     if (style._fontFamily != previousStyle._fontFamily) {
       domRenderer.setElementStyle(element, 'font-family', style._fontFamily);
     }
+    if (style._letterSpacing != previousStyle._letterSpacing) {
+      domRenderer.setElementStyle(
+          element, 'letter-spacing', '${style._letterSpacing}px');
+    }
+    if (style._wordSpacing != previousStyle._wordSpacing) {
+      domRenderer.setElementStyle(
+          element, 'word-spacing', '${style._wordSpacing}px');
+    }
+    if (style._decoration != previousStyle._decoration ||
+        style._decorationStyle != previousStyle._decorationStyle ||
+        style._decorationColor != previousStyle._decorationColor) {
+      updateDecoration = true;
+    }
+  }
+
+  if (updateDecoration) {
+    if (style._decoration != null) {
+      String textDecoration =
+          _textDecorationToCssString(style._decoration, style._decorationStyle);
+      if (textDecoration != null) {
+        domRenderer.setElementStyle(element, 'text-decoration', textDecoration);
+        var decorationColor = style._decorationColor;
+        if (decorationColor != null) {
+          domRenderer.setElementStyle(
+              element, 'text-decoration-color', decorationColor.toCssString());
+        }
+      }
+    }
+  }
+}
+
+/// Converts text decoration style to CSS text-decoration-style value.
+String _textDecorationToCssString(
+    TextDecoration decoration, TextDecorationStyle decorationStyle) {
+  StringBuffer decorations = new StringBuffer();
+  if (decoration != null) {
+    if (decoration.contains(TextDecoration.underline)) {
+      decorations.write('underline ');
+    }
+    if (decoration.contains(TextDecoration.overline)) {
+      decorations.write('overline ');
+    }
+    if (decoration.contains(TextDecoration.lineThrough)) {
+      decorations.write('line-through ');
+    }
+  }
+  if (decorationStyle != null) {
+    decorations.write(_decorationStyleToCssString(decorationStyle));
+  }
+  return decorations.isEmpty ? null : decorations.toString();
+}
+
+String _decorationStyleToCssString(TextDecorationStyle decorationStyle) {
+  switch (decorationStyle) {
+    case TextDecorationStyle.dashed:
+      return 'dashed';
+    case TextDecorationStyle.dotted:
+      return 'dotted';
+    case TextDecorationStyle.double:
+      return 'double';
+    case TextDecorationStyle.solid:
+      return 'solid';
+    case TextDecorationStyle.wavy:
+      return 'wavy';
+    default:
+      return null;
   }
 }
 
