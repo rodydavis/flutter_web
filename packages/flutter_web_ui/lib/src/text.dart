@@ -378,6 +378,20 @@ class TextStyle {
   final Paint _foreground;
   final List<Shadow> _shadows;
 
+  String get _effectiveFontFamily {
+    if (assertionsEnabled) {
+      // In widget tests we use a predictable-size font "Ahem". This makes
+      // widget tests predictable and less flaky.
+      if (domRenderer.debugIsInWidgetTest) {
+        return 'Ahem';
+      }
+    }
+    if (_fontFamily == null || _fontFamily.isEmpty) {
+      return DomRenderer.defaultFontFamily;
+    }
+    return _fontFamily;
+  }
+
   @override
   bool operator ==(dynamic other) {
     if (identical(this, other)) return true;
@@ -545,6 +559,20 @@ class ParagraphStyle {
   final StrutStyle _strutStyle;
   final String _ellipsis;
   final Locale _locale;
+
+  String get _effectiveFontFamily {
+    if (assertionsEnabled) {
+      // In widget tests we use a predictable-size font "Ahem". This makes
+      // widget tests predictable and less flaky.
+      if (domRenderer.debugIsInWidgetTest) {
+        return 'Ahem';
+      }
+    }
+    if (_fontFamily == null || _fontFamily.isEmpty) {
+      return DomRenderer.defaultFontFamily;
+    }
+    return _fontFamily;
+  }
 
   double get _webOnlyLineHeight {
     if (_strutStyle == null || _strutStyle._height == null) {
@@ -1282,7 +1310,9 @@ class Paragraph {
   bool get webOnlyDrawOnCanvas =>
       _webOnlyIsSingleLine &&
       _plainText != null &&
-      _paragraphGeometricStyle.decoration == null;
+      _paragraphGeometricStyle.decoration == null &&
+      _paragraphGeometricStyle.letterSpacing == null &&
+      _paragraphGeometricStyle.wordSpacing == null;
 
   /// Whether this paragraph has been laid out.
   // TODO(yjbanov): This is Engine-internal API. We should make it private.
@@ -1800,8 +1830,9 @@ void applyTextStyleToElement({
       domRenderer.setElementStyle(element, 'font-style',
           style._fontStyle == FontStyle.normal ? 'normal' : 'italic');
     }
-    if (style._fontFamily != null) {
-      domRenderer.setElementStyle(element, 'font-family', style._fontFamily);
+    if (style._effectiveFontFamily != null) {
+      domRenderer.setElementStyle(
+          element, 'font-family', style._effectiveFontFamily);
     }
     if (style._letterSpacing != null) {
       domRenderer.setElementStyle(
@@ -1957,8 +1988,9 @@ void applyParagraphStyleToElement({
       domRenderer.setElementStyle(element, 'font-style',
           style._fontStyle == FontStyle.normal ? 'normal' : 'italic');
     }
-    if (style._fontFamily != null) {
-      domRenderer.setElementStyle(element, 'font-family', style._fontFamily);
+    if (style._effectiveFontFamily != null) {
+      domRenderer.setElementStyle(
+          element, 'font-family', style._effectiveFontFamily);
     }
   } else {
     if (style._textAlign != previousStyle._textAlign) {

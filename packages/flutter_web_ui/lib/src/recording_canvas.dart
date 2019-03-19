@@ -229,6 +229,12 @@ class RecordingCanvas {
   }
 
   void drawDRRect(RRect outer, RRect inner, Paint paint) {
+    // If inner rect is not contained inside outer, flutter engine skips
+    // painting rectangle.
+    if (!(outer.contains(Offset(inner.left, inner.top)) &&
+        outer.contains(Offset(inner.right, inner.bottom)))) {
+      return;
+    }
     _hasArbitraryPaint = true;
     _didDraw = true;
     var strokeWidth = paint.strokeWidth == null ? 0 : paint.strokeWidth;

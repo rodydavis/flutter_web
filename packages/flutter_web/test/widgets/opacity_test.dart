@@ -17,7 +17,7 @@ void main() {
       ));
       expectCurrentHtml('''
 <o style="opacity: 0.501961">
-  <pic><d><p>Hello</p></d></pic>
+  <pic><d><p style="font-family: Ahem">Hello</p></d></pic>
 </o>
 ''');
     });
