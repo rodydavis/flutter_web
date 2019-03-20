@@ -1418,12 +1418,24 @@ class Paragraph {
     final double dx = offset.dx - webOnlyAlignOffset;
     final TextMeasurementService instance = TextMeasurementService.instance;
 
+    double _measureSingleLineWidth(String text) {
+      if (_paragraphGeometricStyle.letterSpacing != null ||
+          _paragraphGeometricStyle.wordSpacing != null ||
+          _paragraphGeometricStyle.decoration != null) {
+        // Note that measuring single-line text repeatedly with this API is
+        // very slow.
+        return instance.measureSingleLineText(_cloneWithText(text)).width;
+      } else {
+        return instance.measureSingleLineWidth(text, _paragraphGeometricStyle);
+      }
+    }
+
     int low = 0;
     int high = _plainText.length;
     do {
       final int current = (low + high) ~/ 2;
-      final double width = instance.measureSingleLineWidth(
-          _plainText.substring(0, current), _paragraphGeometricStyle);
+      final double width =
+          _measureSingleLineWidth(_plainText.substring(0, current));
       if (width < dx) {
         low = current;
       } else if (width > dx) {
@@ -1438,10 +1450,10 @@ class Paragraph {
       return TextPosition(offset: high, affinity: TextAffinity.upstream);
     }
 
-    final double lowWidth = instance.measureSingleLineWidth(
-        _plainText.substring(0, low), _paragraphGeometricStyle);
-    final double highWidth = instance.measureSingleLineWidth(
-        _plainText.substring(0, high), _paragraphGeometricStyle);
+    final double lowWidth =
+        _measureSingleLineWidth(_plainText.substring(0, low));
+    final double highWidth =
+        _measureSingleLineWidth(_plainText.substring(0, high));
 
     if (dx - lowWidth < highWidth - dx) {
       // The offset is closer to the low index.

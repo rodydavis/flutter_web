@@ -104,7 +104,7 @@ class ParagraphGeometricStyle {
       result.write(' ');
       result.write('word-spacing: ${wordSpacing}px');
     }
-    if (decoration == true) {
+    if (decoration != null && decoration.isNotEmpty) {
       // Unline line-through, wavy decoration combined with overline/underline
       // does change rendering size.
       result.write(' ');
@@ -345,7 +345,12 @@ class ParagraphRuler {
           : null
       ..fontStyle = style.fontStyle != null
           ? style.fontStyle == ui.FontStyle.normal ? 'normal' : 'italic'
-          : null;
+          : null
+      ..letterSpacing =
+          style.letterSpacing != null ? '${style.letterSpacing}px' : null
+      ..wordSpacing =
+          style.wordSpacing != null ? '${style.wordSpacing}px' : null
+      ..textDecoration = style.decoration;
     if (style.lineHeight != null) {
       element.style.lineHeight = style.lineHeight.toString();
     }

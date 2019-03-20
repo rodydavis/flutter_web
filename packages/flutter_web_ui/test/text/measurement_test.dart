@@ -196,5 +196,49 @@ void main() {
       expect(textWithNewline.width, 50);
       expect(textWithNewline.height, 20);
     });
+
+    test('takes letter spacing into account', () {
+      final TextMeasurementService instance =
+          TextMeasurementService.initialize(rulerCacheCapacity: 2);
+
+      final constraints = ui.ParagraphConstraints(width: 100);
+
+      final normalBuilder = ui.ParagraphBuilder(ahemStyle);
+      normalBuilder.addText('abc');
+      final normalText = normalBuilder.build();
+
+      final spacedBuilder = ui.ParagraphBuilder(ahemStyle);
+      spacedBuilder.pushStyle(ui.TextStyle(letterSpacing: 1.5));
+      spacedBuilder.addText('abc');
+      final spacedText = spacedBuilder.build();
+
+      instance.measure(normalText, constraints);
+      instance.measure(spacedText, constraints);
+
+      expect(
+          normalText.maxIntrinsicWidth < spacedText.maxIntrinsicWidth, isTrue);
+    });
+
+    test('takes word spacing into account', () {
+      final TextMeasurementService instance =
+          TextMeasurementService.initialize(rulerCacheCapacity: 2);
+
+      final constraints = ui.ParagraphConstraints(width: 100);
+
+      final normalBuilder = ui.ParagraphBuilder(ahemStyle);
+      normalBuilder.addText('a b c');
+      final normalText = normalBuilder.build();
+
+      final spacedBuilder = ui.ParagraphBuilder(ahemStyle);
+      spacedBuilder.pushStyle(ui.TextStyle(wordSpacing: 1.5));
+      spacedBuilder.addText('a b c');
+      final spacedText = spacedBuilder.build();
+
+      instance.measure(normalText, constraints);
+      instance.measure(spacedText, constraints);
+
+      expect(
+          normalText.maxIntrinsicWidth < spacedText.maxIntrinsicWidth, isTrue);
+    });
   });
 }

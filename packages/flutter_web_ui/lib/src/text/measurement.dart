@@ -162,6 +162,12 @@ class TextMeasurementService {
   /// Since only the width is needed, this method uses the [measureText] Canvas
   /// API which is significantly faster than DOM measurement.
   double measureSingleLineWidth(String text, ParagraphGeometricStyle style) {
+    assert(
+        style.letterSpacing == null &&
+            style.wordSpacing == null &&
+            style.decoration == null,
+        'Cannot measure text using canvas if it uses '
+        'letter spacing, word spacing or decoration: $style');
     canvasContext.font = style.cssFontString;
     return canvasContext.measureText(text).width;
   }
