@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 import 'dart:html' as html;
+import 'dart:math' as math;
+
 import 'package:vector_math/vector_math_64.dart';
 
 import 'canvas.dart';
@@ -76,21 +78,25 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
     }());
     String effectiveTransform;
     bool isStroke = paint.style == PaintingStyle.stroke;
+    var left = math.min(rect.left, rect.right);
+    var right = math.max(rect.left, rect.right);
+    var top = math.min(rect.top, rect.bottom);
+    var bottom = math.max(rect.top, rect.bottom);
     if (currentTransform.isIdentity()) {
       if (isStroke) {
         effectiveTransform =
-            'translate(${rect.left - (paint.strokeWidth / 2.0)}px, ${rect.top - (paint.strokeWidth / 2.0)}px)';
+            'translate(${left - (paint.strokeWidth / 2.0)}px, ${top - (paint.strokeWidth / 2.0)}px)';
       } else {
-        effectiveTransform = 'translate(${rect.left}px, ${rect.top}px)';
+        effectiveTransform = 'translate(${left}px, ${top}px)';
       }
     } else {
       // Clone to avoid mutating _transform.
       Matrix4 translated = currentTransform.clone();
       if (isStroke) {
-        translated.translate(rect.left - (paint.strokeWidth / 2.0),
-            rect.top - (paint.strokeWidth / 2.0));
+        translated.translate(
+            left - (paint.strokeWidth / 2.0), top - (paint.strokeWidth / 2.0));
       } else {
-        translated.translate(rect.left, rect.top);
+        translated.translate(left, top);
       }
       effectiveTransform = matrix4ToCssTransform(translated);
     }
@@ -104,13 +110,13 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
 
     if (isStroke) {
       style
-        ..width = '${rect.width - paint.strokeWidth}px'
-        ..height = '${rect.height - paint.strokeWidth}px'
+        ..width = '${right - left - paint.strokeWidth}px'
+        ..height = '${bottom - top - paint.strokeWidth}px'
         ..border = '${paint.strokeWidth}px solid ${cssColor}';
     } else {
       style
-        ..width = '${rect.width}px'
-        ..height = '${rect.height}px'
+        ..width = '${right - left}px'
+        ..height = '${bottom - top}px'
         ..backgroundColor = cssColor;
     }
 

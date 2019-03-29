@@ -6,6 +6,7 @@ import 'dart:html' as html;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'browser_detection.dart';
 import 'canvas.dart';
 import 'engine_canvas.dart';
 import 'geometry.dart';
@@ -584,24 +585,51 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     final shadows = ElevationShadow.computeCanvasShadows(elevation, color);
     if (shadows.isNotEmpty) {
       for (final shadow in shadows) {
-        // We paint shadows using a path and a mask filter instead of the
-        // built-in shadow* properties. This is because the color alpha of the
-        // paint is added to the shadow. The effect we're looking for is to just
-        // paint the shadow without the path itself, but if we use a non-zero
-        // alpha for the paint the path is painted in addition to the shadow,
-        // which is undesirable.
-        final paint = Paint()
-          ..color = shadow.color
-          ..style = PaintingStyle.fill
-          ..strokeWidth = 0.0
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, shadow.blur);
-        _ctx.save();
-        _ctx.translate(shadow.offsetX, shadow.offsetY);
-        PaintData paintData = paint.webOnlyPaintData;
-        _applyPaint(paintData);
-        _runPath(path);
-        _strokeOrFill(paintData, resetPaint: false);
-        _ctx.restore();
+        // TODO(het): Shadows with transparent occluders are not supported
+        // on webkit since filter is unsupported.
+        if (transparentOccluder && browserEngine != BrowserEngine.webkit) {
+          // We paint shadows using a path and a mask filter instead of the
+          // built-in shadow* properties. This is because the color alpha of the
+          // paint is added to the shadow. The effect we're looking for is to just
+          // paint the shadow without the path itself, but if we use a non-zero
+          // alpha for the paint the path is painted in addition to the shadow,
+          // which is undesirable.
+          final paint = Paint()
+            ..color = shadow.color
+            ..style = PaintingStyle.fill
+            ..strokeWidth = 0.0
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, shadow.blur);
+          _ctx.save();
+          _ctx.translate(shadow.offsetX, shadow.offsetY);
+          final paintData = paint.webOnlyPaintData;
+          _applyPaint(paintData);
+          _runPath(path);
+          _strokeOrFill(paintData, resetPaint: false);
+          _ctx.restore();
+        } else {
+          // TODO(het): We fill the path with this paint, then later we clip
+          // by the same path and fill it with a fully opaque color (we know
+          // the color is fully opaque because `transparentOccluder` is false.
+          // However, due to anti-aliasing of the clip, a few pixels of the
+          // path we are about to paint may still be visible after we fill with
+          // the opaque occluder. For that reason, we fill with the shadow color,
+          // and set the shadow color to fully opaque. This way, the visible
+          // pixels are less opaque and less noticeable.
+          final paint = Paint()
+            ..color = shadow.color
+            ..style = PaintingStyle.fill
+            ..strokeWidth = 0.0;
+          _ctx.save();
+          final paintData = paint.webOnlyPaintData;
+          _applyPaint(paintData);
+          _ctx.shadowBlur = shadow.blur;
+          _ctx.shadowColor = shadow.color.withAlpha(0xff).toCssString();
+          _ctx.shadowOffsetX = shadow.offsetX;
+          _ctx.shadowOffsetY = shadow.offsetY;
+          _runPath(path);
+          _strokeOrFill(paintData, resetPaint: false);
+          _ctx.restore();
+        }
       }
       _resetPaint();
     }

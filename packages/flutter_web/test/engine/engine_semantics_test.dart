@@ -675,7 +675,7 @@ void _testTextField() {
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
 <sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
-  <sem-tf style="user-select: text">hello</sem-tf>
+  <sem-tf style="user-select: text; caret-color: transparent">hello</sem-tf>
 </sem>''');
 
     semantics().semanticsEnabled = false;

@@ -1360,12 +1360,12 @@ class Path {
     double sweepAngle = math.atan2(endVectorY, endVectorX) - startAngle;
 
     if (clockwise && sweepAngle < 0) {
-      sweepAngle -= math.pi * 2.0;
-    } else if (!clockwise && sweepAngle > 0) {
       sweepAngle += math.pi * 2.0;
+    } else if (!clockwise && sweepAngle > 0) {
+      sweepAngle -= math.pi * 2.0;
     }
 
-    _commands.add(new Ellipse(cx, cy, rx, ry, 0.0, startAngle,
+    _commands.add(new Ellipse(cx, cy, rx, ry, xAxisRotation, startAngle,
         startAngle + sweepAngle, sweepAngle.isNegative));
 
     _setCurrentPoint(arcEnd.dx, arcEnd.dy);

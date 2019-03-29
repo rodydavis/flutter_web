@@ -1395,8 +1395,6 @@ class _PaintBounds {
 
   /// Grow painted area to include given rectangle.
   void growLTRB(double left, double top, double right, double bottom) {
-    assert(left <= right);
-    assert(top <= bottom);
     if (left == right || top == bottom) return;
 
     var transformedPointLeft = left;

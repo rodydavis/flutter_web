@@ -1283,6 +1283,9 @@ class EngineSemanticsOwner {
       'touchend',
       'touchmove',
       'touchcancel',
+      'mousedown',
+      'mousemove',
+      'mouseup',
     ];
 
     if (_pointerEventTypes.contains(event.type)) {

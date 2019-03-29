@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:html' as html;
+import 'dart:js_util' as js_util;
 
 import '../../ui.dart' as ui;
 
@@ -32,6 +33,7 @@ class TextField extends RoleManager {
       ..height = '${semanticsObject.rect.height}px'
       ..userSelect = 'text'
       ..setProperty('-webkit-user-select', 'text');
+    js_util.setProperty(_textFieldElement.style, 'caretColor', 'transparent');
     semanticsObject.element.append(_textFieldElement);
 
     switch (browserEngine) {
