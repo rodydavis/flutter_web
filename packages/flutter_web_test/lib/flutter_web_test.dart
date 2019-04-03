@@ -346,7 +346,7 @@ void expectCurrentLayout(String expectedHtml) {
 
 /// Currently rendered HTML DOM as an HTML string.
 String get currentHtml {
-  return ui.window.webOnlySceneElement?.outerHtml ?? '';
+  return ui.domRenderer.sceneElement?.outerHtml ?? '';
 }
 
 /// A widget that creates an element and sizes itself by constraining its

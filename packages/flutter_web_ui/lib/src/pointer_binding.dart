@@ -11,6 +11,7 @@ import 'package:flutter_web_ui/ui.dart' as ui show window;
 import 'package:flutter_web_ui/ui.dart'
     show PointerData, PointerDataPacket, PointerChange;
 
+import 'engine.dart';
 import 'pointer.dart';
 import 'semantics/semantics.dart' as engine;
 
@@ -31,6 +32,9 @@ class PointerBinding {
       _detector = const PointerSupportDetector();
       _adapter = _createAdapter();
     }
+    registerHotRestartListener(() {
+      _adapter?.clearListeners();
+    });
   }
 
   PointerSupportDetector _detector;

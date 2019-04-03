@@ -488,7 +488,12 @@ class FlutterPainter {
   _drawColor(ctx, geom, command) {
     ctx.globalCompositeOperation = _stringForBlendMode(command[2]);
     ctx.fillStyle = command[1];
-    ctx.fillRect(0, 0, geom.width, geom.height);
+
+    // Fill a virtually infinite rect with the color.
+    //
+    // We can't use (0, 0, width, height) because the current transform can
+    // cause it to not fill the entire clip.
+    ctx.fillRect(-10000, -10000, 20000, 20000);
     this._resetPaint(ctx);
   }
 
@@ -512,7 +517,12 @@ class FlutterPainter {
     let paint = scanner.scanPaint();
     this._applyPaint(ctx, paint);
     ctx.beginPath();
-    ctx.fillRect(0, 0, geom.width, geom.height);
+
+    // Fill a virtually infinite rect with the color.
+    //
+    // We can't use (0, 0, width, height) because the current transform can
+    // cause it to not fill the entire clip.
+    ctx.fillRect(-10000, -10000, 20000, 20000);
     this._resetPaint(ctx);
   }
 }

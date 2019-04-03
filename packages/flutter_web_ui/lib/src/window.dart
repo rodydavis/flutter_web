@@ -1013,10 +1013,6 @@ class Window {
   AccessibilityFeatures get accessibilityFeatures => _accessibilityFeatures;
   AccessibilityFeatures _accessibilityFeatures = AccessibilityFeatures._(0);
 
-  /// The last scene element rendered by the [render] method.
-  dynamic _sceneElement;
-  dynamic get webOnlySceneElement => _sceneElement;
-
   /// Updates the application's rendering on the GPU with the newly provided
   /// [Scene]. This function must be called within the scope of the
   /// [onBeginFrame] or [onDrawFrame] callbacks being invoked. If this function
@@ -1045,16 +1041,7 @@ class Window {
     if (scene is LayerScene) {
       _rasterizer.draw(scene.layerTree);
     } else {
-      // On the Web we don't want to unnecessarily move DOM nodes around. If a
-      // DOM node is already in the right place, skip DOM mutations to avoid
-      // performance cost.
-      if (scene.webOnlyRootElement != _sceneElement) {
-        if (_sceneElement != null) {
-          _sceneElement.remove();
-        }
-        _sceneElement = scene.webOnlyRootElement;
-        domRenderer.append(domRenderer.rootElement, _sceneElement);
-      }
+      domRenderer.renderScene(scene.webOnlyRootElement);
     }
   }
 

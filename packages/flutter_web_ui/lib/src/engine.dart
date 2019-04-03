@@ -2,14 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:developer' as developer;
 import 'dart:html' as html;
 
-import 'window.dart';
 import 'dom_renderer.dart';
 import 'keyboard.dart';
 import 'pointer_binding.dart';
+import 'window.dart';
 
 bool _engineInitialized = false;
+
+final List<VoidCallback> _hotRestartListeners = <VoidCallback>[];
+
+/// Requests that [listener] is called just before hot restarting the app.
+void registerHotRestartListener(VoidCallback listener) {
+  _hotRestartListeners.add(listener);
+}
 
 /// This method performs one-time initialization of the Web environment that
 /// supports the Flutter framework.
@@ -22,6 +30,20 @@ void webOnlyInitializeEngine() {
   if (_engineInitialized) {
     return;
   }
+
+  // Called by the Web runtime just before hot restarting the app.
+  //
+  // This extension cleans up resources that are registered with browser's
+  // global singletons that Dart compiler is unable to clean-up automatically.
+  //
+  // This extension does not need to clean-up Dart statics. Those are cleaned
+  // up by the compiler.
+  developer.registerExtension('ext.flutter.disassemble', (_, __) {
+    for (VoidCallback listener in _hotRestartListeners) {
+      listener();
+    }
+    return Future.value(developer.ServiceExtensionResponse.result('OK'));
+  });
 
   _engineInitialized = true;
 

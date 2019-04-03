@@ -76,7 +76,7 @@ class PointerData {
     this.radiusMax = 0.0,
     this.orientation = 0.0,
     this.tilt = 0.0,
-    this.platformData: 0,
+    this.platformData = 0,
   });
 
   /// Time of event dispatch, relative to an arbitrary timeline.

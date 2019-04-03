@@ -1617,7 +1617,7 @@ enum FilterQuality {
 ///    this class.
 class ImageFilter {
   /// Creates an image filter that applies a Gaussian blur.
-  ImageFilter.blur({double sigmaX: 0.0, double sigmaY: 0.0}) {
+  ImageFilter.blur({double sigmaX = 0.0, double sigmaY = 0.0}) {
     _initBlur(sigmaX, sigmaY);
   }
   void _initBlur(double sigmaX, double sigmaY) {

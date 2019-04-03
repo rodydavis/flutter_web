@@ -29,24 +29,29 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   /// Prepare to reuse this canvas by clearing it's current contents.
+  @override
   void clear() {
     super.clear();
     // TODO(yjbanov): we should measure if reusing old elements is beneficial.
     domRenderer.clearDom(rootElement);
   }
 
+  @override
   void clipRect(Rect rect) {
     throw UnimplementedError();
   }
 
+  @override
   void clipRRect(RRect rrect) {
     throw UnimplementedError();
   }
 
+  @override
   void clipPath(Path path) {
     throw UnimplementedError();
   }
 
+  @override
   void drawColor(Color color, BlendMode blendMode) {
     // TODO(yjbanov): implement blendMode
     html.Element box = html.Element.tag('draw-color');
@@ -60,14 +65,17 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
     currentElement.append(box);
   }
 
+  @override
   void drawLine(Offset p1, Offset p2, PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawPaint(PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawRect(Rect rect, PaintData paint) {
     assert(paint.shader == null);
     final rectangle = html.Element.tag('draw-rect');
@@ -123,39 +131,48 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
     currentElement.append(rectangle);
   }
 
+  @override
   void drawRRect(RRect rrect, PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawDRRect(RRect outer, RRect inner, PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawOval(Rect rect, PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawCircle(Offset c, double radius, PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawPath(Path path, PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawShadow(
       Path path, Color color, double elevation, bool transparentOccluder) {
     throw UnimplementedError();
   }
 
+  @override
   void drawImage(Image image, Offset p, PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
     throw UnimplementedError();
   }
 
+  @override
   void drawParagraph(Paragraph paragraph, Offset offset) {
     assert(paragraph.webOnlyIsLaidOut);
 

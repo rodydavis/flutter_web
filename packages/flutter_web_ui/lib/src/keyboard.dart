@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_web_ui/src/services.dart';
 
+import 'engine.dart';
 import 'window.dart';
 
 /// Provides keyboard bindings, such as the `flutter/keyevent` channel.
@@ -35,6 +36,9 @@ class Keyboard {
       _handleHtmlEvent(event);
     };
     html.window.addEventListener('keyup', _keyupListener);
+    registerHotRestartListener(() {
+      dispose();
+    });
   }
 
   /// Uninitializes the [Keyboard] singleton.

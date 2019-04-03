@@ -34,6 +34,14 @@ class RecordingCanvas {
   bool get hasArbitraryPaint => _hasArbitraryPaint;
   bool _hasArbitraryPaint = false;
 
+  /// Forces arbitrary paint even for simple pictures.
+  ///
+  /// This is useful for testing bitmap canvas when otherwise the compositor
+  /// would prefer a DOM canvas.
+  void debugEnforceArbitraryPaint() {
+    _hasArbitraryPaint = true;
+  }
+
   /// Whether this canvas contain drawing operations.
   ///
   /// Some pictures are created but only contain operations that do not result
@@ -51,15 +59,12 @@ class RecordingCanvas {
   }
 
   /// Applies the recorded commands onto an [engineCanvas].
-  void apply(EngineCanvas engineCanvas, {bool clearFirst = true}) {
+  void apply(EngineCanvas engineCanvas) {
     if (_debugDumpPaintCommands) {
       final StringBuffer debugBuf = StringBuffer();
       debugBuf.writeln(
           '--- Applying RecordingCanvas to ${engineCanvas.runtimeType} '
           'with bounds $_paintBounds');
-      if (clearFirst) {
-        engineCanvas.clear();
-      }
       for (var i = 0; i < _commands.length; i++) {
         var command = _commands[i];
         debugBuf.writeln('ctx.$command;');
@@ -68,9 +73,6 @@ class RecordingCanvas {
       debugBuf.writeln('--- End of command stream');
       print(debugBuf);
     } else {
-      if (clearFirst) {
-        engineCanvas.clear();
-      }
       for (var i = 0; i < _commands.length; i++) {
         _commands[i].apply(engineCanvas);
       }
@@ -1403,59 +1405,17 @@ class _PaintBounds {
     var transformedPointBottom = bottom;
 
     if (!_currentMatrixIsIdentity) {
-      // Construct a matrix where each row represents a vector pointing at
-      // one of the four corners of the (left, top, right, bottom) rectangle.
-      // Using the row-major order allows us to multiply the matrix in-place
-      // by the transposed current transformation matrix. The vector_math
-      // library has a convenience function `multiplyTranspose` that performs
-      // the multiplication without copying. This way we compute the positions
-      // of all four points in a single matrix-by-matrix multiplication at the
-      // cost of one `Matrix4` instance and one `Float64List` instance.
-      //
-      // The rejected alternative was to use `Vector3` for each point and
-      // multiply by the current transform. However, that would cost us four
-      // `Vector3` instances, four `Float64List` instances, and four
-      // matrix-by-vector multiplications.
-      //
-      // `Float64List` initializes the array with zeros, so we do not have to
-      // fill in every single element.
-      final Float64List pointData = Float64List(16);
-
-      // Row 0: top-left
-      pointData[0] = left;
-      pointData[4] = top;
-      pointData[12] = 1;
-
-      // Row 1: top-right
-      pointData[1] = right;
-      pointData[5] = top;
-      pointData[13] = 1;
-
-      // Row 2: bottom-left
-      pointData[2] = left;
-      pointData[6] = bottom;
-      pointData[14] = 1;
-
-      // Row 3: bottom-right
-      pointData[3] = right;
-      pointData[7] = bottom;
-      pointData[15] = 1;
-
-      final Matrix4 pointMatrix = Matrix4.fromFloat64List(pointData);
-      pointMatrix.multiplyTranspose(_currentMatrix);
-
-      transformedPointLeft = math.min(
-          math.min(math.min(pointData[0], pointData[1]), pointData[2]),
-          pointData[3]);
-      transformedPointTop = math.min(
-          math.min(math.min(pointData[4], pointData[5]), pointData[6]),
-          pointData[7]);
-      transformedPointRight = math.max(
-          math.max(math.max(pointData[0], pointData[1]), pointData[2]),
-          pointData[3]);
-      transformedPointBottom = math.max(
-          math.max(math.max(pointData[4], pointData[5]), pointData[6]),
-          pointData[7]);
+      Rect transformedRect = localClipToGlobalClip(
+        localLeft: left,
+        localTop: top,
+        localRight: right,
+        localBottom: bottom,
+        transform: _currentMatrix,
+      );
+      transformedPointLeft = transformedRect.left;
+      transformedPointTop = transformedRect.top;
+      transformedPointRight = transformedRect.right;
+      transformedPointBottom = transformedRect.bottom;
     }
 
     if (_clipRectInitialized) {

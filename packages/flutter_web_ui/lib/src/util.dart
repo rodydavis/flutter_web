@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart';
+
+import 'geometry.dart';
 
 /// Generic callback signature, used by [_futurize].
 typedef Callback<T> = void Function(T result);
@@ -109,4 +112,90 @@ bool get assertionsEnabled {
   var k = false;
   assert(k = true);
   return k;
+}
+
+/// Converts a rectangular clip specified in local coordinates to screen
+/// coordinates given the effective [transform].
+///
+/// The resulting clip is a rectangle aligned to the pixel grid, i.e. two of
+/// its sides are vertical and two are horizontal. In the presence of rotations
+/// the rectangle is inflated such that it fits the rotated rectangle.
+Rect localClipRectToGlobalClip({Rect localClip, Matrix4 transform}) {
+  return localClipToGlobalClip(
+    localLeft: localClip.left,
+    localTop: localClip.top,
+    localRight: localClip.right,
+    localBottom: localClip.bottom,
+    transform: transform,
+  );
+}
+
+/// Converts a rectangular clip specified in local coordinates to screen
+/// coordinates given the effective [transform].
+///
+/// This is the same as [localClipRectToGlobalClip], except that the local clip
+/// rect is specified in terms of left, top, right, and bottom edge offsets.
+Rect localClipToGlobalClip({
+  double localLeft,
+  double localTop,
+  double localRight,
+  double localBottom,
+  Matrix4 transform,
+}) {
+  assert(localLeft != null);
+  assert(localTop != null);
+  assert(localRight != null);
+  assert(localBottom != null);
+
+  // Construct a matrix where each row represents a vector pointing at
+  // one of the four corners of the (left, top, right, bottom) rectangle.
+  // Using the row-major order allows us to multiply the matrix in-place
+  // by the transposed current transformation matrix. The vector_math
+  // library has a convenience function `multiplyTranspose` that performs
+  // the multiplication without copying. This way we compute the positions
+  // of all four points in a single matrix-by-matrix multiplication at the
+  // cost of one `Matrix4` instance and one `Float64List` instance.
+  //
+  // The rejected alternative was to use `Vector3` for each point and
+  // multiply by the current transform. However, that would cost us four
+  // `Vector3` instances, four `Float64List` instances, and four
+  // matrix-by-vector multiplications.
+  //
+  // `Float64List` initializes the array with zeros, so we do not have to
+  // fill in every single element.
+  final Float64List pointData = Float64List(16);
+
+  // Row 0: top-left
+  pointData[0] = localLeft;
+  pointData[4] = localTop;
+  pointData[12] = 1;
+
+  // Row 1: top-right
+  pointData[1] = localRight;
+  pointData[5] = localTop;
+  pointData[13] = 1;
+
+  // Row 2: bottom-left
+  pointData[2] = localLeft;
+  pointData[6] = localBottom;
+  pointData[14] = 1;
+
+  // Row 3: bottom-right
+  pointData[3] = localRight;
+  pointData[7] = localBottom;
+  pointData[15] = 1;
+
+  final Matrix4 pointMatrix = Matrix4.fromFloat64List(pointData);
+  pointMatrix.multiplyTranspose(transform);
+
+  return Rect.fromLTRB(
+    math.min(math.min(math.min(pointData[0], pointData[1]), pointData[2]),
+        pointData[3]),
+    math.min(math.min(math.min(pointData[4], pointData[5]), pointData[6]),
+        pointData[7]),
+    math.max(math.max(math.max(pointData[0], pointData[1]), pointData[2]),
+        pointData[3]),
+    math.max(math.max(math.max(pointData[4], pointData[5]), pointData[6]),
+        pointData[7]),
+  );
 }

@@ -44,32 +44,13 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   int _saveCount = 0;
 
-  BitmapCanvas(this.bounds);
-
-  void apply(PaintCommand command) {
-    command.apply(this);
-  }
-
-  /// Prepare to reuse this canvas by clearing it's current contents.
-  void clear() {
-    super.clear();
-    _paragraphs.forEach((p) => p.remove());
-    _paragraphs.clear();
-    _cachedLastStyle = null;
-    // Restore to the state where we have only applied the scaling.
-    if (_ctx != null) {
-      _ctx.restore();
-      _ctx.clearRect(0, 0, _width, _height);
-      _ctx.font = '';
-      _initializeViewport();
-    }
-    if (_canvas != null) {
-      _canvas.style.transformOrigin = '';
-      _canvas.style.transform = '';
-    }
-  }
-
-  void _initializeCanvas() {
+  /// Allocates a canvas with enough memory to paint a picture within the given
+  /// [bounds].
+  ///
+  /// This canvas can be reused by pictures with different paint bounds as long
+  /// as the [Rect.size] of the bounds fully fit within the size used to
+  /// initialize this canvas.
+  BitmapCanvas(this.bounds) {
     rootElement.style.position = 'absolute';
 
     // Adds one extra pixel to the requested size. This is to compensate for
@@ -100,6 +81,26 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _ctx = _canvas.context2D;
     rootElement.append(_canvas);
     _initializeViewport();
+  }
+
+  /// Prepare to reuse this canvas by clearing it's current contents.
+  @override
+  void clear() {
+    super.clear();
+    _paragraphs.forEach((p) => p.remove());
+    _paragraphs.clear();
+    _cachedLastStyle = null;
+    // Restore to the state where we have only applied the scaling.
+    if (_ctx != null) {
+      _ctx.restore();
+      _ctx.clearRect(0, 0, _width, _height);
+      _ctx.font = '';
+      _initializeViewport();
+    }
+    if (_canvas != null) {
+      _canvas.style.transformOrigin = '';
+      _canvas.style.transform = '';
+    }
   }
 
   /// Configures the canvas such that its coordinate system follows the scene's
@@ -145,15 +146,11 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     }
   }
 
-  html.CanvasElement get canvas {
-    if (_canvas == null) _initializeCanvas();
-    return _canvas;
-  }
+  /// The `<canvas>` element used by this bitmap canvas.
+  html.CanvasElement get canvas => _canvas;
 
-  html.CanvasRenderingContext2D get ctx {
-    if (_canvas == null) _initializeCanvas();
-    return _ctx;
-  }
+  /// The 2D context of the `<canvas>` element used by this bitmap canvas.
+  html.CanvasRenderingContext2D get ctx => _ctx;
 
   /// Sets the global paint styles to correspond to [paint].
   void _applyPaint(PaintData paint) {
@@ -213,6 +210,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     ctx.strokeStyle = null;
   }
 
+  @override
   int save() {
     super.save();
     ctx.save();
@@ -223,6 +221,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     save();
   }
 
+  @override
   void restore() {
     super.restore();
     ctx.restore();
@@ -242,21 +241,25 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _saveCount = count;
   }
 
+  @override
   void translate(double dx, double dy) {
     super.translate(dx, dy);
     ctx.translate(dx, dy);
   }
 
+  @override
   void scale(double sx, double sy) {
     super.scale(sx, sy);
     ctx.scale(sx, sy);
   }
 
+  @override
   void rotate(double radians) {
     super.rotate(radians);
     ctx.rotate(radians);
   }
 
+  @override
   void skew(double sx, double sy) {
     super.skew(sx, sy);
     ctx.transform(1, sy, sx, 1, 0, 0);
@@ -271,6 +274,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     // Source: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/transform
   }
 
+  @override
   void transform(Float64List matrix4) {
     super.transform(matrix4);
 
@@ -318,28 +322,38 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     );
   }
 
+  @override
   void clipRect(Rect rect) {
     ctx.beginPath();
     ctx.rect(rect.left, rect.top, rect.width, rect.height);
     ctx.clip();
   }
 
+  @override
   void clipRRect(RRect rrect) {
     var path = new Path()..addRRect(rrect);
     _runPath(path);
     ctx.clip();
   }
 
+  @override
   void clipPath(Path path) {
     _runPath(path);
     ctx.clip();
   }
 
+  @override
   void drawColor(Color color, BlendMode blendMode) {
     ctx.globalCompositeOperation = _stringForBlendMode(blendMode);
-    ctx.fillRect(0, 0, size.width, size.height);
+
+    // Fill a virtually infinite rect with the color.
+    //
+    // We can't use (0, 0, width, height) because the current transform can
+    // cause it to not fill the entire clip.
+    ctx.fillRect(-10000, -10000, 20000, 20000);
   }
 
+  @override
   void drawLine(Offset p1, Offset p2, PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
@@ -349,13 +363,20 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _resetPaint();
   }
 
+  @override
   void drawPaint(PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
-    ctx.fillRect(0, 0, size.width, size.height);
+
+    // Fill a virtually infinite rect with the color.
+    //
+    // We can't use (0, 0, width, height) because the current transform can
+    // cause it to not fill the entire clip.
+    ctx.fillRect(-10000, -10000, 20000, 20000);
     _resetPaint();
   }
 
+  @override
   void drawRect(Rect rect, PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
@@ -363,6 +384,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _strokeOrFill(paint);
   }
 
+  @override
   void drawRRect(RRect rrect, PaintData paint) {
     _applyPaint(paint);
     _drawRRectPath(rrect);
@@ -552,6 +574,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     );
   }
 
+  @override
   void drawDRRect(RRect outer, RRect inner, PaintData paint) {
     _applyPaint(paint);
     _drawRRectPath(outer);
@@ -559,6 +582,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _strokeOrFill(paint);
   }
 
+  @override
   void drawOval(Rect rect, PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
@@ -567,6 +591,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _strokeOrFill(paint);
   }
 
+  @override
   void drawCircle(Offset c, double radius, PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
@@ -574,12 +599,14 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _strokeOrFill(paint);
   }
 
+  @override
   void drawPath(Path path, PaintData paint) {
     _applyPaint(paint);
     _runPath(path);
     _strokeOrFill(paint);
   }
 
+  @override
   void drawShadow(
       Path path, Color color, double elevation, bool transparentOccluder) {
     final shadows = ElevationShadow.computeCanvasShadows(elevation, color);
@@ -635,6 +662,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     }
   }
 
+  @override
   void drawImage(Image image, Offset p, PaintData paint) {
     _applyPaint(paint);
     html.Element imgElement = (image as HtmlImage).imgElement.clone(true);
@@ -644,6 +672,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     rootElement.append(imgElement);
   }
 
+  @override
   void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
     // TODO(het): Check if the src rect is the entire image, and if so just
     // append the imgElement and set it's height and width.
@@ -660,6 +689,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     );
   }
 
+  @override
   void drawParagraph(Paragraph paragraph, Offset offset) {
     assert(paragraph.webOnlyIsLaidOut);
 
@@ -708,7 +738,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   /// Paints the [picture] into this canvas.
   void drawPicture(Picture picture) {
-    picture.recordingCanvas.apply(this, clearFirst: false);
+    picture.recordingCanvas.apply(this);
   }
 
   /// 'Runs' the given [path] by applying all of its commands to the canvas.

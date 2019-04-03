@@ -292,7 +292,7 @@ class PaintingContext extends ClipContext {
     _currentLayer = PictureLayer(estimatedBounds);
     _currentLayer.webOnlyPaintedBy = _webOnlyPaintedBy;
     _recorder = ui.PictureRecorder();
-    _canvas = Canvas(_recorder, estimatedBounds);
+    _canvas = Canvas(_recorder);
     _containerLayer.append(_currentLayer);
   }
 

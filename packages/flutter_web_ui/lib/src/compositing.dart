@@ -5,7 +5,6 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:js_util' as js_util;
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
@@ -27,6 +26,12 @@ import 'window.dart';
 /// When `true` prints detailed explanations why particular DOM nodes were or
 /// were not reused.
 const _debugExplainDomReuse = false;
+
+/// When `true` renders the outlines of clip layers on the screen instead of
+/// clipping the contents.
+///
+/// This is useful when visually debugging clipping behavior.
+bool debugShowClipLayers = false;
 
 /// The threshold for the canvas pixel count to screen pixel count ratio, beyond
 /// which in debug mode a warning is issued to the console.
@@ -89,18 +94,18 @@ class SceneBuilder {
     }
   }
   SceneBuilder._() {
-    _surfaceStack.add(_PersistedScene());
+    _surfaceStack.add(PersistedScene());
   }
 
   factory SceneBuilder.layer() = LayerSceneBuilder;
 
-  final List<_PersistedContainerSurface> _surfaceStack =
-      <_PersistedContainerSurface>[];
+  final List<PersistedContainerSurface> _surfaceStack =
+      <PersistedContainerSurface>[];
 
   /// The scene built by this scene builder.
   ///
   /// This getter should only be called after all surfaces are built.
-  _PersistedScene get _persistedScene {
+  PersistedScene get _persistedScene {
     assert(() {
       if (_surfaceStack.length != 1) {
         final surfacePrintout =
@@ -118,18 +123,18 @@ class SceneBuilder {
   }
 
   /// The surface currently being built.
-  _PersistedContainerSurface get _currentSurface => _surfaceStack.last;
+  PersistedContainerSurface get _currentSurface => _surfaceStack.last;
 
-  void _pushSurface(_PersistedContainerSurface surface) {
+  void _pushSurface(PersistedContainerSurface surface) {
     _adoptSurface(surface);
     _surfaceStack.add(surface);
   }
 
-  void _addSurface(_PersistedLeafSurface surface) {
+  void _addSurface(PersistedLeafSurface surface) {
     _adoptSurface(surface);
   }
 
-  void _adoptSurface(_PersistedSurface surface) {
+  void _adoptSurface(PersistedSurface surface) {
     _currentSurface.appendChild(surface);
   }
 
@@ -140,7 +145,7 @@ class SceneBuilder {
   /// See [pop] for details about the operation stack.
   EngineLayer pushOffset(double dx, double dy,
       {@required Object webOnlyPaintedBy}) {
-    _pushSurface(_PersistedOffset(webOnlyPaintedBy, dx, dy));
+    _pushSurface(PersistedOffset(webOnlyPaintedBy, dx, dy));
     return null; // this does not return an engine layer yet.
   }
 
@@ -158,7 +163,7 @@ class SceneBuilder {
   }
 
   void _pushTransform(Float64List matrix4, Object webOnlyPaintedBy) {
-    _pushSurface(_PersistedTransform(webOnlyPaintedBy, matrix4));
+    _pushSurface(PersistedTransform(webOnlyPaintedBy, matrix4));
   }
 
   /// Pushes a rectangular clip operation onto the operation stack.
@@ -171,7 +176,7 @@ class SceneBuilder {
       {Clip clipBehavior = Clip.antiAlias, @required Object webOnlyPaintedBy}) {
     assert(clipBehavior != null);
     assert(clipBehavior != Clip.none);
-    _pushSurface(_PersistedClipRect(webOnlyPaintedBy, rect));
+    _pushSurface(PersistedClipRect(webOnlyPaintedBy, rect));
   }
 
   /// Pushes a rounded-rectangular clip operation onto the operation stack.
@@ -181,7 +186,7 @@ class SceneBuilder {
   /// See [pop] for details about the operation stack.
   void pushClipRRect(RRect rrect,
       {Clip clipBehavior, @required Object webOnlyPaintedBy}) {
-    _pushSurface(_PersistedClipRRect(webOnlyPaintedBy, rrect, clipBehavior));
+    _pushSurface(PersistedClipRRect(webOnlyPaintedBy, rrect, clipBehavior));
   }
 
   /// Pushes a path clip operation onto the operation stack.
@@ -206,7 +211,7 @@ class SceneBuilder {
   /// See [pop] for details about the operation stack.
   void pushOpacity(int alpha,
       {@required Object webOnlyPaintedBy, Offset offset = Offset.zero}) {
-    _pushSurface(_PersistedOpacity(webOnlyPaintedBy, alpha, offset));
+    _pushSurface(PersistedOpacity(webOnlyPaintedBy, alpha, offset));
   }
 
   /// Pushes a color filter operation onto the operation stack.
@@ -285,7 +290,7 @@ class SceneBuilder {
 
   void _pushPhysicalShape(Path path, double elevation, int color,
       int shadowColor, Clip clipBehavior, Object webOnlyPaintedBy) {
-    _pushSurface(_PersistedPhysicalShape(
+    _pushSurface(PersistedPhysicalShape(
         webOnlyPaintedBy, path, elevation, color, shadowColor, clipBehavior));
   }
 
@@ -395,7 +400,7 @@ class SceneBuilder {
   /// embedded UIView. In addition to that, on iOS versions greater than 9, the Flutter frames are
   /// synchronized with the UIView frames adding additional performance overhead.
   void addPlatformView(int viewId,
-      {Offset offset: Offset.zero, double width: 0.0, double height: 0.0}) {
+      {Offset offset = Offset.zero, double width = 0.0, double height = 0.0}) {
     assert(offset != null, 'Offset argument was null');
     _addPlatformView(offset.dx, offset.dy, width, height, viewId);
   }
@@ -458,7 +463,20 @@ class SceneBuilder {
   ///
   /// This is a surface tree that holds onto the DOM elements that can be reused
   /// on the next frame.
-  static _PersistedScene _lastFrameScene;
+  static PersistedScene _lastFrameScene;
+
+  /// Returns the computed persisted scene graph recorded in the last frame.
+  ///
+  /// This is only available in debug mode. It returns `null` in profile and
+  /// release modes.
+  static PersistedScene get debugLastFrameScene {
+    PersistedScene result;
+    assert(() {
+      result = _lastFrameScene;
+      return true;
+    }());
+    return result;
+  }
 
   static int _debugFrameNumber = 0;
 
@@ -503,15 +521,15 @@ class SceneBuilder {
   }
 }
 
-void _debugPrintReuseStats(_PersistedScene scene, int frameNumber) {
+void _debugPrintReuseStats(PersistedScene scene, int frameNumber) {
   int canvasCount = 0;
   int canvasReuseCount = 0;
   int canvasAllocationCount = 0;
   int canvasPaintSkipCount = 0;
   int elementReuseCount = 0;
-  void countReusesRecursively(_PersistedSurface surface) {
+  void countReusesRecursively(PersistedSurface surface) {
     elementReuseCount += surface._debugDidReuseElement ? 1 : 0;
-    if (surface is _PersistedStandardPicture) {
+    if (surface is PersistedStandardPicture) {
       canvasCount += 1;
       canvasReuseCount += surface._debugDidReuseCanvas ? 1 : 0;
       canvasAllocationCount += surface._debugDidAllocateNewCanvas ? 1 : 0;
@@ -596,15 +614,18 @@ class SceneHost {
   void dispose() {}
 }
 
-typedef _PersistedSurfaceVisitor = void Function(_PersistedSurface);
+/// Signature of a function that receives a [PersistedSurface].
+///
+/// This is used to traverse surfaces using [PersistedSurface.visitChildren].
+typedef PersistedSurfaceVisitor = void Function(PersistedSurface);
 
 /// A node in the tree built by [SceneBuilder] that contains information used to
 /// compute the fewest amount of mutations necessary to update the browser DOM.
-abstract class _PersistedSurface {
+abstract class PersistedSurface {
   /// Creates a persisted surface.
   ///
   /// [paintedBy] points to the object that painted this surface.
-  _PersistedSurface(this.paintedBy) : assert(paintedBy != null);
+  PersistedSurface(this.paintedBy) : assert(paintedBy != null);
 
   /// The root element that renders this surface to the DOM.
   ///
@@ -620,7 +641,7 @@ abstract class _PersistedSurface {
   html.Element get childContainer => rootElement;
 
   /// This surface's immediate parent.
-  _PersistedContainerSurface parent;
+  PersistedContainerSurface parent;
 
   /// The render object that painted this surface.
   ///
@@ -645,8 +666,7 @@ abstract class _PersistedSurface {
   /// Visits immediate children.
   ///
   /// Does not recurse.
-  @protected
-  void visitChildren(_PersistedSurfaceVisitor visitor);
+  void visitChildren(PersistedSurfaceVisitor visitor);
 
   /// Creates a new element and sets the necessary HTML and CSS attributes.
   ///
@@ -655,6 +675,7 @@ abstract class _PersistedSurface {
   @protected
   @mustCallSuper
   void build() {
+    recomputeTransformAndClip();
     rootElement = createElement();
     apply();
   }
@@ -667,7 +688,7 @@ abstract class _PersistedSurface {
   /// adopting the [oldSurface]'s elements could lead to correctness issues.
   @protected
   @mustCallSuper
-  void adoptElements(covariant _PersistedSurface oldSurface) {
+  void adoptElements(covariant PersistedSurface oldSurface) {
     rootElement = oldSurface.rootElement;
     _debugDidReuseElement = true;
   }
@@ -678,8 +699,10 @@ abstract class _PersistedSurface {
   /// creates a new element by calling [build].
   @protected
   @mustCallSuper
-  void update(covariant _PersistedSurface oldSurface) {
+  void update(covariant PersistedSurface oldSurface) {
     assert(oldSurface != null);
+
+    recomputeTransformAndClip();
 
     if (isTotalMatchFor(oldSurface)) {
       adoptElements(oldSurface);
@@ -718,14 +741,14 @@ abstract class _PersistedSurface {
   //                descendants shift around but the element is still reusable.
   //                We'd need a more robust disambiguation strategy to implement
   //                this correctly.
-  bool isTotalMatchFor(_PersistedSurface other) {
+  bool isTotalMatchFor(PersistedSurface other) {
     assert(other != null);
     return other.runtimeType == runtimeType &&
         identical(other.paintedBy, paintedBy) &&
         _hasExactDescendants(other);
   }
 
-  bool _hasExactDescendants(_PersistedSurface other) {
+  bool _hasExactDescendants(PersistedSurface other) {
     if ((_descendants == null || _descendants.isEmpty) &&
         (other._descendants == null || other._descendants.isEmpty)) {
       return true;
@@ -760,8 +783,41 @@ abstract class _PersistedSurface {
   /// Sets the HTML and CSS properties appropriate for this surface's
   /// implementation.
   ///
-  /// For example, [_PersistedTransform] sets the "transform" CSS attribute.
+  /// For example, [PersistedTransform] sets the "transform" CSS attribute.
   void apply();
+
+  /// The effective transform at this surface level.
+  ///
+  /// This value is computed by concatenating transforms of all ancestor
+  /// transforms as well as this layer's transform (if any).
+  ///
+  /// The value is update by [recomputeTransformAndClip].
+  Matrix4 get transform => _transform;
+  Matrix4 _transform;
+
+  /// The intersection at this surface level.
+  ///
+  /// This value is the intersection of clips in the ancestor chain, including
+  /// the clip added by this layer (if any).
+  ///
+  /// The value is update by [recomputeTransformAndClip].
+  Rect get globalClip => _globalClip;
+  Rect _globalClip;
+
+  /// Recomputes [transform] and [globalClip] fields.
+  ///
+  /// The default implementation inherits the values from the parent. Concrete
+  /// surface implementations may override this with their custom transform and
+  /// clip behaviors.
+  ///
+  /// This method is called by the [update] method. If a surface overrides this
+  /// method it must make sure that all the parameters necessary for the
+  /// computation are updated prior to calling `super.update`.
+  @protected
+  void recomputeTransformAndClip() {
+    _transform = parent._transform;
+    _globalClip = parent._globalClip;
+  }
 
   /// Prints this surface into a [buffer] in a human-readable format.
   void debugPrint(StringBuffer buffer, int indent) {
@@ -806,27 +862,27 @@ abstract class _PersistedSurface {
 }
 
 /// A surface that doesn't have child surfaces.
-abstract class _PersistedLeafSurface extends _PersistedSurface {
-  _PersistedLeafSurface(Object paintedBy) : super(paintedBy);
+abstract class PersistedLeafSurface extends PersistedSurface {
+  PersistedLeafSurface(Object paintedBy) : super(paintedBy);
 
   @override
-  void visitChildren(_PersistedSurfaceVisitor visitor) {
+  void visitChildren(PersistedSurfaceVisitor visitor) {
     // Does not have children.
   }
 }
 
 /// A surface that has a flat list of child surfaces.
-abstract class _PersistedContainerSurface extends _PersistedSurface {
-  _PersistedContainerSurface(Object paintedBy) : super(paintedBy);
+abstract class PersistedContainerSurface extends PersistedSurface {
+  PersistedContainerSurface(Object paintedBy) : super(paintedBy);
 
-  final List<_PersistedSurface> _children = <_PersistedSurface>[];
+  final List<PersistedSurface> _children = <PersistedSurface>[];
 
   @override
-  void visitChildren(_PersistedSurfaceVisitor visitor) {
+  void visitChildren(PersistedSurfaceVisitor visitor) {
     _children.forEach(visitor);
   }
 
-  void appendChild(_PersistedSurface child) {
+  void appendChild(PersistedSurface child) {
     _children.add(child);
     child.parent = this;
 
@@ -839,7 +895,7 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
     // detect when children move within their list of siblings and reuse their
     // elements.
     if (!identical(child.paintedBy, paintedBy)) {
-      _PersistedSurface container = this;
+      PersistedSurface container = this;
       while (container != null && identical(container.paintedBy, paintedBy)) {
         container._descendants ??= Set<Object>();
         container._descendants.add(child.paintedBy);
@@ -856,13 +912,13 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
     // Memoize container element for efficiency. [childContainer] is polymorphic
     final html.Element containerElement = childContainer;
     for (int i = 0; i < len; i++) {
-      final _PersistedSurface child = _children[i];
+      final PersistedSurface child = _children[i];
       child.build();
       containerElement.append(child.rootElement);
     }
   }
 
-  void _updateChild(_PersistedSurface newChild, _PersistedSurface oldChild) {
+  void _updateChild(PersistedSurface newChild, PersistedSurface oldChild) {
     assert(newChild.rootElement == null);
     assert(oldChild.isTotalMatchFor(newChild));
     final html.Element oldElement = oldChild.rootElement;
@@ -876,7 +932,7 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
   }
 
   @override
-  void update(_PersistedContainerSurface oldContainer) {
+  void update(PersistedContainerSurface oldContainer) {
     super.update(oldContainer);
 
     // A simple algorithms that attempts to reuse DOM elements from the previous
@@ -905,7 +961,7 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
       } else {
         // Scan back for a matching old child, if any.
         int searchPointer = bottomInOld - 1;
-        _PersistedSurface match;
+        PersistedSurface match;
 
         // Searching by scanning the array backwards may seem inefficient, but
         // in practice we'll have single-digit child lists. It is better to scan
@@ -962,7 +1018,7 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
     // Remove elements that were not reused this frame.
     final len = oldContainer._children.length;
     for (int i = 0; i < len; i++) {
-      _PersistedSurface oldChild = oldContainer._children[i];
+      PersistedSurface oldChild = oldContainer._children[i];
       if (oldChild.rootElement != null) {
         oldChild.recycle();
       }
@@ -1010,8 +1066,21 @@ abstract class _PersistedContainerSurface extends _PersistedSurface {
 }
 
 /// A surface that creates a DOM element for whole app.
-class _PersistedScene extends _PersistedContainerSurface {
-  _PersistedScene() : super(const Object());
+class PersistedScene extends PersistedContainerSurface {
+  PersistedScene() : super(const Object()) {
+    _transform = Matrix4.identity();
+  }
+
+  @override
+  void recomputeTransformAndClip() {
+    // The scene clip is the size of the entire window.
+    // TODO(yjbanov): in the add2app scenario where we might be hosted inside
+    //                a custom element, this will be different. We will need to
+    //                update this code when we add add2app support.
+    final double screenWidth = html.window.innerWidth.toDouble();
+    final double screenHeight = html.window.innerHeight.toDouble();
+    _globalClip = Rect.fromLTRB(0, 0, screenWidth, screenHeight);
+  }
 
   @override
   html.Element createElement() {
@@ -1029,10 +1098,16 @@ class _PersistedScene extends _PersistedContainerSurface {
 }
 
 /// A surface that transforms its children using CSS transform.
-class _PersistedTransform extends _PersistedContainerSurface {
-  _PersistedTransform(Object paintedBy, this.matrix4) : super(paintedBy);
+class PersistedTransform extends PersistedContainerSurface {
+  PersistedTransform(Object paintedBy, this.matrix4) : super(paintedBy);
 
   final Float64List matrix4;
+
+  @override
+  void recomputeTransformAndClip() {
+    _transform = parent._transform.multiplied(Matrix4.fromFloat64List(matrix4));
+    _globalClip = parent._globalClip;
+  }
 
   @override
   html.Element createElement() {
@@ -1046,7 +1121,7 @@ class _PersistedTransform extends _PersistedContainerSurface {
   }
 
   @override
-  void update(_PersistedTransform oldSurface) {
+  void update(PersistedTransform oldSurface) {
     super.update(oldSurface);
 
     if (identical(oldSurface.matrix4, matrix4)) {
@@ -1068,14 +1143,24 @@ class _PersistedTransform extends _PersistedContainerSurface {
 }
 
 /// A surface that translates its children using CSS transform and translate.
-class _PersistedOffset extends _PersistedContainerSurface {
-  _PersistedOffset(Object paintedBy, this.dx, this.dy) : super(paintedBy);
+class PersistedOffset extends PersistedContainerSurface {
+  PersistedOffset(Object paintedBy, this.dx, this.dy) : super(paintedBy);
 
   /// Horizontal displacement.
   final double dx;
 
   /// Vertical displacement.
   final double dy;
+
+  @override
+  void recomputeTransformAndClip() {
+    _transform = parent._transform;
+    if (dx != 0.0 || dy != 0.0) {
+      _transform = _transform.clone();
+      _transform.translate(dx, dy);
+    }
+    _globalClip = parent._globalClip;
+  }
 
   @override
   html.Element createElement() {
@@ -1088,7 +1173,7 @@ class _PersistedOffset extends _PersistedContainerSurface {
   }
 
   @override
-  void update(_PersistedOffset oldSurface) {
+  void update(PersistedOffset oldSurface) {
     super.update(oldSurface);
 
     if (oldSurface.dx != dx || oldSurface.dy != dy) {
@@ -1099,7 +1184,7 @@ class _PersistedOffset extends _PersistedContainerSurface {
 
 /// Mixin used by surfaces that clip their contents using an overflowing DOM
 /// element.
-mixin _DomClip on _PersistedContainerSurface {
+mixin _DomClip on PersistedContainerSurface {
   /// The dedicated child container element that's separate from the
   /// [rootElement] is used to compensate for the coordinate system shift
   /// introduced by the [rootElement] translation.
@@ -1117,7 +1202,16 @@ mixin _DomClip on _PersistedContainerSurface {
   @override
   html.Element createElement() {
     final html.Element element = defaultCreateElement('flt-clip');
-    element.style.overflow = 'hidden';
+    if (!debugShowClipLayers) {
+      // Hide overflow in production mode. When debugging we want to see the
+      // clipped picture in full.
+      element.style.overflow = 'hidden';
+    } else {
+      // Display the outline of the clipping region. When debugShowClipLayers is
+      // `true` we don't hide clip overflow (see above). This outline helps
+      // visualizing clip areas.
+      element.style.boxShadow = 'inset 0 0 10px green';
+    }
     _childContainer = html.Element.tag('flt-clip-interior');
     _childContainer.style.position = 'absolute';
     element.append(_childContainer);
@@ -1136,10 +1230,19 @@ mixin _DomClip on _PersistedContainerSurface {
 }
 
 /// A surface that creates a rectangular clip.
-class _PersistedClipRect extends _PersistedContainerSurface with _DomClip {
-  _PersistedClipRect(Object paintedBy, this.rect) : super(paintedBy);
+class PersistedClipRect extends PersistedContainerSurface with _DomClip {
+  PersistedClipRect(Object paintedBy, this.rect) : super(paintedBy);
 
   final Rect rect;
+
+  @override
+  void recomputeTransformAndClip() {
+    _transform = parent._transform;
+    _globalClip = parent._globalClip.intersect(localClipRectToGlobalClip(
+      localClip: rect,
+      transform: _transform,
+    ));
+  }
 
   @override
   html.Element createElement() {
@@ -1161,7 +1264,7 @@ class _PersistedClipRect extends _PersistedContainerSurface with _DomClip {
   }
 
   @override
-  void update(_PersistedClipRect oldSurface) {
+  void update(PersistedClipRect oldSurface) {
     super.update(oldSurface);
     if (rect != oldSurface.rect) {
       apply();
@@ -1170,13 +1273,22 @@ class _PersistedClipRect extends _PersistedContainerSurface with _DomClip {
 }
 
 /// A surface that creates a rounded rectangular clip.
-class _PersistedClipRRect extends _PersistedContainerSurface with _DomClip {
-  _PersistedClipRRect(Object paintedBy, this.rrect, this.clipBehavior)
+class PersistedClipRRect extends PersistedContainerSurface with _DomClip {
+  PersistedClipRRect(Object paintedBy, this.rrect, this.clipBehavior)
       : super(paintedBy);
 
   final RRect rrect;
   // TODO(yjbanov): can this be controlled in the browser?
   final Clip clipBehavior;
+
+  @override
+  void recomputeTransformAndClip() {
+    _transform = parent._transform;
+    _globalClip = parent._globalClip.intersect(localClipRectToGlobalClip(
+      localClip: rrect.outerRect,
+      transform: _transform,
+    ));
+  }
 
   @override
   html.Element createElement() {
@@ -1202,7 +1314,7 @@ class _PersistedClipRRect extends _PersistedContainerSurface with _DomClip {
   }
 
   @override
-  void update(_PersistedClipRRect oldSurface) {
+  void update(PersistedClipRRect oldSurface) {
     super.update(oldSurface);
     if (rrect != oldSurface.rrect) {
       apply();
@@ -1211,12 +1323,27 @@ class _PersistedClipRRect extends _PersistedContainerSurface with _DomClip {
 }
 
 /// A surface that makes its children transparent.
-class _PersistedOpacity extends _PersistedContainerSurface {
-  _PersistedOpacity(Object paintedBy, this.alpha, this.offset)
+class PersistedOpacity extends PersistedContainerSurface {
+  PersistedOpacity(Object paintedBy, this.alpha, this.offset)
       : super(paintedBy);
 
   final int alpha;
   final Offset offset;
+
+  @override
+  void recomputeTransformAndClip() {
+    _transform = parent._transform;
+
+    final double dx = offset.dx;
+    final double dy = offset.dy;
+
+    if (dx != 0.0 || dy != 0.0) {
+      _transform = _transform.clone();
+      _transform.translate(dx, dy);
+    }
+
+    _globalClip = parent._globalClip;
+  }
 
   @override
   html.Element createElement() {
@@ -1230,7 +1357,7 @@ class _PersistedOpacity extends _PersistedContainerSurface {
   }
 
   @override
-  void update(_PersistedOpacity oldSurface) {
+  void update(PersistedOpacity oldSurface) {
     super.update(oldSurface);
     if (alpha != oldSurface.alpha || offset != oldSurface.offset) {
       apply();
@@ -1252,7 +1379,17 @@ const _kCanvasCacheSize = 30;
 /// Canvases available for reuse, capped at [_kCanvasCacheSize].
 final List<BitmapCanvas> _recycledCanvases = <BitmapCanvas>[];
 
-/// Callbacks produced by [_PersistedPicture]s that actually paint on the
+/// Clears cached canvases.
+///
+/// After calling this function new canvases will be created for the subsequent
+/// scene. This is useful when tests need predictable canvas sizes. If the cache
+/// is not cleared, then canvases allocated in one test may be reused in another
+/// test.
+void debugClearCanvasCache() {
+  _recycledCanvases.clear();
+}
+
+/// Callbacks produced by [PersistedPicture]s that actually paint on the
 /// canvas. Painting is delayed until the layer tree is updated to maximize
 /// the number of reusable canvases.
 List<VoidCallback> _paintQueue = <VoidCallback>[];
@@ -1266,8 +1403,8 @@ void _recycleCanvas(EngineCanvas canvas) {
   }
 }
 
-/// Signature of a function that instantiates a [_PersistedPicture].
-typedef PersistedPictureFactory = _PersistedPicture Function(
+/// Signature of a function that instantiates a [PersistedPicture].
+typedef PersistedPictureFactory = PersistedPicture Function(
     Object webOnlyPaintedBy, double dx, double dy, Picture picture, int hints);
 
 /// Function used by the [SceneBuilder] to instantiate a picture layer.
@@ -1275,20 +1412,20 @@ PersistedPictureFactory persistedPictureFactory = standardPictureFactory;
 
 /// Instantiates an implementation of a picture layer that uses DOM, CSS, and
 /// 2D canvas for painting.
-_PersistedStandardPicture standardPictureFactory(
+PersistedStandardPicture standardPictureFactory(
     Object webOnlyPaintedBy, double dx, double dy, Picture picture, int hints) {
-  return _PersistedStandardPicture(webOnlyPaintedBy, dx, dy, picture, hints);
+  return PersistedStandardPicture(webOnlyPaintedBy, dx, dy, picture, hints);
 }
 
 /// Instantiates an implementation of a picture layer that uses CSS Paint API
 /// (part of Houdini) for painting.
-_PersistedHoudiniPicture houdiniPictureFactory(
+PersistedHoudiniPicture houdiniPictureFactory(
     Object webOnlyPaintedBy, double dx, double dy, Picture picture, int hints) {
-  return _PersistedHoudiniPicture(webOnlyPaintedBy, dx, dy, picture, hints);
+  return PersistedHoudiniPicture(webOnlyPaintedBy, dx, dy, picture, hints);
 }
 
-class _PersistedHoudiniPicture extends _PersistedPicture {
-  _PersistedHoudiniPicture(
+class PersistedHoudiniPicture extends PersistedPicture {
+  PersistedHoudiniPicture(
       Object paintedBy, double dx, double dy, Picture picture, int hints)
       : super(paintedBy, dx, dy, picture, hints) {
     if (!_cssPainterRegistered) {
@@ -1320,7 +1457,7 @@ class _PersistedHoudiniPicture extends _PersistedPicture {
   @override
   void applyPaint(EngineCanvas oldCanvas) {
     _recycleCanvas(oldCanvas);
-    final HoudiniCanvas canvas = HoudiniCanvas(_computeCanvasBounds());
+    final HoudiniCanvas canvas = HoudiniCanvas(_localCullRect);
     _canvas = canvas;
     domRenderer.clearDom(rootElement);
     rootElement.append(_canvas.rootElement);
@@ -1329,8 +1466,8 @@ class _PersistedHoudiniPicture extends _PersistedPicture {
   }
 }
 
-class _PersistedStandardPicture extends _PersistedPicture {
-  _PersistedStandardPicture(
+class PersistedStandardPicture extends PersistedPicture {
+  PersistedStandardPicture(
       Object paintedBy, double dx, double dy, Picture picture, int hints)
       : super(paintedBy, dx, dy, picture, hints);
 
@@ -1355,10 +1492,9 @@ class _PersistedStandardPicture extends _PersistedPicture {
   }
 
   void _applyBitmapPaint(EngineCanvas oldCanvas) {
-    final Rect bounds = _computeCanvasBounds();
     if (oldCanvas == null ||
         oldCanvas is DomCanvas ||
-        oldCanvas is BitmapCanvas && bounds != oldCanvas.bounds) {
+        oldCanvas is BitmapCanvas && _localCullRect != oldCanvas.bounds) {
       // We can't use the old canvas because the size has changed, so we put
       // it in a cache for later reuse.
       _recycleCanvas(oldCanvas);
@@ -1367,13 +1503,15 @@ class _PersistedStandardPicture extends _PersistedPicture {
       // picture to be painted after the update cycle is done syncing the layer
       // tree then reuse canvases that were freed up.
       _paintQueue.add(() {
-        _canvas = _findOrCreateCanvas(bounds);
+        _canvas = _findOrCreateCanvas(_localCullRect);
         domRenderer.clearDom(rootElement);
         rootElement.append(_canvas.rootElement);
+        _canvas.clear();
         picture.recordingCanvas.apply(_canvas);
       });
     } else {
       _canvas = oldCanvas;
+      _canvas.clear();
       picture.recordingCanvas.apply(_canvas);
     }
   }
@@ -1423,16 +1561,17 @@ class _PersistedStandardPicture extends _PersistedPicture {
 
 /// A surface that uses a combination of `<canvas>`, `<div>` and `<p>` elements
 /// to draw shapes and text.
-abstract class _PersistedPicture extends _PersistedLeafSurface {
-  _PersistedPicture(
-      Object paintedBy, this.dx, this.dy, this.picture, this.hints)
-      : super(paintedBy);
+abstract class PersistedPicture extends PersistedLeafSurface {
+  PersistedPicture(Object paintedBy, this.dx, this.dy, this.picture, this.hints)
+      : localPaintBounds = picture.recordingCanvas.computePaintBounds(),
+        super(paintedBy);
 
   EngineCanvas _canvas;
 
   final double dx;
   final double dy;
   final Picture picture;
+  final Rect localPaintBounds;
   final int hints;
 
   bool _debugDidNotPaint = false;
@@ -1442,40 +1581,59 @@ abstract class _PersistedPicture extends _PersistedLeafSurface {
     return defaultCreateElement('flt-picture');
   }
 
+  @override
+  void recomputeTransformAndClip() {
+    _transform = parent._transform;
+    if (dx != 0.0 || dy != 0.0) {
+      _transform = _transform.clone();
+      _transform.translate(dx, dy);
+    }
+    _globalClip = parent._globalClip;
+  }
+
+  /// The rectangle that contains all visible pixels drawn by [picture] inside
+  /// the current layer hierarchy in local coordinates.
+  ///
+  /// This value is a conservative estimate, i.e. it must be big enough to
+  /// contain everything that's visible, but it may be bigger than necessary.
+  /// Therefore it should not be used for clipping. It is meant to be used for
+  /// optimizing canvas allocation.
+  Rect get localCullRect => _localCullRect;
+  Rect _localCullRect;
+
+  /// Same as [localCullRect] but in screen coordinate system.
+  Rect get globalCullRect => _globalCullRect;
+  Rect _globalCullRect;
+
   /// Computes the canvas paint bounds based on the estimated paint bounds and
   /// the scaling produced by transformations.
-  Rect _computeCanvasBounds() {
-    final Matrix4 effectiveTransform = Matrix4.identity();
-    _PersistedContainerSurface parent = this.parent;
-    while (parent != null) {
-      if (parent is _PersistedTransform) {
-        effectiveTransform.multiply(Matrix4.fromFloat64List(parent.matrix4));
+  void _recomputeCullRect() {
+    assert(transform != null);
+    assert(localPaintBounds != null);
+    final Rect globalPaintBounds = localClipRectToGlobalClip(
+        localClip: localPaintBounds, transform: transform);
+    _globalCullRect = globalPaintBounds.intersect(_globalClip);
+
+    if (_globalCullRect.width < 0 || _globalCullRect.height < 0) {
+      _globalCullRect = Rect.zero;
+      _localCullRect = Rect.zero;
+    } else {
+      final Matrix4 invertedTransform =
+          Matrix4.fromFloat64List(Float64List(16));
+
+      // TODO(yjbanov): When we move to our own vecto math librari, rewrite this
+      //                to check for the case of simple transform before
+      //                inverting. Inversion of simple transforms can be made
+      //                much cheaper.
+      final double det = invertedTransform.copyInverse(transform);
+      if (det == 0) {
+        // Determinant is zero, which means the transform is not invertible.
+        _localCullRect = Rect.zero;
+      } else {
+        _localCullRect = localClipRectToGlobalClip(
+            localClip: globalCullRect, transform: invertedTransform);
       }
-      parent = parent.parent;
     }
-
-    final shift = effectiveTransform.transform(Vector4(0.0, 0.0, 0.0, 1.0));
-    final scaleX =
-        (effectiveTransform.transform(Vector4(1.0, 0.0, 0.0, 1.0)) - shift)
-            .x
-            .abs();
-    final scaleY =
-        (effectiveTransform.transform(Vector4(0.0, 1.0, 0.0, 1.0)) - shift)
-            .y
-            .abs();
-
-    final Rect bounds = picture.recordingCanvas.computePaintBounds();
-    Size canvasSize = bounds.size;
-    final double screenWidth =
-        window.physicalSize.width / window.devicePixelRatio;
-    final double screenHeight =
-        window.physicalSize.height / window.devicePixelRatio;
-    canvasSize = Size(
-      math.min(canvasSize.width * math.max(scaleX, 1.0), screenWidth),
-      math.min(canvasSize.height * math.max(scaleY, 1.0), screenHeight),
-    );
-    // TODO(yjbanov): should we inflate the bounds instead?
-    return bounds.topLeft & canvasSize;
   }
 
   void _applyPaint(EngineCanvas oldCanvas) {
@@ -1497,19 +1655,23 @@ abstract class _PersistedPicture extends _PersistedLeafSurface {
 
   @override
   void apply() {
+    _recomputeCullRect();
     _applyTranslate();
     _applyPaint(null);
   }
 
   @override
-  void update(_PersistedPicture oldSurface) {
+  void update(PersistedPicture oldSurface) {
     super.update(oldSurface);
 
     if (dx != oldSurface.dx || dy != oldSurface.dy) {
       _applyTranslate();
     }
 
-    if (!identical(picture, oldSurface.picture)) {
+    _recomputeCullRect();
+
+    if (!identical(picture, oldSurface.picture) ||
+        _localCullRect != oldSurface._localCullRect) {
       // The picture was repainted. Attempt to repaint into the existing canvas.
       _applyPaint(oldSurface._canvas);
     } else {
@@ -1539,9 +1701,9 @@ abstract class _PersistedPicture extends _PersistedLeafSurface {
   }
 }
 
-class _PersistedPhysicalShape extends _PersistedContainerSurface with _DomClip {
-  _PersistedPhysicalShape(Object paintedBy, this.path, this.elevation,
-      int color, int shadowColor, this.clipBehavior)
+class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
+  PersistedPhysicalShape(Object paintedBy, this.path, this.elevation, int color,
+      int shadowColor, this.clipBehavior)
       : this.color = Color(color),
         this.shadowColor = Color(shadowColor),
         super(paintedBy);
@@ -1551,6 +1713,29 @@ class _PersistedPhysicalShape extends _PersistedContainerSurface with _DomClip {
   final Color color;
   final Color shadowColor;
   final Clip clipBehavior;
+
+  @override
+  void recomputeTransformAndClip() {
+    _transform = parent._transform;
+
+    final RRect roundRect = path.webOnlyPathAsRoundedRect;
+    if (roundRect != null) {
+      _globalClip = parent._globalClip.intersect(localClipRectToGlobalClip(
+        localClip: roundRect.outerRect,
+        transform: transform,
+      ));
+    } else {
+      Rect rect = path.webOnlyPathAsRect;
+      if (rect != null) {
+        _globalClip = parent._globalClip.intersect(localClipRectToGlobalClip(
+          localClip: rect,
+          transform: transform,
+        ));
+      } else {
+        _globalClip = parent._globalClip;
+      }
+    }
+  }
 
   void _applyColor() {
     rootElement.style.backgroundColor = color.toCssString();
@@ -1614,7 +1799,7 @@ class _PersistedPhysicalShape extends _PersistedContainerSurface with _DomClip {
   }
 
   @override
-  void update(_PersistedPhysicalShape oldSurface) {
+  void update(PersistedPhysicalShape oldSurface) {
     super.update(oldSurface);
     if (oldSurface.color != color) {
       _applyColor();

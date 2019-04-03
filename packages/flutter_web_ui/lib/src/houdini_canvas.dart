@@ -46,6 +46,7 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   /// Prepare to reuse this canvas by clearing it's current contents.
+  @override
   void clear() {
     super.clear();
     _serializedCommands = <List>[];
@@ -77,6 +78,7 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
     }
   }
 
+  @override
   void clipRect(Rect rect) {
     final clip = html.Element.tag('flt-clip-rect');
     String cssTransform = matrix4ToCssTransform(
@@ -97,6 +99,7 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
     pushElement(clip);
   }
 
+  @override
   void clipRRect(RRect rrect) {
     final outer = rrect.outerRect;
     if (rrect.isRect) {
@@ -148,55 +151,68 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
     pushElement(clip);
   }
 
+  @override
   void clipPath(Path path) {
     // TODO(yjbanov): implement.
   }
 
+  @override
   void drawColor(Color color, BlendMode blendMode) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawLine(Offset p1, Offset p2, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawPaint(PaintData paint) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawRect(Rect rect, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawRRect(RRect rrect, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawDRRect(RRect outer, RRect inner, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawOval(Rect rect, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawCircle(Offset c, double radius, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawPath(Path path, PaintData paint) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawShadow(
       Path path, Color color, double elevation, bool transparentOccluder) {
     // Drawn using CSS Paint.
   }
 
+  @override
   void drawImage(Image image, Offset p, PaintData paint) {
     // TODO(yjbanov): implement.
   }
 
+  @override
   void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
     // TODO(yjbanov): implement src rectangle
     HtmlImage htmlImage = image;
@@ -215,6 +231,7 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
     currentElement.append(imageBox);
   }
 
+  @override
   void drawParagraph(Paragraph paragraph, Offset offset) {
     assert(paragraph.webOnlyIsLaidOut);
 

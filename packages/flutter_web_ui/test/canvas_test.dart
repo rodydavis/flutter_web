@@ -43,6 +43,7 @@ void main() {
       paragraph = builder.build();
       paragraph.layout(ui.ParagraphConstraints(width: 100));
       recordingCanvas.drawParagraph(paragraph, const ui.Offset(10, 10));
+      canvas.clear();
       recordingCanvas.apply(canvas);
     }, whenDone: () {
       expect(mockCanvas.methodCallLog, hasLength(2));
@@ -65,6 +66,7 @@ void main() {
       builder.addText('sample');
       final ui.Paragraph paragraph = builder.build();
       recordingCanvas.drawParagraph(paragraph, const ui.Offset(10, 10));
+      canvas.clear();
       recordingCanvas.apply(canvas);
     }, whenDone: () {
       expect(mockCanvas.methodCallLog, hasLength(1));

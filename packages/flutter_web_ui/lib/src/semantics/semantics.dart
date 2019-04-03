@@ -11,8 +11,9 @@ import 'package:vector_math/vector_math_64.dart';
 
 import 'package:flutter_web_ui/ui.dart' as ui;
 
-import '../util.dart' as util;
 import '../alarm_clock.dart';
+import '../engine.dart';
+import '../util.dart' as util;
 
 import 'checkable.dart';
 import 'incrementable.dart';
@@ -1033,7 +1034,11 @@ enum GestureMode {
 
 /// The top-level service that manages everything semantics-related.
 class EngineSemanticsOwner {
-  EngineSemanticsOwner._();
+  EngineSemanticsOwner._() {
+    registerHotRestartListener(() {
+      _rootSemanticsElement?.remove();
+    });
+  }
 
   /// The singleton instance that manages semantics.
   static EngineSemanticsOwner get instance {

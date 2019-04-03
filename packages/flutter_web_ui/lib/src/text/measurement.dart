@@ -9,6 +9,7 @@ import 'package:flutter_web_ui/ui.dart' as ui;
 import 'package:meta/meta.dart';
 
 import 'ruler.dart';
+import '../engine.dart';
 import '../dom_renderer.dart';
 import '../util.dart';
 
@@ -25,6 +26,9 @@ class TextMeasurementService {
       ..width = '0'
       ..height = '0';
     html.document.body.append(_rulerHost);
+    registerHotRestartListener(() {
+      _rulerHost?.remove();
+    });
   }
 
   /// Initializes the text measurement service singleton.

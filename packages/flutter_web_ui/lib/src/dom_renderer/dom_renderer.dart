@@ -17,6 +17,7 @@ import 'dart:js_util' as js_util;
 
 import 'package:flutter_web_ui/ui.dart' as ui;
 
+import '../engine.dart';
 import '../text/measurement.dart';
 import '../util.dart';
 
@@ -29,6 +30,13 @@ class DomRenderer {
     reset();
 
     TextMeasurementService.initialize(rulerCacheCapacity: 10);
+
+    registerHotRestartListener(() {
+      _resizeSubscription?.cancel();
+      _sceneElement?.remove();
+      _styleElement?.remove();
+      _viewportMeta?.remove();
+    });
   }
 
   static const int vibrateLongPress = 50;
@@ -36,6 +44,34 @@ class DomRenderer {
   static const int vibrateMediumImpact = 20;
   static const int vibrateHeavyImpact = 30;
   static const int vibrateSelectionClick = 10;
+
+  /// Listens to window resize events.
+  StreamSubscription _resizeSubscription;
+
+  /// Contains Flutter-specific CSS rules, such as default margins and
+  /// paddings.
+  html.StyleElement _styleElement;
+
+  /// Configures the screen, such as scaling.
+  html.MetaElement _viewportMeta;
+
+  /// The last scene element rendered by the [render] method.
+  html.Element get sceneElement => _sceneElement;
+  html.Element _sceneElement;
+
+  /// Attaches the element corresponding to the scene to the Web page.
+  ///
+  /// We don't want to unnecessarily move DOM nodes around. If a DOM node is
+  /// already in the right place, skip DOM mutation. This is both faster and
+  /// more correct, because moving DOM nodes loses internal state, such as
+  /// text selection.
+  void renderScene(html.Element sceneElement) {
+    if (sceneElement != _sceneElement) {
+      _sceneElement?.remove();
+      _sceneElement = sceneElement;
+      append(rootElement, sceneElement);
+    }
+  }
 
   bool get debugIsInWidgetTest => _debugIsInWidgetTest;
   set debugIsInWidgetTest(bool value) {
@@ -147,9 +183,9 @@ class DomRenderer {
       '$defaultFontStyle $defaultFontWeight $defaultFontSize $defaultFontFamily';
 
   void reset() {
-    html.StyleElement styleElement = new html.StyleElement();
-    html.document.head.append(styleElement);
-    html.CssStyleSheet sheet = styleElement.sheet;
+    _styleElement = new html.StyleElement();
+    html.document.head.append(_styleElement);
+    html.CssStyleSheet sheet = _styleElement.sheet;
 
     // TODO(butterfly): use more efficient CSS selectors; descendant selectors
     //                  are slow. More info:
@@ -223,11 +259,11 @@ flt-semantics input[type=range]::-webkit-slider-thumb {
       viewportMeta.remove();
     }
 
-    html.MetaElement viewportMeta = html.MetaElement()
+    _viewportMeta = html.MetaElement()
       ..name = 'viewport'
       ..content = 'width=device-width, initial-scale=1.0, '
           'maximum-scale=1.0, user-scalable=no';
-    html.document.head.append(viewportMeta);
+    html.document.head.append(_viewportMeta);
 
     // We treat browser pixels as device pixels because pointer events,
     // position, and sizes all use browser pixel as the unit (i.e. "px" in CSS).
@@ -242,7 +278,7 @@ flt-semantics input[type=range]::-webkit-slider-thumb {
     ui.window.physicalSize = logicalSize * ui.window.devicePixelRatio;
 
     // TODO: handle removing listener once we have app destroy lifecycle.
-    html.window.onResize.listen((_) {
+    _resizeSubscription = html.window.onResize.listen((_) {
       var logicalSize = new ui.Size(
         html.window.innerWidth.toDouble(),
         html.window.innerHeight.toDouble(),

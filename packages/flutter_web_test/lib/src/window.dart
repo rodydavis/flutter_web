@@ -74,9 +74,6 @@ class TestWindow implements Window {
   }
 
   @override
-  dynamic get webOnlySceneElement => _window.webOnlySceneElement;
-
-  @override
   double get devicePixelRatio => _devicePixelRatio ?? _window.devicePixelRatio;
   @override
   set devicePixelRatio(double devicePixelRatio) {

@@ -34,6 +34,7 @@ class MockCanvasCall {
 class MockEngineCanvas implements EngineCanvas {
   final List<MockCanvasCall> methodCallLog = <MockCanvasCall>[];
 
+  @override
   html.Element get rootElement => null;
 
   void _called(String methodName, {dynamic arguments}) {
@@ -43,18 +44,22 @@ class MockEngineCanvas implements EngineCanvas {
     ));
   }
 
+  @override
   void clear() {
     _called('clear');
   }
 
+  @override
   void save() {
     _called('save');
   }
 
+  @override
   void restore() {
     _called('restore');
   }
 
+  @override
   void translate(double dx, double dy) {
     _called('translate', arguments: {
       'dx': dx,
@@ -62,6 +67,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void scale(double sx, double sy) {
     _called('scale', arguments: {
       'sx': sx,
@@ -69,10 +75,12 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void rotate(double radians) {
     _called('rotate', arguments: radians);
   }
 
+  @override
   void skew(double sx, double sy) {
     _called('skew', arguments: {
       'sx': sx,
@@ -80,22 +88,27 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void transform(Float64List matrix4) {
     _called('transform', arguments: matrix4);
   }
 
+  @override
   void clipRect(Rect rect) {
     _called('clipRect', arguments: rect);
   }
 
+  @override
   void clipRRect(RRect rrect) {
     _called('clipRRect', arguments: rrect);
   }
 
+  @override
   void clipPath(Path path) {
     _called('clipPath', arguments: path);
   }
 
+  @override
   void drawColor(Color color, BlendMode blendMode) {
     _called('drawColor', arguments: {
       'color': color,
@@ -103,6 +116,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawLine(Offset p1, Offset p2, PaintData paint) {
     _called('drawLine', arguments: {
       'p1': p1,
@@ -111,14 +125,17 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawPaint(PaintData paint) {
     _called('drawPaint', arguments: paint);
   }
 
+  @override
   void drawRect(Rect rect, PaintData paint) {
     _called('drawRect', arguments: paint);
   }
 
+  @override
   void drawRRect(RRect rrect, PaintData paint) {
     _called('drawRRect', arguments: {
       'rrect': rrect,
@@ -126,6 +143,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawDRRect(RRect outer, RRect inner, PaintData paint) {
     _called('drawDRRect', arguments: {
       'outer': outer,
@@ -134,6 +152,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawOval(Rect rect, PaintData paint) {
     _called('drawOval', arguments: {
       'rect': rect,
@@ -141,6 +160,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawCircle(Offset c, double radius, PaintData paint) {
     _called('drawCircle', arguments: {
       'c': c,
@@ -149,6 +169,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawPath(Path path, PaintData paint) {
     _called('drawPath', arguments: {
       'path': path,
@@ -156,6 +177,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawShadow(
       Path path, Color color, double elevation, bool transparentOccluder) {
     _called('drawShadow', arguments: {
@@ -166,6 +188,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawImage(Image image, Offset p, PaintData paint) {
     _called('drawImage', arguments: {
       'image': image,
@@ -174,6 +197,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
     _called('drawImageRect', arguments: {
       'image': image,
@@ -183,6 +207,7 @@ class MockEngineCanvas implements EngineCanvas {
     });
   }
 
+  @override
   void drawParagraph(Paragraph paragraph, Offset offset) {
     _called('drawParagraph', arguments: {
       'paragraph': paragraph,
