@@ -5,9 +5,11 @@ import 'dart:html' as html
 import 'dart:typed_data';
 
 import '../assets/assets.dart';
+import '../browser_detection.dart';
 
 const _testFontFamily = 'Ahem';
 const _testFontUrl = '/packages/flutter_web/assets/Ahem.ttf';
+const _robotoFontUrl = '/packages/flutter_web_ui/assets/Roboto-Regular.ttf';
 
 /// This class is responsible for registering and loading fonts.
 ///
@@ -52,6 +54,13 @@ class FontCollection {
       _assetFontManager = _FontManager();
     } else {
       _assetFontManager = _PolyfillFontManager();
+    }
+
+    // If not on Chrome, add Roboto to the bundled fonts since it is provided
+    // by default by Flutter.
+    if (browserEngine != BrowserEngine.blink) {
+      _assetFontManager
+          .registerAsset('Roboto', 'url($_robotoFontUrl)', <String, String>{});
     }
 
     for (Map<String, dynamic> fontFamily in fontManifest) {
