@@ -1041,8 +1041,10 @@ class ClipPathLayer extends ContainerLayer {
       return true;
     }());
     if (enabled)
-      builder.pushClipPath(clipPath.shift(layerOffset),
-          clipBehavior: clipBehavior, webOnlyPaintedBy: webOnlyPaintedBy);
+      builder.pushClipPath(
+          (layerOffset == Offset.zero) ? clipPath : clipPath.shift(layerOffset),
+          clipBehavior: clipBehavior,
+          webOnlyPaintedBy: webOnlyPaintedBy);
     addChildrenToScene(builder, layerOffset);
     if (enabled) builder.pop();
     return null; // this does not return an engine layer yet.
@@ -1409,7 +1411,10 @@ class PhysicalModelLayer extends ContainerLayer {
     }());
     if (enabled) {
       engineLayer = builder.pushPhysicalShape(
-        path: clipPath.shift(layerOffset),
+        // TODO(flutter_web): upstream Offset.zero optimization since most
+        path: (layerOffset == Offset.zero)
+            ? clipPath
+            : clipPath.shift(layerOffset),
         elevation: elevation,
         color: color,
         shadowColor: shadowColor,

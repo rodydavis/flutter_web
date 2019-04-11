@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'bitmap_canvas.dart';
+import 'conic.dart';
 import 'geometry.dart';
 import 'painting.dart';
 import 'recording_canvas.dart';
@@ -1196,8 +1197,12 @@ class Path {
   /// hyperbola; if the weight equals 1, it's a parabola; and if it is
   /// less than 1, it is an ellipse.
   void conicTo(double x1, double y1, double x2, double y2, double w) {
-    // TODO(het): See if this can be implemented with a bezier curve
-    throw new UnimplementedError();
+    List<Offset> quads =
+        Conic(_currentX, _currentY, x1, y1, x2, y2, w).toQuads();
+    for (int i = 1, len = quads.length; i < len; i += 2) {
+      quadraticBezierTo(
+          quads[i].dx, quads[i].dy, quads[i + 1].dx, quads[i + 1].dy);
+    }
   }
 
   /// Adds a bezier segment that curves from the current point to the
@@ -1207,8 +1212,7 @@ class Path {
   /// a hyperbola; if the weight equals 1, it's a parabola; and if it
   /// is less than 1, it is an ellipse.
   void relativeConicTo(double x1, double y1, double x2, double y2, double w) {
-    // TODO(het): See if this can be implemented with a bezier curve
-    throw new UnimplementedError();
+    conicTo(_currentX + x1, _currentY + y1, _currentX + x2, _currentY + y2, w);
   }
 
   /// If the `forceMoveTo` argument is false, adds a straight line
@@ -1705,11 +1709,52 @@ class Path {
             break;
           case PathCommandTypes.ellipse:
             Ellipse cmd = op;
-            minX = cmd.x - cmd.radiusX;
-            curX = maxX = cmd.x + cmd.radiusX;
-            minY = cmd.y - cmd.radiusY;
-            maxY = cmd.y + cmd.radiusY;
-            curY = cmd.y;
+            // Rotate 4 corners of bounding box.
+            final double rx = cmd.radiusX;
+            final double ry = cmd.radiusY;
+            final double cosVal = math.cos(cmd.rotation);
+            final double sinVal = math.sin(cmd.rotation);
+            final double rxCos = rx * cosVal;
+            final double ryCos = ry * cosVal;
+            final double rxSin = rx * sinVal;
+            final double rySin = ry * sinVal;
+
+            final double leftDeltaX = rxCos - rySin;
+            final double rightDeltaX = -rxCos - rySin;
+            final double topDeltaY = ryCos + rxSin;
+            final double bottomDeltaY = ryCos - rxSin;
+
+            final centerX = cmd.x;
+            final centerY = cmd.y;
+
+            double rotatedX = centerX + leftDeltaX;
+            double rotatedY = centerY + topDeltaY;
+            minX = maxX = rotatedX;
+            minY = maxY = rotatedY;
+
+            rotatedX = centerX + rightDeltaX;
+            rotatedY = centerY + bottomDeltaY;
+            minX = math.min(minX, rotatedX);
+            maxX = math.max(maxX, rotatedX);
+            minY = math.min(minY, rotatedY);
+            maxY = math.max(maxY, rotatedY);
+
+            rotatedX = centerX - leftDeltaX;
+            rotatedY = centerY - topDeltaY;
+            minX = math.min(minX, rotatedX);
+            maxX = math.max(maxX, rotatedX);
+            minY = math.min(minY, rotatedY);
+            maxY = math.max(maxY, rotatedY);
+
+            rotatedX = centerX - rightDeltaX;
+            rotatedY = centerY - bottomDeltaY;
+            minX = math.min(minX, rotatedX);
+            maxX = math.max(maxX, rotatedX);
+            minY = math.min(minY, rotatedY);
+            maxY = math.max(maxY, rotatedY);
+
+            curX = centerX + cmd.radiusX;
+            curY = centerY;
             break;
           case PathCommandTypes.quadraticCurveTo:
             QuadraticCurveTo cmd = op;
@@ -1912,10 +1957,22 @@ class Path {
             break;
           case PathCommandTypes.rect:
             RectCommand cmd = op;
-            curX = minX = cmd.x;
-            maxX = cmd.x + cmd.width;
-            curY = minY = cmd.y;
-            maxY = cmd.y + cmd.height;
+            var left = cmd.x;
+            var width = cmd.width;
+            if (cmd.width < 0) {
+              left -= width;
+              width = -width;
+            }
+            var top = cmd.y;
+            var height = cmd.height;
+            if (cmd.height < 0) {
+              top -= height;
+              height = -height;
+            }
+            curX = minX = left;
+            maxX = left + width;
+            curY = minY = top;
+            maxY = top + height;
             break;
           case PathCommandTypes.rRect:
             RRectCommand cmd = op;

@@ -204,4 +204,22 @@ void main() {
     expect(events[3].runtimeType, equals(PointerCancelEvent));
     expect(events[4].runtimeType, equals(PointerRemovedEvent));
   });
+
+  test('Can expand pointer scroll events', () {
+    const ui.PointerDataPacket packet =
+        ui.PointerDataPacket(data: <ui.PointerData>[
+      ui.PointerData(change: ui.PointerChange.add),
+      ui.PointerData(
+          change: ui.PointerChange.hover,
+          signalKind: ui.PointerSignalKind.scroll),
+    ]);
+
+    final List<PointerEvent> events =
+        PointerEventConverter.expand(packet.data, ui.window.devicePixelRatio)
+            .toList();
+
+    expect(events.length, 2);
+    expect(events[0].runtimeType, equals(PointerAddedEvent));
+    expect(events[1].runtimeType, equals(PointerScrollEvent));
+  });
 }

@@ -116,6 +116,10 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
 
     final String cssColor = paint.color?.toCssString() ?? '#000000';
 
+    if (paint.maskFilter != null) {
+      style.filter = 'blur(${paint.maskFilter.webOnlySigma}px)';
+    }
+
     if (isStroke) {
       style
         ..width = '${right - left - paint.strokeWidth}px'

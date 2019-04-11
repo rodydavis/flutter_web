@@ -3,7 +3,14 @@
 // found in the LICENSE file.
 
 import 'dart:html' as html
-    show window, Event, PointerEvent, TouchEvent, MouseEvent, EventListener;
+    show
+        window,
+        Event,
+        PointerEvent,
+        TouchEvent,
+        MouseEvent,
+        EventListener,
+        WheelEvent;
 import 'dart:js_util' show hasProperty;
 import 'dart:math' as math;
 
@@ -282,6 +289,7 @@ class TouchAdapter extends BaseAdapter {
         change: change,
         timeStamp: _eventTimeStampToDuration(event.timeStamp),
         kind: PointerDeviceKind.touch,
+        signalKind: PointerSignalKind.none,
         device: _uniqueDeviceIdFromType('touch'),
         physicalX: touch.client.x,
         physicalY: touch.client.y,
@@ -312,6 +320,11 @@ class MouseAdapter extends BaseAdapter {
       _isDown = false;
       _callback(_convertEventToPointerData(PointerChange.up, event));
     });
+
+    _addEventListener('wheel', (html.Event event) {
+      html.WheelEvent wheelEvent = event as html.WheelEvent;
+      _callback(_convertWheelEventToPointerData(wheelEvent));
+    });
   }
 
   List<PointerData> _convertEventToPointerData(
@@ -323,6 +336,7 @@ class MouseAdapter extends BaseAdapter {
         change: change,
         timeStamp: _eventTimeStampToDuration(event.timeStamp),
         kind: PointerDeviceKind.mouse,
+        signalKind: PointerSignalKind.none,
         device: _uniqueDeviceIdFromType('mouse'),
         physicalX: event.client.x,
         physicalY: event.client.y,
@@ -330,6 +344,64 @@ class MouseAdapter extends BaseAdapter {
         pressure: 1.0,
         pressureMin: 0.0,
         pressureMax: 1.0,
+      )
+    ];
+  }
+
+  List<PointerData> _convertWheelEventToPointerData(
+    html.WheelEvent event,
+  ) {
+    const int domDeltaPixel = 0x00;
+    const int domDeltaLine = 0x01;
+    const int domDeltaPage = 0x02;
+
+    // Flutter only supports pixel scroll delta. Convert deltaMode values
+    // to pixels.
+    double deltaX = event.deltaX;
+    double deltaY = event.deltaY;
+    switch (event.deltaMode) {
+      case domDeltaLine:
+        deltaX *= 32.0;
+        deltaY *= 32.0;
+        break;
+      case domDeltaPage:
+        deltaX *= ui.window.physicalSize.width;
+        deltaY *= ui.window.physicalSize.height;
+        break;
+      case domDeltaPixel:
+      default:
+        break;
+    }
+    return [
+      PointerData(
+        change: PointerChange.add,
+        timeStamp: _eventTimeStampToDuration(event.timeStamp),
+        kind: PointerDeviceKind.mouse,
+        signalKind: PointerSignalKind.scroll,
+        device: _uniqueDeviceIdFromType('mouse'),
+        physicalX: event.client.x,
+        physicalY: event.client.y,
+        buttons: event.buttons,
+        pressure: 1.0,
+        pressureMin: 0.0,
+        pressureMax: 1.0,
+        scrollDeltaX: deltaX,
+        scrollDeltaY: deltaY,
+      ),
+      PointerData(
+        change: PointerChange.hover,
+        timeStamp: _eventTimeStampToDuration(event.timeStamp),
+        kind: PointerDeviceKind.mouse,
+        signalKind: PointerSignalKind.scroll,
+        device: _uniqueDeviceIdFromType('mouse'),
+        physicalX: event.client.x,
+        physicalY: event.client.y,
+        buttons: event.buttons,
+        pressure: 1.0,
+        pressureMin: 0.0,
+        pressureMax: 1.0,
+        scrollDeltaX: deltaX,
+        scrollDeltaY: deltaY,
       )
     ];
   }

@@ -20,6 +20,7 @@ import 'geometry.dart';
 import 'houdini_canvas.dart';
 import 'painting.dart';
 import 'shadow.dart';
+import 'path_to_svg.dart';
 import 'util.dart';
 import 'window.dart';
 
@@ -198,7 +199,7 @@ class SceneBuilder {
       {Clip clipBehavior = Clip.antiAlias, @required Object webOnlyPaintedBy}) {
     assert(clipBehavior != null);
     assert(clipBehavior != Clip.none);
-    throw UnimplementedError();
+    _pushSurface(_PersistedClipPath(webOnlyPaintedBy, path, clipBehavior));
   }
 
   /// Pushes an opacity operation onto the operation stack.
@@ -1365,6 +1366,66 @@ class PersistedOpacity extends PersistedContainerSurface {
   }
 }
 
+// Counter used for generating clip path id inside an svg <defs> tag.
+int _clipCounter = 0;
+
+/// A surface that clips it's children.
+class _PersistedClipPath extends PersistedContainerSurface {
+  _PersistedClipPath(Object paintedBy, this.clipPath, this.clipBehavior)
+      : super(paintedBy);
+
+  final Path clipPath;
+  final Clip clipBehavior;
+  html.Element _clipElement;
+
+  @override
+  html.Element createElement() {
+    return defaultCreateElement('flt-clippath');
+  }
+
+  @override
+  void apply() {
+    if (clipPath == null) {
+      if (_clipElement != null) {
+        domRenderer.setElementStyle(childContainer, 'clip-path', '');
+        _clipElement.remove();
+        _clipElement = null;
+      }
+      return;
+    }
+    String svgClipPath = _pathToSvgClipPath(clipPath);
+    _clipElement?.remove();
+    _clipElement =
+        html.Element.html(svgClipPath, treeSanitizer: _NullTreeSanitizer());
+    domRenderer.append(childContainer, _clipElement);
+    domRenderer.setElementStyle(
+        childContainer, 'clip-path', 'url(#svgClip${_clipCounter})');
+  }
+
+  @override
+  void update(_PersistedClipPath oldSurface) {
+    super.update(oldSurface);
+    if (oldSurface.clipPath != clipPath) {
+      oldSurface._clipElement?.remove();
+      apply();
+    } else {
+      _clipElement = oldSurface._clipElement;
+    }
+    oldSurface._clipElement = null;
+  }
+
+  @override
+  void recycle() {
+    _clipElement?.remove();
+    _clipElement = null;
+    super.recycle();
+  }
+}
+
+class _NullTreeSanitizer implements html.NodeTreeSanitizer {
+  void sanitizeTree(html.Node node) {}
+}
+
 // TODO(yjbanov): this is currently very naive. We probably want to cache
 //                fewer large canvases than small canvases. We could also
 //                improve cache hit count if we did not require exact canvas
@@ -1713,6 +1774,7 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
   final Color color;
   final Color shadowColor;
   final Clip clipBehavior;
+  html.Element _clipElement;
 
   @override
   void recomputeTransformAndClip() {
@@ -1784,7 +1846,8 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
         style
           ..transform = 'translate(${rect.left}px, ${rect.top}px)'
           ..width = '${rect.width}px'
-          ..height = '${rect.height}px';
+          ..height = '${rect.height}px'
+          ..borderRadius = '';
         childContainer.style.transform =
             'translate(${-rect.left}px, ${-rect.top}px)';
         if (clipBehavior != Clip.none) {
@@ -1793,9 +1856,14 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
         return;
       }
     }
-    // TODO: apply path via clip-path CSS property.
-    throw new UnimplementedError(
-        'Arbitrary path physical shape not supported yet');
+
+    String svgClipPath = _pathToSvgClipPath(path);
+    assert(_clipElement == null);
+    _clipElement =
+        html.Element.html(svgClipPath, treeSanitizer: _NullTreeSanitizer());
+    domRenderer.append(rootElement, _clipElement);
+    domRenderer.setElementStyle(
+        rootElement, 'clip-path', 'url(#svgClip${_clipCounter})');
   }
 
   @override
@@ -1809,7 +1877,35 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
       _applyShadow();
     }
     if (oldSurface.path != path) {
+      oldSurface._clipElement?.remove();
+      // Reset style on prior element since we may have switched between
+      // rect/rrect and arbitrary path.
+      var style = rootElement.style;
+      style.transform = '';
+      style.borderRadius = '';
+      style.overflow = '';
+      domRenderer.setElementStyle(rootElement, 'clip-path', '');
       _applyShape();
+    } else {
+      _clipElement = oldSurface._clipElement;
     }
+    oldSurface._clipElement = null;
   }
+}
+
+/// Converts Path to svg element that contains a clip-path definition.
+String _pathToSvgClipPath(Path path) {
+  Rect bounds = path.getBounds();
+  StringBuffer sb = new StringBuffer();
+  sb.write('<svg width="${bounds.right}" height="${bounds.bottom}" '
+      'style="position:absolute">');
+  sb.write('<defs>');
+
+  String clipId = 'svgClip${++_clipCounter}';
+  sb.write('<clipPath id=${clipId}>');
+
+  sb.write('<path fill="#FFFFFF" d="');
+  pathToSvg(path, sb);
+  sb.write('"></path></clipPath></defs></svg');
+  return sb.toString();
 }
