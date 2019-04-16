@@ -43,10 +43,10 @@ const GalleryDemoCategory _kStyle = GalleryDemoCategory._(
   icon: GalleryIcons.custom_typography,
 );
 
-const GalleryDemoCategory _kCupertinoComponents = GalleryDemoCategory._(
-  name: 'Cupertino',
-  icon: GalleryIcons.phone_iphone,
-);
+//const GalleryDemoCategory _kCupertinoComponents = GalleryDemoCategory._(
+//  name: 'Cupertino',
+//  icon: GalleryIcons.phone_iphone,
+//);
 
 const GalleryDemoCategory _kMaterialComponents = GalleryDemoCategory._(
   name: 'Material',
@@ -496,15 +496,15 @@ List<GalleryDemo> _buildGalleryDemos() {
 //      buildRoute: (BuildContext context) => const VideoDemo(),
 //    ),
     // Cupertino Components
-    GalleryDemo(
-      title: 'Activity Indicator',
-      icon: GalleryIcons.cupertino_progress,
-      category: _kCupertinoComponents,
-      routeName: CupertinoProgressIndicatorDemo.routeName,
-      documentationUrl:
-          'https://docs.flutter.io/flutter/cupertino/CupertinoActivityIndicator-class.html',
-      buildRoute: (BuildContext context) => CupertinoProgressIndicatorDemo(),
-    ),
+//    GalleryDemo(
+//      title: 'Activity Indicator',
+//      icon: GalleryIcons.cupertino_progress,
+//      category: _kCupertinoComponents,
+//      routeName: CupertinoProgressIndicatorDemo.routeName,
+//      documentationUrl:
+//          'https://docs.flutter.io/flutter/cupertino/CupertinoActivityIndicator-class.html',
+//      buildRoute: (BuildContext context) => CupertinoProgressIndicatorDemo(),
+//    ),
 //    GalleryDemo(
 //      title: 'Alerts',
 //      icon: GalleryIcons.dialogs,

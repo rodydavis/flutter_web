@@ -4,7 +4,7 @@
 
 import 'dart:html' as html;
 
-import 'package:flutter_web_ui/src/dom_renderer.dart';
+import 'package:flutter_web_ui/src/engine.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
 
 void main() {

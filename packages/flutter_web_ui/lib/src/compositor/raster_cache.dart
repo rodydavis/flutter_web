@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:vector_math/vector_math_64.dart';
-
-import '../bitmap_canvas.dart';
-import '../canvas.dart';
+part of engine;
 
 /// A cache of [Picture]s that have already been rasterized.
 ///
@@ -36,10 +33,11 @@ class RasterCache {
   /// The flag [willChange] is a hint to the raster cache that this picture
   /// will change, and so should be less likely to be cached.
   void prepare(
-      Picture picture, Matrix4 matrix, bool isComplex, bool willChange) {}
+      ui.Picture picture, Matrix4 matrix, bool isComplex, bool willChange) {}
 
   /// Gets a raster cache result for the [picture] at transform [matrix].
-  RasterCacheResult get(Picture picture, Matrix4 matrix) => RasterCacheResult();
+  RasterCacheResult get(ui.Picture picture, Matrix4 matrix) =>
+      RasterCacheResult();
 }
 
 /// A cache entry for a given picture and matrix.

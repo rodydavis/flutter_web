@@ -4,7 +4,7 @@
 
 import 'package:flutter_web/material.dart';
 import 'package:flutter_web_ui/ui.dart' as ui;
-import 'package:flutter_web_ui/src/semantics/semantics.dart' as engine;
+import 'package:flutter_web_ui/src/engine.dart' as engine;
 
 import 'gallery/app.dart';
 

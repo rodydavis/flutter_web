@@ -2,13 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-import 'dart:typed_data';
-
-import 'package:flutter_web_ui/src/services.dart';
-
-import 'engine.dart';
-import 'window.dart';
+part of engine;
 
 /// Provides keyboard bindings, such as the `flutter/keyevent` channel.
 class Keyboard {
@@ -77,7 +71,7 @@ class Keyboard {
       eventData['codePoint'] = event.key.codeUnits.first;
     }
 
-    window.onPlatformMessage('flutter/keyevent',
+    ui.window.onPlatformMessage('flutter/keyevent',
         _messageCodec.encodeMessage(eventData), _noopCallback);
   }
 }

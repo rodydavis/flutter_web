@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+part of ui;
+
 /// Returns runtime Dart compilation trace as a UTF-8 encoded memory buffer.
 ///
 /// The buffer contains a list of symbols compiled by the Dart JIT at runtime up to the point

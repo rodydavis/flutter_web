@@ -5,7 +5,7 @@ import 'package:flutter_web/material.dart';
 import 'package:flutter_web/rendering.dart';
 import 'package:flutter_web/scheduler.dart';
 import 'package:flutter_web_ui/ui.dart';
-import 'package:flutter_web_ui/src/dom_renderer.dart';
+import 'package:flutter_web_ui/src/engine.dart' as engine;
 import 'package:flutter_web/widgets.dart';
 import 'package:flutter_web/src/util.dart';
 import 'package:meta/meta.dart';
@@ -89,14 +89,14 @@ void testWidgets(String description, WidgetTesterCallback callback,
 void webOnlyInitializeTestDomRenderer({double devicePixelRatio = 3.0}) {
   if (WidgetsBinding.instance == null) {
     // Force-initialize DomRenderer so it doesn't overwrite test pixel ratio.
-    domRenderer;
+    engine.domRenderer;
     // The following parameters are hard-coded in Flutter's test embedder. Since
     // we don't have an embedder yet this is the lowest-most layer we can put
     // this stuff in.
     window.devicePixelRatio = devicePixelRatio;
     window.physicalSize = Size(800 * devicePixelRatio, 600 * devicePixelRatio);
     window.webOnlyScheduleFrameCallback = () {};
-    domRenderer.debugIsInWidgetTest = true;
+    engine.domRenderer.debugIsInWidgetTest = true;
     // Only load the Ahem font once and await the same future in all tests.
     _platformInitializedFuture =
         webOnlyInitializePlatform(assetManager: WebOnlyMockAssetManager());

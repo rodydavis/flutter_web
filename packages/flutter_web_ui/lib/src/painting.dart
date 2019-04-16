@@ -2,17 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:math' as math;
-import 'dart:html' as html;
-import 'dart:typed_data';
-
-import 'geometry.dart';
-import 'hash_codes.dart';
-import 'lerp.dart';
-import 'tile_mode.dart';
-import 'util.dart';
-import 'html_image_codec.dart';
+part of ui;
 
 bool _offsetIsValid(Offset offset) {
   assert(offset != null, 'Offset argument was null.');
@@ -258,7 +248,7 @@ class Color {
 
   @override
   String toString() {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       return 'Color(0x${value.toRadixString(16).padLeft(8, '0')})';
     } else {
       return super.toString();
@@ -1046,6 +1036,21 @@ class Paint {
     _paintData.color = value;
   }
 
+  /// Whether the colors of the image are inverted when drawn.
+  ///
+  /// Inverting the colors of an image applies a new color filter that will
+  /// be composed with any user provided color filters. This is primarily
+  /// used for implementing smart invert on iOS.
+  bool get invertColors {
+    return false;
+  }
+
+  set invertColors(bool _) {
+    if (engine.assertionsEnabled) {
+      throw UnsupportedError('Paint.invertColors is not supported.');
+    }
+  }
+
   Color _color = _defaultPaintColor;
   static const Color _defaultPaintColor = const Color(0xFF000000);
 
@@ -1124,7 +1129,7 @@ class Paint {
 
   @override
   String toString() {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       StringBuffer result = new StringBuffer();
       String semicolon = '';
       result.write('Paint(');
@@ -1496,7 +1501,7 @@ class ColorFilter {
   }
 
   @override
-  String toString() => assertionsEnabled
+  String toString() => engine.assertionsEnabled
       ? 'ColorFilter($_color, $_blendMode)'
       : super.toString();
 }
@@ -1727,11 +1732,11 @@ class Codec {
   ///
   /// The returned future can complete with an error if the decoding has failed.
   Future<FrameInfo> getNextFrame() {
-    return futurize(_getNextFrame);
+    return engine.futurize(_getNextFrame);
   }
 
   /// Returns an error message on failure, null on success.
-  String _getNextFrame(Callback<FrameInfo> callback) => null;
+  String _getNextFrame(engine.Callback<FrameInfo> callback) => null;
 
   /// Release the resources used by this object. The object is no longer usable
   /// after this method is called.
@@ -1749,7 +1754,7 @@ class Codec {
 /// failed.
 Future<Codec> instantiateImageCodec(Uint8List list,
     {double decodedCacheRatioCap = double.infinity}) {
-  return futurize((Callback<Codec> callback) =>
+  return engine.futurize((engine.Callback<Codec> callback) =>
       _instantiateImageCodec(list, callback, null));
 }
 
@@ -1757,19 +1762,19 @@ Future<Codec> instantiateImageCodec(Uint8List list,
 ///
 /// Returns an error message if the instantiation has failed, null otherwise.
 String _instantiateImageCodec(
-    Uint8List list, Callback<Codec> callback, _ImageInfo imageInfo) {
+    Uint8List list, engine.Callback<Codec> callback, _ImageInfo imageInfo) {
   final blob = html.Blob([list.buffer]);
-  callback(HtmlBlobCodec(blob));
+  callback(engine.HtmlBlobCodec(blob));
   return null;
 }
 
 Future<Codec> webOnlyInstantiateImageCodecFromUrl(Uri uri) {
-  return futurize((Callback<Codec> callback) =>
+  return engine.futurize((engine.Callback<Codec> callback) =>
       _instantiateImageCodecFromUrl(uri, callback));
 }
 
-String _instantiateImageCodecFromUrl(Uri uri, Callback<Codec> callback) {
-  callback(HtmlCodec(uri.toString()));
+String _instantiateImageCodecFromUrl(Uri uri, engine.Callback<Codec> callback) {
+  callback(engine.HtmlCodec(uri.toString()));
   return null;
 }
 
@@ -1800,8 +1805,9 @@ void decodeImageFromPixels(Uint8List pixels, int width, int height,
     {int rowBytes}) {
   final _ImageInfo imageInfo =
       new _ImageInfo(width, height, format.index, rowBytes);
-  final Future<Codec> codecFuture = futurize((Callback<Codec> callback) =>
-      _instantiateImageCodec(pixels, callback, imageInfo));
+  final Future<Codec> codecFuture = engine.futurize(
+      (engine.Callback<Codec> callback) =>
+          _instantiateImageCodec(pixels, callback, imageInfo));
   codecFuture
       .then((Codec codec) => codec.getNextFrame())
       .then((FrameInfo frameInfo) => callback(frameInfo.image));
@@ -1955,5 +1961,3 @@ class Shadow {
   @override
   String toString() => 'TextShadow($color, $offset, $blurRadius)';
 }
-
-class EngineLayer {}

@@ -832,6 +832,8 @@ class RenderEditable extends RenderBox {
           ? obscuringCharacter * text.toPlainText().length
           : text.toPlainText()
       ..isObscured = obscureText
+      // TODO(flutter_web): upstream.
+      ..isMultiline = _isMultiline
       ..textDirection = textDirection
       ..isFocused = hasFocus
       ..isTextField = true;

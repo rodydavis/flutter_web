@@ -2,25 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html';
-import 'dart:typed_data';
+part of engine;
 
-import 'package:vector_math/vector_math_64.dart';
-
-import '../canvas.dart';
-import '../compositing.dart';
-import '../geometry.dart';
-import '../painting.dart';
-import 'layer.dart';
-import 'layer_tree.dart';
-
-class EngineLayerImpl extends EngineLayer {
+class EngineLayerImpl extends ui.EngineLayer {
   final ContainerLayer _layer;
 
   EngineLayerImpl(this._layer);
 }
 
-class LayerScene implements Scene {
+class LayerScene implements ui.Scene {
   final LayerTree layerTree;
 
   LayerScene(Layer rootLayer) : layerTree = LayerTree() {
@@ -31,35 +21,35 @@ class LayerScene implements Scene {
   void dispose() {}
 
   @override
-  Future<Image> toImage(int width, int height) => null;
+  Future<ui.Image> toImage(int width, int height) => null;
 
   @override
-  Element get webOnlyRootElement => null;
+  html.Element get webOnlyRootElement => null;
 }
 
-class LayerSceneBuilder implements SceneBuilder {
+class LayerSceneBuilder implements ui.SceneBuilder {
   Layer rootLayer;
   ContainerLayer currentLayer;
 
   @override
   void addChildScene(
-      {Offset offset = Offset.zero,
+      {ui.Offset offset = ui.Offset.zero,
       double width = 0.0,
       double height = 0.0,
-      SceneHost sceneHost,
+      ui.SceneHost sceneHost,
       bool hitTestable = true}) {
     throw new UnimplementedError();
   }
 
   @override
-  void addPerformanceOverlay(int enabledOptions, Rect bounds,
+  void addPerformanceOverlay(int enabledOptions, ui.Rect bounds,
       {Object webOnlyPaintedBy}) {
     // We don't plan to implement this on the web.
     throw UnimplementedError();
   }
 
   @override
-  void addPicture(Offset offset, Picture picture,
+  void addPicture(ui.Offset offset, ui.Picture picture,
       {bool isComplexHint = false,
       bool willChangeHint = false,
       Object webOnlyPaintedBy}) {
@@ -68,14 +58,14 @@ class LayerSceneBuilder implements SceneBuilder {
   }
 
   @override
-  void addRetained(EngineLayer retainedLayer) {
+  void addRetained(ui.EngineLayer retainedLayer) {
     if (currentLayer == null) return;
     currentLayer.add((retainedLayer as EngineLayerImpl)._layer);
   }
 
   @override
   void addTexture(int textureId,
-      {Offset offset = Offset.zero,
+      {ui.Offset offset = ui.Offset.zero,
       double width = 0.0,
       double height = 0.0,
       bool freeze = false,
@@ -86,7 +76,7 @@ class LayerSceneBuilder implements SceneBuilder {
   @override
   void addPlatformView(
     int viewId, {
-    Offset offset = Offset.zero,
+    ui.Offset offset = ui.Offset.zero,
     double width = 0.0,
     double height = 0.0,
   }) {
@@ -94,7 +84,7 @@ class LayerSceneBuilder implements SceneBuilder {
   }
 
   @override
-  Scene build() {
+  ui.Scene build() {
     return LayerScene(rootLayer);
   }
 
@@ -105,36 +95,40 @@ class LayerSceneBuilder implements SceneBuilder {
   }
 
   @override
-  void pushBackdropFilter(ImageFilter filter, {Object webOnlyPaintedBy}) {
-    throw new UnimplementedError();
-  }
-
-  @override
-  void pushClipPath(Path path,
-      {Clip clipBehavior = Clip.antiAlias, Object webOnlyPaintedBy}) {
-    pushLayer(ClipPathLayer(path));
-  }
-
-  @override
-  void pushClipRRect(RRect rrect,
-      {Clip clipBehavior, Object webOnlyPaintedBy}) {
-    pushLayer(ClipRRectLayer(rrect));
-  }
-
-  @override
-  void pushClipRect(Rect rect,
-      {Clip clipBehavior = Clip.antiAlias, Object webOnlyPaintedBy}) {
-    pushLayer(ClipRectLayer(rect));
-  }
-
-  @override
-  void pushColorFilter(Color color, BlendMode blendMode,
+  ui.EngineLayer pushBackdropFilter(ui.ImageFilter filter,
       {Object webOnlyPaintedBy}) {
     throw new UnimplementedError();
   }
 
   @override
-  EngineLayer pushOffset(double dx, double dy, {Object webOnlyPaintedBy}) {
+  ui.EngineLayer pushClipPath(ui.Path path,
+      {ui.Clip clipBehavior = ui.Clip.antiAlias, Object webOnlyPaintedBy}) {
+    pushLayer(ClipPathLayer(path));
+    return null;
+  }
+
+  @override
+  ui.EngineLayer pushClipRRect(ui.RRect rrect,
+      {ui.Clip clipBehavior, Object webOnlyPaintedBy}) {
+    pushLayer(ClipRRectLayer(rrect));
+    return null;
+  }
+
+  @override
+  ui.EngineLayer pushClipRect(ui.Rect rect,
+      {ui.Clip clipBehavior = ui.Clip.antiAlias, Object webOnlyPaintedBy}) {
+    pushLayer(ClipRectLayer(rect));
+    return null;
+  }
+
+  @override
+  ui.EngineLayer pushColorFilter(ui.Color color, ui.BlendMode blendMode,
+      {Object webOnlyPaintedBy}) {
+    throw new UnimplementedError();
+  }
+
+  @override
+  ui.EngineLayer pushOffset(double dx, double dy, {Object webOnlyPaintedBy}) {
     final matrix = Matrix4.translationValues(dx, dy, 0.0);
     final layer = TransformLayer(matrix);
     pushLayer(layer);
@@ -142,19 +136,20 @@ class LayerSceneBuilder implements SceneBuilder {
   }
 
   @override
-  void pushOpacity(int alpha,
-      {Object webOnlyPaintedBy, Offset offset = Offset.zero}) {
+  ui.EngineLayer pushOpacity(int alpha,
+      {Object webOnlyPaintedBy, ui.Offset offset = ui.Offset.zero}) {
     // TODO(het): Implement opacity
     pushOffset(0.0, 0.0);
+    return null;
   }
 
   @override
-  EngineLayer pushPhysicalShape(
-      {Path path,
+  ui.EngineLayer pushPhysicalShape(
+      {ui.Path path,
       double elevation,
-      Color color,
-      Color shadowColor,
-      Clip clipBehavior = Clip.none,
+      ui.Color color,
+      ui.Color shadowColor,
+      ui.Clip clipBehavior = ui.Clip.none,
       Object webOnlyPaintedBy}) {
     final layer =
         PhysicalShapeLayer(elevation, color, shadowColor, path, clipBehavior);
@@ -163,15 +158,17 @@ class LayerSceneBuilder implements SceneBuilder {
   }
 
   @override
-  void pushShaderMask(Shader shader, Rect maskRect, BlendMode blendMode,
+  ui.EngineLayer pushShaderMask(
+      ui.Shader shader, ui.Rect maskRect, ui.BlendMode blendMode,
       {Object webOnlyPaintedBy}) {
     throw new UnimplementedError();
   }
 
   @override
-  void pushTransform(Float64List matrix4, {Object webOnlyPaintedBy}) {
+  ui.EngineLayer pushTransform(Float64List matrix4, {Object webOnlyPaintedBy}) {
     final matrix = Matrix4.fromList(matrix4);
     pushLayer(TransformLayer(matrix));
+    return null;
   }
 
   @override

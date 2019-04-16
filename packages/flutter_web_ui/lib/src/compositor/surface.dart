@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import '../geometry.dart';
-import '../bitmap_canvas.dart';
-
-import 'package:vector_math/vector_math_64.dart';
+part of engine;
 
 /// A frame which contains a canvas to be drawn into.
 class SurfaceFrame {
@@ -34,7 +31,7 @@ class Surface {
   Surface(this.submitFunction);
 
   /// Acquire a frame of the given [size] containing a drawable canvas.
-  SurfaceFrame acquireFrame(Size size) {
+  SurfaceFrame acquireFrame(ui.Size size) {
     final canvas = canvasCache.acquireCanvas(size);
     return SurfaceFrame(submitFunction, canvas);
   }
@@ -45,10 +42,10 @@ class Surface {
 class _CanvasCache {
   BitmapCanvas _canvas;
 
-  BitmapCanvas acquireCanvas(Size size) {
+  BitmapCanvas acquireCanvas(ui.Size size) {
     assert(size != null);
     if (size == _canvas?.size) return _canvas;
-    _canvas = BitmapCanvas(Offset.zero & size);
+    _canvas = BitmapCanvas(ui.Offset.zero & size);
     return _canvas;
   }
 }

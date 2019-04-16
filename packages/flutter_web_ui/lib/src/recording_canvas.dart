@@ -2,19 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:math' as math;
-import 'dart:typed_data';
-
-import 'package:vector_math/vector_math_64.dart';
-
-import 'canvas.dart';
-import 'engine_canvas.dart';
-import 'geometry.dart';
-import 'painting.dart';
-import 'shadow.dart';
-import 'text.dart';
-
-import 'util.dart';
+part of engine;
 
 /// Enable this to print every command applied by a canvas.
 const bool _debugDumpPaintCommands = false;
@@ -27,7 +15,7 @@ class RecordingCanvas {
   final _PaintBounds _paintBounds;
   final _commands = <PaintCommand>[];
 
-  RecordingCanvas(Rect bounds) : this._paintBounds = _PaintBounds(bounds);
+  RecordingCanvas(ui.Rect bounds) : this._paintBounds = _PaintBounds(bounds);
 
   /// Whether this canvas is doing arbitrary paint operations not expressible
   /// via DOM elements.
@@ -54,7 +42,7 @@ class RecordingCanvas {
   bool _didDraw = false;
 
   /// Computes paint bounds based on estimated [bounds] and transforms.
-  Rect computePaintBounds() {
+  ui.Rect computePaintBounds() {
     return _paintBounds.computeBounds();
   }
 
@@ -98,7 +86,7 @@ class RecordingCanvas {
     saveCount++;
   }
 
-  void saveLayerWithoutBounds(Paint paint) {
+  void saveLayerWithoutBounds(ui.Paint paint) {
     _hasArbitraryPaint = true;
     // TODO(het): Implement this correctly using another canvas.
     _commands.add(const PaintSave());
@@ -106,7 +94,7 @@ class RecordingCanvas {
     saveCount++;
   }
 
-  void saveLayer(Rect bounds, Paint paint) {
+  void saveLayer(ui.Rect bounds, ui.Paint paint) {
     _hasArbitraryPaint = true;
     // TODO(het): Implement this correctly using another canvas.
     _commands.add(const PaintSave());
@@ -154,32 +142,32 @@ class RecordingCanvas {
     _commands.add(new PaintSkew(sx, sy));
   }
 
-  void clipRect(Rect rect) {
+  void clipRect(ui.Rect rect) {
     _paintBounds.clipRect(rect);
     _hasArbitraryPaint = true;
     _commands.add(new PaintClipRect(rect));
   }
 
-  void clipRRect(RRect rrect) {
+  void clipRRect(ui.RRect rrect) {
     _paintBounds.clipRect(rrect.outerRect);
     _hasArbitraryPaint = true;
     _commands.add(new PaintClipRRect(rrect));
   }
 
-  void clipPath(Path path) {
+  void clipPath(ui.Path path) {
     _paintBounds.clipRect(path.getBounds());
     _hasArbitraryPaint = true;
     _commands.add(new PaintClipPath(path));
   }
 
-  void drawColor(Color color, BlendMode blendMode) {
+  void drawColor(ui.Color color, ui.BlendMode blendMode) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     _paintBounds.grow(_paintBounds.maxPaintBounds);
     _commands.add(new PaintDrawColor(color, blendMode));
   }
 
-  void drawLine(Offset p1, Offset p2, Paint paint) {
+  void drawLine(ui.Offset p1, ui.Offset p2, ui.Paint paint) {
     final double strokeWidth = math.max(paint.strokeWidth, 1.0);
     // TODO(yjbanov): This can be optimized. Currently we create a box around
     //                the line and then apply the transform on the box to get
@@ -198,14 +186,14 @@ class RecordingCanvas {
     _commands.add(new PaintDrawLine(p1, p2, paint.webOnlyPaintData));
   }
 
-  void drawPaint(Paint paint) {
+  void drawPaint(ui.Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     _paintBounds.grow(_paintBounds.maxPaintBounds);
     _commands.add(new PaintDrawPaint(paint.webOnlyPaintData));
   }
 
-  void drawRect(Rect rect, Paint paint) {
+  void drawRect(ui.Rect rect, ui.Paint paint) {
     if (paint.shader != null) {
       _hasArbitraryPaint = true;
     }
@@ -218,7 +206,7 @@ class RecordingCanvas {
     _commands.add(new PaintDrawRect(rect, paint.webOnlyPaintData));
   }
 
-  void drawRRect(RRect rrect, Paint paint) {
+  void drawRRect(ui.RRect rrect, ui.Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     var strokeWidth = paint.strokeWidth == null ? 0 : paint.strokeWidth;
@@ -230,11 +218,11 @@ class RecordingCanvas {
     _commands.add(new PaintDrawRRect(rrect, paint.webOnlyPaintData));
   }
 
-  void drawDRRect(RRect outer, RRect inner, Paint paint) {
+  void drawDRRect(ui.RRect outer, ui.RRect inner, ui.Paint paint) {
     // If inner rect is not contained inside outer, flutter engine skips
     // painting rectangle.
-    if (!(outer.contains(Offset(inner.left, inner.top)) &&
-        outer.contains(Offset(inner.right, inner.bottom)))) {
+    if (!(outer.contains(ui.Offset(inner.left, inner.top)) &&
+        outer.contains(ui.Offset(inner.right, inner.bottom)))) {
       return;
     }
     _hasArbitraryPaint = true;
@@ -245,7 +233,7 @@ class RecordingCanvas {
     _commands.add(new PaintDrawDRRect(outer, inner, paint.webOnlyPaintData));
   }
 
-  void drawOval(Rect rect, Paint paint) {
+  void drawOval(ui.Rect rect, ui.Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     if (paint.strokeWidth != null && paint.strokeWidth > 1.0) {
@@ -256,7 +244,7 @@ class RecordingCanvas {
     _commands.add(new PaintDrawOval(rect, paint.webOnlyPaintData));
   }
 
-  void drawCircle(Offset c, double radius, Paint paint) {
+  void drawCircle(ui.Offset c, double radius, ui.Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     var strokeWidth = paint.strokeWidth == null ? 0 : paint.strokeWidth;
@@ -268,10 +256,10 @@ class RecordingCanvas {
     _commands.add(new PaintDrawCircle(c, radius, paint.webOnlyPaintData));
   }
 
-  void drawPath(Path path, Paint paint) {
+  void drawPath(ui.Path path, ui.Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
-    Rect pathBounds = path.getBounds();
+    ui.Rect pathBounds = path.getBounds();
     if (paint.strokeWidth != null && paint.strokeWidth > 1.0) {
       pathBounds = pathBounds.inflate(paint.strokeWidth);
     }
@@ -279,7 +267,7 @@ class RecordingCanvas {
     _commands.add(new PaintDrawPath(path, paint.webOnlyPaintData));
   }
 
-  void drawImage(Image image, Offset offset, Paint paint) {
+  void drawImage(ui.Image image, ui.Offset offset, ui.Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     var left = offset.dx;
@@ -288,7 +276,7 @@ class RecordingCanvas {
     _commands.add(new PaintDrawImage(image, offset, paint.webOnlyPaintData));
   }
 
-  void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
+  void drawImageRect(ui.Image image, ui.Rect src, ui.Rect dst, ui.Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
     _paintBounds.grow(dst);
@@ -296,7 +284,7 @@ class RecordingCanvas {
         .add(new PaintDrawImageRect(image, src, dst, paint.webOnlyPaintData));
   }
 
-  void drawParagraph(Paragraph paragraph, Offset offset) {
+  void drawParagraph(ui.Paragraph paragraph, ui.Offset offset) {
     _didDraw = true;
     var left = offset.dx;
     var top = offset.dy;
@@ -305,11 +293,11 @@ class RecordingCanvas {
     _commands.add(new PaintDrawParagraph(paragraph, offset));
   }
 
-  void drawShadow(
-      Path path, Color color, double elevation, bool transparentOccluder) {
+  void drawShadow(ui.Path path, ui.Color color, double elevation,
+      bool transparentOccluder) {
     _hasArbitraryPaint = true;
     _didDraw = true;
-    Rect shadowRect =
+    ui.Rect shadowRect =
         ElevationShadow.computeShadowRect(path.getBounds(), elevation);
     _paintBounds.grow(shadowRect);
     _commands
@@ -504,7 +492,7 @@ class PaintSkew extends PaintCommand {
 }
 
 class PaintClipRect extends PaintCommand {
-  final Rect rect;
+  final ui.Rect rect;
 
   PaintClipRect(this.rect);
 
@@ -528,7 +516,7 @@ class PaintClipRect extends PaintCommand {
 }
 
 class PaintClipRRect extends PaintCommand {
-  final RRect rrect;
+  final ui.RRect rrect;
 
   PaintClipRRect(this.rrect);
 
@@ -555,7 +543,7 @@ class PaintClipRRect extends PaintCommand {
 }
 
 class PaintClipPath extends PaintCommand {
-  final Path path;
+  final ui.Path path;
 
   PaintClipPath(this.path);
 
@@ -579,8 +567,8 @@ class PaintClipPath extends PaintCommand {
 }
 
 class PaintDrawColor extends PaintCommand {
-  final Color color;
-  final BlendMode blendMode;
+  final ui.Color color;
+  final ui.BlendMode blendMode;
 
   PaintDrawColor(this.color, this.blendMode);
 
@@ -604,9 +592,9 @@ class PaintDrawColor extends PaintCommand {
 }
 
 class PaintDrawLine extends PaintCommand {
-  final Offset p1;
-  final Offset p2;
-  final PaintData paint;
+  final ui.Offset p1;
+  final ui.Offset p2;
+  final ui.PaintData paint;
 
   PaintDrawLine(this.p1, this.p2, this.paint);
 
@@ -631,7 +619,7 @@ class PaintDrawLine extends PaintCommand {
 }
 
 class PaintDrawPaint extends PaintCommand {
-  final PaintData paint;
+  final ui.PaintData paint;
 
   PaintDrawPaint(this.paint);
 
@@ -655,8 +643,8 @@ class PaintDrawPaint extends PaintCommand {
 }
 
 class PaintDrawRect extends PaintCommand {
-  final Rect rect;
-  final PaintData paint;
+  final ui.Rect rect;
+  final ui.PaintData paint;
 
   PaintDrawRect(this.rect, this.paint);
 
@@ -681,8 +669,8 @@ class PaintDrawRect extends PaintCommand {
 }
 
 class PaintDrawRRect extends PaintCommand {
-  final RRect rrect;
-  final PaintData paint;
+  final ui.RRect rrect;
+  final ui.PaintData paint;
 
   PaintDrawRRect(this.rrect, this.paint);
 
@@ -710,9 +698,9 @@ class PaintDrawRRect extends PaintCommand {
 }
 
 class PaintDrawDRRect extends PaintCommand {
-  final RRect outer;
-  final RRect inner;
-  final PaintData paint;
+  final ui.RRect outer;
+  final ui.RRect inner;
+  final ui.PaintData paint;
 
   PaintDrawDRRect(this.outer, this.inner, this.paint);
 
@@ -741,8 +729,8 @@ class PaintDrawDRRect extends PaintCommand {
 }
 
 class PaintDrawOval extends PaintCommand {
-  final Rect rect;
-  final PaintData paint;
+  final ui.Rect rect;
+  final ui.PaintData paint;
 
   PaintDrawOval(this.rect, this.paint);
 
@@ -770,9 +758,9 @@ class PaintDrawOval extends PaintCommand {
 }
 
 class PaintDrawCircle extends PaintCommand {
-  final Offset c;
+  final ui.Offset c;
   final double radius;
-  final PaintData paint;
+  final ui.PaintData paint;
 
   PaintDrawCircle(this.c, this.radius, this.paint);
 
@@ -802,8 +790,8 @@ class PaintDrawCircle extends PaintCommand {
 }
 
 class PaintDrawPath extends PaintCommand {
-  final Path path;
-  final PaintData paint;
+  final ui.Path path;
+  final ui.PaintData paint;
 
   PaintDrawPath(this.path, this.paint);
 
@@ -834,8 +822,8 @@ class PaintDrawShadow extends PaintCommand {
   PaintDrawShadow(
       this.path, this.color, this.elevation, this.transparentOccluder);
 
-  final Path path;
-  final Color color;
+  final ui.Path path;
+  final ui.Color color;
   final double elevation;
   final bool transparentOccluder;
 
@@ -870,9 +858,9 @@ class PaintDrawShadow extends PaintCommand {
 }
 
 class PaintDrawImage extends PaintCommand {
-  final Image image;
-  final Offset offset;
-  final PaintData paint;
+  final ui.Image image;
+  final ui.Offset offset;
+  final ui.PaintData paint;
 
   PaintDrawImage(this.image, this.offset, this.paint);
 
@@ -898,10 +886,10 @@ class PaintDrawImage extends PaintCommand {
 }
 
 class PaintDrawImageRect extends PaintCommand {
-  final Image image;
-  final Rect src;
-  final Rect dst;
-  final PaintData paint;
+  final ui.Image image;
+  final ui.Rect src;
+  final ui.Rect dst;
+  final ui.PaintData paint;
 
   PaintDrawImageRect(this.image, this.src, this.dst, this.paint);
 
@@ -927,8 +915,8 @@ class PaintDrawImageRect extends PaintCommand {
 }
 
 class PaintDrawParagraph extends PaintCommand {
-  final Paragraph paragraph;
-  final Offset offset;
+  final ui.Paragraph paragraph;
+  final ui.Offset offset;
 
   PaintDrawParagraph(this.paragraph, this.offset);
 
@@ -958,7 +946,7 @@ class PaintDrawParagraph extends PaintCommand {
   }
 }
 
-List _serializePaintToCssPaint(PaintData paint) {
+List _serializePaintToCssPaint(ui.PaintData paint) {
   return [
     paint.blendMode?.index,
     paint.style?.index,
@@ -973,7 +961,7 @@ List _serializePaintToCssPaint(PaintData paint) {
   ];
 }
 
-List _serializeRectToCssPaint(Rect rect) {
+List _serializeRectToCssPaint(ui.Rect rect) {
   return [
     rect.left,
     rect.top,
@@ -982,7 +970,7 @@ List _serializeRectToCssPaint(Rect rect) {
   ];
 }
 
-List _serializeRRectToCssPaint(RRect rrect) {
+List _serializeRRectToCssPaint(ui.RRect rrect) {
   return [
     rrect.left,
     rrect.top,
@@ -1009,7 +997,7 @@ class Subpath {
 
   Subpath(this.startX, this.startY) : commands = <PathCommand>[];
 
-  Subpath shift(Offset offset) {
+  Subpath shift(ui.Offset offset) {
     final result = Subpath(startX + offset.dx, startY + offset.dy)
       ..currentX = currentX + offset.dx
       ..currentY = currentY + offset.dy;
@@ -1055,7 +1043,7 @@ abstract class PathCommand {
   final int type;
   const PathCommand(this.type);
 
-  PathCommand shifted(Offset offset);
+  PathCommand shifted(ui.Offset offset);
 
   List serializeToCssPaint();
 }
@@ -1067,7 +1055,7 @@ class MoveTo extends PathCommand {
   const MoveTo(this.x, this.y) : super(PathCommandTypes.moveTo);
 
   @override
-  MoveTo shifted(Offset offset) {
+  MoveTo shifted(ui.Offset offset) {
     return new MoveTo(x + offset.dx, y + offset.dy);
   }
 
@@ -1093,7 +1081,7 @@ class LineTo extends PathCommand {
   const LineTo(this.x, this.y) : super(PathCommandTypes.lineTo);
 
   @override
-  LineTo shifted(Offset offset) {
+  LineTo shifted(ui.Offset offset) {
     return new LineTo(x + offset.dx, y + offset.dy);
   }
 
@@ -1127,7 +1115,7 @@ class Ellipse extends PathCommand {
       : super(PathCommandTypes.ellipse);
 
   @override
-  Ellipse shifted(Offset offset) {
+  Ellipse shifted(ui.Offset offset) {
     return new Ellipse(x + offset.dx, y + offset.dy, radiusX, radiusY, rotation,
         startAngle, endAngle, anticlockwise);
   }
@@ -1167,7 +1155,7 @@ class QuadraticCurveTo extends PathCommand {
       : super(PathCommandTypes.quadraticCurveTo);
 
   @override
-  QuadraticCurveTo shifted(Offset offset) {
+  QuadraticCurveTo shifted(ui.Offset offset) {
     return new QuadraticCurveTo(
         x1 + offset.dx, y1 + offset.dy, x2 + offset.dx, y2 + offset.dy);
   }
@@ -1199,7 +1187,7 @@ class BezierCurveTo extends PathCommand {
       : super(PathCommandTypes.bezierCurveTo);
 
   @override
-  BezierCurveTo shifted(Offset offset) {
+  BezierCurveTo shifted(ui.Offset offset) {
     return new BezierCurveTo(x1 + offset.dx, y1 + offset.dy, x2 + offset.dx,
         y2 + offset.dy, x3 + offset.dx, y3 + offset.dy);
   }
@@ -1229,7 +1217,7 @@ class RectCommand extends PathCommand {
       : super(PathCommandTypes.rect);
 
   @override
-  RectCommand shifted(Offset offset) {
+  RectCommand shifted(ui.Offset offset) {
     return new RectCommand(x + offset.dx, y + offset.dy, width, height);
   }
 
@@ -1249,12 +1237,12 @@ class RectCommand extends PathCommand {
 }
 
 class RRectCommand extends PathCommand {
-  final RRect rrect;
+  final ui.RRect rrect;
 
   const RRectCommand(this.rrect) : super(PathCommandTypes.rRect);
 
   @override
-  RRectCommand shifted(Offset offset) {
+  RRectCommand shifted(ui.Offset offset) {
     return new RRectCommand(rrect.shift(offset));
   }
 
@@ -1277,7 +1265,7 @@ class CloseCommand extends PathCommand {
   const CloseCommand() : super(PathCommandTypes.close);
 
   @override
-  CloseCommand shifted(Offset offset) {
+  CloseCommand shifted(ui.Offset offset) {
     return this;
   }
 
@@ -1298,7 +1286,7 @@ class CloseCommand extends PathCommand {
 
 class _PaintBounds {
   // Bounds of maximum area that is paintable by canvas ops.
-  final Rect maxPaintBounds;
+  final ui.Rect maxPaintBounds;
 
   bool _didPaintInsideClipArea = false;
   // Bounds of actually painted area. If _left is not set, reported paintBounds
@@ -1308,7 +1296,7 @@ class _PaintBounds {
   // Stack of transforms.
   List<Matrix4> _transforms;
   // Stack of clip bounds.
-  List<Rect> _clipStack;
+  List<ui.Rect> _clipStack;
   bool _currentMatrixIsIdentity = true;
   Matrix4 _currentMatrix = Matrix4.identity();
   bool _clipRectInitialized = false;
@@ -1352,7 +1340,7 @@ class _PaintBounds {
     _currentMatrix.multiply(skewMatrix);
   }
 
-  void clipRect(Rect rect) {
+  void clipRect(ui.Rect rect) {
     // If we have an active transform, calculate screen relative clipping
     // rectangle and union with current clipping rectangle.
     if (!_currentMatrixIsIdentity) {
@@ -1364,7 +1352,7 @@ class _PaintBounds {
           _currentMatrix.transform3(Vector3(rect.left, rect.bottom, 0.0));
       Vector3 rightBottom =
           _currentMatrix.transform3(Vector3(rect.right, rect.bottom, 0.0));
-      rect = Rect.fromLTRB(
+      rect = ui.Rect.fromLTRB(
           math.min(math.min(math.min(leftTop.x, rightTop.x), leftBottom.x),
               rightBottom.x),
           math.min(math.min(math.min(leftTop.y, rightTop.y), leftBottom.y),
@@ -1391,7 +1379,7 @@ class _PaintBounds {
   }
 
   /// Grow painted area to include given rectangle.
-  void grow(Rect r) {
+  void grow(ui.Rect r) {
     growLTRB(r.left, r.top, r.right, r.bottom);
   }
 
@@ -1405,7 +1393,7 @@ class _PaintBounds {
     var transformedPointBottom = bottom;
 
     if (!_currentMatrixIsIdentity) {
-      Rect transformedRect = localClipToGlobalClip(
+      ui.Rect transformedRect = localClipToGlobalClip(
         localLeft: left,
         localTop: top,
         localRight: right,
@@ -1460,14 +1448,14 @@ class _PaintBounds {
     _transforms ??= [];
     _transforms.add(_currentMatrix?.clone());
     _clipStack.add(_clipRectInitialized
-        ? new Rect.fromLTRB(_currentClipLeft, _currentClipTop,
+        ? new ui.Rect.fromLTRB(_currentClipLeft, _currentClipTop,
             _currentClipRight, _currentClipBottom)
         : null);
   }
 
   void restoreTransformsAndClip() {
     _currentMatrix = _transforms.removeLast();
-    Rect clipRect = _clipStack.removeLast();
+    ui.Rect clipRect = _clipStack.removeLast();
     if (clipRect != null) {
       _currentClipLeft = clipRect.left;
       _currentClipTop = clipRect.top;
@@ -1479,8 +1467,8 @@ class _PaintBounds {
     }
   }
 
-  Rect computeBounds() {
-    if (!_didPaintInsideClipArea) return Rect.zero;
+  ui.Rect computeBounds() {
+    if (!_didPaintInsideClipArea) return ui.Rect.zero;
 
     // The framework may send us NaNs in the case when it attempts to invert an
     // infinitely size rect.
@@ -1501,10 +1489,10 @@ class _PaintBounds {
 
     if (right < maxLeft || bottom < maxTop) {
       // Computed and max bounds do not intersect.
-      return Rect.zero;
+      return ui.Rect.zero;
     }
 
-    return Rect.fromLTRB(
+    return ui.Rect.fromLTRB(
       math.max(left, maxLeft),
       math.max(top, maxTop),
       math.min(right, maxRight),
@@ -1515,7 +1503,7 @@ class _PaintBounds {
   @override
   String toString() {
     if (assertionsEnabled) {
-      final Rect bounds = computeBounds();
+      final ui.Rect bounds = computeBounds();
       return '_PaintBounds(${bounds} of size ${bounds.size})';
     } else {
       return super.toString();

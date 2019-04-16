@@ -11,6 +11,7 @@ import 'package:flutter_web/foundation.dart';
 import 'package:flutter_web/gestures.dart';
 import 'package:flutter_web/painting.dart';
 import 'package:flutter_web/semantics.dart';
+
 import 'package:flutter_web/src/util.dart';
 
 import 'package:vector_math/vector_math_64.dart';
@@ -1563,14 +1564,8 @@ abstract class _RenderPhysicalModelBase<T> extends _RenderCustomClip<T> {
     markNeedsPaint();
   }
 
-  static final Paint _transparentPaint = Paint()
-    ..color = const Color(0x00000000);
-
-  // On Fuchsia, the system compositor is responsible for drawing shadows
-  // for physical model layers with non-zero elevation.
   @override
-  bool get alwaysNeedsCompositing =>
-      _elevation != 0.0 && defaultTargetPlatform == TargetPlatform.fuchsia;
+  bool get alwaysNeedsCompositing => true;
 
   @override
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
@@ -1696,40 +1691,15 @@ class RenderPhysicalModel extends _RenderPhysicalModelBase<RRect> {
         }
         return true;
       }());
-      if (needsCompositing) {
-        final PhysicalModelLayer physicalModel = PhysicalModelLayer(
-          clipPath: offsetRRectAsPath,
-          clipBehavior: clipBehavior,
-          elevation: paintShadows ? elevation : 0.0,
-          color: color,
-          shadowColor: shadowColor,
-        );
-        context.pushLayer(physicalModel, super.paint, offset,
-            childPaintBounds: offsetBounds);
-      } else {
-        final Canvas canvas = context.canvas;
-        if (elevation != 0.0 && paintShadows) {
-          // The drawShadow call doesn't add the region of the shadow to the
-          // picture's bounds, so we draw a hardcoded amount of extra space to
-          // account for the maximum potential area of the shadow.
-          // TODO(jsimmons): remove this when Skia does it for us.
-          canvas.drawRect(
-            offsetBounds.inflate(20.0),
-            _RenderPhysicalModelBase._transparentPaint,
-          );
-          canvas.drawShadow(
-            offsetRRectAsPath,
-            shadowColor,
-            elevation,
-            color.alpha != 0xFF,
-          );
-        }
-        canvas.drawRRect(offsetRRect, Paint()..color = color);
-        context.clipRRectAndPaint(offsetRRect, clipBehavior, offsetBounds,
-            () => super.paint(context, offset));
-        assert(context.canvas == canvas,
-            'canvas changed even though needsCompositing was false');
-      }
+      final PhysicalModelLayer physicalModel = PhysicalModelLayer(
+        clipPath: offsetRRectAsPath,
+        clipBehavior: clipBehavior,
+        elevation: paintShadows ? elevation : 0.0,
+        color: color,
+        shadowColor: shadowColor,
+      );
+      context.pushLayer(physicalModel, super.paint, offset,
+          childPaintBounds: offsetBounds);
     }
   }
 
@@ -1811,44 +1781,15 @@ class RenderPhysicalShape extends _RenderPhysicalModelBase<Path> {
         }
         return true;
       }());
-      if (needsCompositing) {
-        final PhysicalModelLayer physicalModel = PhysicalModelLayer(
-          clipPath: offsetPath,
-          clipBehavior: clipBehavior,
-          elevation: paintShadows ? elevation : 0.0,
-          color: color,
-          shadowColor: shadowColor,
-        );
-        context.pushLayer(physicalModel, super.paint, offset,
-            childPaintBounds: offsetBounds);
-      } else {
-        final Canvas canvas = context.canvas;
-        if (elevation != 0.0 && paintShadows) {
-          // The drawShadow call doesn't add the region of the shadow to the
-          // picture's bounds, so we draw a hardcoded amount of extra space to
-          // account for the maximum potential area of the shadow.
-          // TODO(jsimmons): remove this when Skia does it for us.
-          canvas.drawRect(
-            offsetBounds.inflate(20.0),
-            _RenderPhysicalModelBase._transparentPaint,
-          );
-          canvas.drawShadow(
-            offsetPath,
-            shadowColor,
-            elevation,
-            color.alpha != 0xFF,
-          );
-        }
-        canvas.drawPath(
-            offsetPath,
-            Paint()
-              ..color = color
-              ..style = PaintingStyle.fill);
-        context.clipPathAndPaint(offsetPath, clipBehavior, offsetBounds,
-            () => super.paint(context, offset));
-        assert(context.canvas == canvas,
-            'canvas changed even though needsCompositing was false');
-      }
+      final PhysicalModelLayer physicalModel = PhysicalModelLayer(
+        clipPath: offsetPath,
+        clipBehavior: clipBehavior,
+        elevation: paintShadows ? elevation : 0.0,
+        color: color,
+        shadowColor: shadowColor,
+      );
+      context.pushLayer(physicalModel, super.paint, offset,
+          childPaintBounds: offsetBounds);
     }
   }
 
@@ -2489,6 +2430,11 @@ typedef PointerUpEventListener = void Function(PointerUpEvent event);
 /// Used by [Listener] and [RenderPointerListener].
 typedef PointerCancelEventListener = void Function(PointerCancelEvent event);
 
+/// Signature for listening to [PointerSignalEvent] events.
+///
+/// Used by [Listener] and [RenderPointerListener].
+typedef PointerSignalEventListener = void Function(PointerSignalEvent event);
+
 /// Calls callbacks in response to pointer events.
 ///
 /// If it has a child, defers to the child for sizing behavior.
@@ -2510,6 +2456,7 @@ class RenderPointerListener extends RenderProxyBoxWithHitTestBehavior {
     PointerExitEventListener onPointerExit,
     this.onPointerUp,
     this.onPointerCancel,
+    this.onPointerSignal,
     HitTestBehavior behavior = HitTestBehavior.deferToChild,
     RenderBox child,
   })  : _onPointerEnter = onPointerEnter,
@@ -2585,8 +2532,18 @@ class RenderPointerListener extends RenderProxyBoxWithHitTestBehavior {
   /// no longer directed towards this receiver.
   PointerCancelEventListener onPointerCancel;
 
+  /// Called when a pointer signal occures over this object.
+  PointerSignalEventListener onPointerSignal;
+
   // Object used for annotation of the layer used for hover hit detection.
   MouseTrackerAnnotation _hoverAnnotation;
+
+  /// Object used for annotation of the layer used for hover hit detection.
+  ///
+  /// This is only public to allow for testing of Listener widgets. Do not call
+  /// in other contexts.
+  @visibleForTesting
+  MouseTrackerAnnotation get hoverAnnotation => _hoverAnnotation;
 
   void _updateAnnotations() {
     if (_hoverAnnotation != null && attached) {
@@ -2657,6 +2614,8 @@ class RenderPointerListener extends RenderProxyBoxWithHitTestBehavior {
       return onPointerUp(event);
     if (onPointerCancel != null && event is PointerCancelEvent)
       return onPointerCancel(event);
+    if (onPointerSignal != null && event is PointerSignalEvent)
+      return onPointerSignal(event);
   }
 
   @override
@@ -2670,6 +2629,7 @@ class RenderPointerListener extends RenderProxyBoxWithHitTestBehavior {
     if (onPointerExit != null) listeners.add('exit');
     if (onPointerUp != null) listeners.add('up');
     if (onPointerCancel != null) listeners.add('cancel');
+    if (onPointerSignal != null) listeners.add('signal');
     if (listeners.isEmpty) listeners.add('<none>');
     properties.add(IterableProperty<String>('listeners', listeners));
     // TODO(jacobr): add raw listeners to the diagnostics data.
@@ -3379,6 +3339,8 @@ class RenderSemanticsAnnotations extends RenderProxyBox {
     bool focused,
     bool inMutuallyExclusiveGroup,
     bool obscured,
+    // TODO(flutter_web): upstream.
+    bool multiline,
     bool scopesRoute,
     bool namesRoute,
     bool hidden,
@@ -3426,6 +3388,8 @@ class RenderSemanticsAnnotations extends RenderProxyBox {
         _focused = focused,
         _inMutuallyExclusiveGroup = inMutuallyExclusiveGroup,
         _obscured = obscured,
+        // TODO(flutter_web): upstream.
+        _multiline = multiline,
         _scopesRoute = scopesRoute,
         _namesRoute = namesRoute,
         _liveRegion = liveRegion,
@@ -3596,6 +3560,17 @@ class RenderSemanticsAnnotations extends RenderProxyBox {
   set obscured(bool value) {
     if (obscured == value) return;
     _obscured = value;
+    markNeedsSemanticsUpdate();
+  }
+
+  // TODO(flutter_web): upstream.
+  /// If non-null, sets the [SemanticsNode.isMultiline] semantic to the given
+  /// value.
+  bool get multiline => _multiline;
+  bool _multiline;
+  set multiline(bool value) {
+    if (multiline == value) return;
+    _multiline = value;
     markNeedsSemanticsUpdate();
   }
 
@@ -4139,6 +4114,8 @@ class RenderSemanticsAnnotations extends RenderProxyBox {
     if (inMutuallyExclusiveGroup != null)
       config.isInMutuallyExclusiveGroup = inMutuallyExclusiveGroup;
     if (obscured != null) config.isObscured = obscured;
+    // TODO(flutter_web): upstream.
+    if (multiline != null) config.isMultiline = multiline;
     if (hidden != null) config.isHidden = hidden;
     if (image != null) config.isImage = image;
     if (label != null) config.label = label;

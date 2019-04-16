@@ -2,7 +2,7 @@ import 'package:test/test.dart';
 import 'package:quiver/testing/async.dart';
 import 'package:quiver/time.dart';
 
-import 'package:flutter_web_ui/src/alarm_clock.dart';
+import 'package:flutter_web_ui/src/engine.dart';
 
 void main() {
   group(AlarmClock, () {

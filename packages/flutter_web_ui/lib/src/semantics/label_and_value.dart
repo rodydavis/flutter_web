@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-
-import 'semantics.dart';
+part of engine;
 
 /// Renders [_label] and [_value] to the semantics DOM.
 ///

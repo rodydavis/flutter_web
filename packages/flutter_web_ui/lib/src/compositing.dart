@@ -2,27 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:html' as html;
-import 'dart:js_util' as js_util;
-import 'dart:typed_data';
-
-import 'package:meta/meta.dart';
-import 'package:vector_math/vector_math_64.dart';
-
-import 'bitmap_canvas.dart';
-import 'canvas.dart';
-import 'compositor/layer_scene_builder.dart';
-import 'dom_canvas.dart';
-import 'dom_renderer.dart';
-import 'engine_canvas.dart';
-import 'geometry.dart';
-import 'houdini_canvas.dart';
-import 'painting.dart';
-import 'shadow.dart';
-import 'path_to_svg.dart';
-import 'util.dart';
-import 'window.dart';
+part of ui;
 
 /// When `true` prints detailed explanations why particular DOM nodes were or
 /// were not reused.
@@ -89,7 +69,7 @@ class SceneBuilder {
   /// Creates an empty [SceneBuilder] object.
   factory SceneBuilder() {
     if (webOnlyUseLayerSceneBuilder) {
-      return LayerSceneBuilder();
+      return engine.LayerSceneBuilder();
     } else {
       return SceneBuilder._();
     }
@@ -98,7 +78,7 @@ class SceneBuilder {
     _surfaceStack.add(PersistedScene());
   }
 
-  factory SceneBuilder.layer() = LayerSceneBuilder;
+  factory SceneBuilder.layer() = engine.LayerSceneBuilder;
 
   final List<PersistedContainerSurface> _surfaceStack =
       <PersistedContainerSurface>[];
@@ -126,12 +106,13 @@ class SceneBuilder {
   /// The surface currently being built.
   PersistedContainerSurface get _currentSurface => _surfaceStack.last;
 
-  void _pushSurface(PersistedContainerSurface surface) {
+  EngineLayer _pushSurface(PersistedContainerSurface surface) {
     _adoptSurface(surface);
     _surfaceStack.add(surface);
+    return surface;
   }
 
-  void _addSurface(PersistedLeafSurface surface) {
+  void _addSurface(PersistedSurface surface) {
     _adoptSurface(surface);
   }
 
@@ -146,8 +127,7 @@ class SceneBuilder {
   /// See [pop] for details about the operation stack.
   EngineLayer pushOffset(double dx, double dy,
       {@required Object webOnlyPaintedBy}) {
-    _pushSurface(PersistedOffset(webOnlyPaintedBy, dx, dy));
-    return null; // this does not return an engine layer yet.
+    return _pushSurface(PersistedOffset(webOnlyPaintedBy, dx, dy));
   }
 
   /// Pushes a transform operation onto the operation stack.
@@ -155,16 +135,13 @@ class SceneBuilder {
   /// The objects are transformed by the given matrix before rasterization.
   ///
   /// See [pop] for details about the operation stack.
-  void pushTransform(Float64List matrix4, {@required Object webOnlyPaintedBy}) {
+  EngineLayer pushTransform(Float64List matrix4,
+      {@required Object webOnlyPaintedBy}) {
     if (matrix4 == null)
       throw new ArgumentError('"matrix4" argument cannot be null');
     if (matrix4.length != 16)
       throw new ArgumentError('"matrix4" must have 16 entries.');
-    _pushTransform(matrix4, webOnlyPaintedBy);
-  }
-
-  void _pushTransform(Float64List matrix4, Object webOnlyPaintedBy) {
-    _pushSurface(PersistedTransform(webOnlyPaintedBy, matrix4));
+    return _pushSurface(PersistedTransform(webOnlyPaintedBy, matrix4));
   }
 
   /// Pushes a rectangular clip operation onto the operation stack.
@@ -173,11 +150,11 @@ class SceneBuilder {
   ///
   /// See [pop] for details about the operation stack, and [Clip] for different clip modes.
   /// By default, the clip will be anti-aliased (clip = [Clip.antiAlias]).
-  void pushClipRect(Rect rect,
+  EngineLayer pushClipRect(Rect rect,
       {Clip clipBehavior = Clip.antiAlias, @required Object webOnlyPaintedBy}) {
     assert(clipBehavior != null);
     assert(clipBehavior != Clip.none);
-    _pushSurface(PersistedClipRect(webOnlyPaintedBy, rect));
+    return _pushSurface(PersistedClipRect(webOnlyPaintedBy, rect));
   }
 
   /// Pushes a rounded-rectangular clip operation onto the operation stack.
@@ -185,9 +162,10 @@ class SceneBuilder {
   /// Rasterization outside the given rounded rectangle is discarded.
   ///
   /// See [pop] for details about the operation stack.
-  void pushClipRRect(RRect rrect,
+  EngineLayer pushClipRRect(RRect rrect,
       {Clip clipBehavior, @required Object webOnlyPaintedBy}) {
-    _pushSurface(PersistedClipRRect(webOnlyPaintedBy, rrect, clipBehavior));
+    return _pushSurface(
+        PersistedClipRRect(webOnlyPaintedBy, rrect, clipBehavior));
   }
 
   /// Pushes a path clip operation onto the operation stack.
@@ -195,11 +173,12 @@ class SceneBuilder {
   /// Rasterization outside the given path is discarded.
   ///
   /// See [pop] for details about the operation stack.
-  void pushClipPath(Path path,
+  EngineLayer pushClipPath(Path path,
       {Clip clipBehavior = Clip.antiAlias, @required Object webOnlyPaintedBy}) {
     assert(clipBehavior != null);
     assert(clipBehavior != Clip.none);
-    _pushSurface(_PersistedClipPath(webOnlyPaintedBy, path, clipBehavior));
+    return _pushSurface(
+        _PersistedClipPath(webOnlyPaintedBy, path, clipBehavior));
   }
 
   /// Pushes an opacity operation onto the operation stack.
@@ -210,9 +189,9 @@ class SceneBuilder {
   /// opacity).
   ///
   /// See [pop] for details about the operation stack.
-  void pushOpacity(int alpha,
+  EngineLayer pushOpacity(int alpha,
       {@required Object webOnlyPaintedBy, Offset offset = Offset.zero}) {
-    _pushSurface(PersistedOpacity(webOnlyPaintedBy, alpha, offset));
+    return _pushSurface(PersistedOpacity(webOnlyPaintedBy, alpha, offset));
   }
 
   /// Pushes a color filter operation onto the operation stack.
@@ -221,12 +200,8 @@ class SceneBuilder {
   /// blend mode.
   ///
   /// See [pop] for details about the operation stack.
-  void pushColorFilter(Color color, BlendMode blendMode,
+  EngineLayer pushColorFilter(Color color, BlendMode blendMode,
       {@required Object webOnlyPaintedBy}) {
-    _pushColorFilter(color.value, blendMode.index, webOnlyPaintedBy);
-  }
-
-  void _pushColorFilter(int color, int blendMode, Object webOnlyPaintedBy) {
     throw new UnimplementedError();
   }
 
@@ -236,7 +211,7 @@ class SceneBuilder {
   /// rasterizing the given objects.
   ///
   /// See [pop] for details about the operation stack.
-  void pushBackdropFilter(ImageFilter filter,
+  EngineLayer pushBackdropFilter(ImageFilter filter,
       {@required Object webOnlyPaintedBy}) {
     throw new UnimplementedError();
   }
@@ -247,20 +222,8 @@ class SceneBuilder {
   /// rectangle using the given blend mode.
   ///
   /// See [pop] for details about the operation stack.
-  void pushShaderMask(Shader shader, Rect maskRect, BlendMode blendMode,
+  EngineLayer pushShaderMask(Shader shader, Rect maskRect, BlendMode blendMode,
       {@required Object webOnlyPaintedBy}) {
-    _pushShaderMask(shader, maskRect.left, maskRect.right, maskRect.top,
-        maskRect.bottom, blendMode.index, webOnlyPaintedBy);
-  }
-
-  void _pushShaderMask(
-      Shader shader,
-      double maskRectLeft,
-      double maskRectRight,
-      double maskRectTop,
-      double maskRectBottom,
-      int blendMode,
-      Object webOnlyPaintedBy) {
     throw new UnimplementedError();
   }
 
@@ -284,19 +247,32 @@ class SceneBuilder {
     Clip clipBehavior = Clip.none,
     @required Object webOnlyPaintedBy,
   }) {
-    _pushPhysicalShape(path, elevation, color.value,
-        shadowColor?.value ?? 0xFF000000, clipBehavior, webOnlyPaintedBy);
-    return null; // this does not return an engine layer yet.
+    return _pushSurface(PersistedPhysicalShape(
+      webOnlyPaintedBy,
+      path,
+      elevation,
+      color.value,
+      shadowColor?.value ?? 0xFF000000,
+      clipBehavior,
+    ));
   }
 
-  void _pushPhysicalShape(Path path, double elevation, int color,
-      int shadowColor, Clip clipBehavior, Object webOnlyPaintedBy) {
-    _pushSurface(PersistedPhysicalShape(
-        webOnlyPaintedBy, path, elevation, color, shadowColor, clipBehavior));
-  }
-
+  /// Add a retained engine layer subtree from previous frames.
+  ///
+  /// All the engine layers that are in the subtree of the retained layer will
+  /// be automatically appended to the current engine layer tree.
+  ///
+  /// Therefore, when implementing a subclass of the [Layer] concept defined in
+  /// the rendering layer of Flutter's framework, once this is called, there's
+  /// no need to call [addToScene] for its children layers.
   void addRetained(EngineLayer retainedLayer) {
-    throw UnimplementedError('SceneBuilder.addRetained not implemented');
+    PersistedContainerSurface retainedSurface = retainedLayer;
+
+    // Request that the layer is retained only if it hasn't been recycled yet.
+    if (retainedSurface.rootElement != null) {
+      retainedSurface.reuseStrategy = PersistedSurfaceReuseStrategy.retain;
+    }
+    _adoptSurface(retainedSurface);
   }
 
   /// Ends the effect of the most recently pushed operation.
@@ -479,6 +455,20 @@ class SceneBuilder {
     return result;
   }
 
+  /// Discards information about previously rendered frames, including DOM
+  /// elements and cached canvases.
+  ///
+  /// After calling this function new canvases will be created for the
+  /// subsequent scene. This is useful when tests need predictable canvas
+  /// sizes. If the cache is not cleared, then canvases allocated in one test
+  /// may be reused in another test.
+  static void debugForgetFrameScene() {
+    _lastFrameScene?.rootElement?.remove();
+    _lastFrameScene = null;
+    _clipCounter = 0;
+    _recycledCanvases.clear();
+  }
+
   static int _debugFrameNumber = 0;
 
   /// Finishes building the scene.
@@ -505,7 +495,19 @@ class SceneBuilder {
       }
       _paintQueue = <VoidCallback>[];
     }
-    if (assertionsEnabled || _debugExplainDomReuse) {
+
+    // Reset reuse strategy back to matching. Retain requests are one-time. In
+    // order to retain the same layer again the framework must call addRetained
+    // again. If addRetained is not called the engine will recycle the surfaces.
+    // Calling addRetained on a layer whose surface has been recycled will
+    // rebuild the surfaces as if it was a brand new layer.
+    if (_retainedSurfaces.isNotEmpty) {
+      for (int i = 0; i < _retainedSurfaces.length; i++) {
+        _retainedSurfaces[i].reuseStrategy =
+            PersistedSurfaceReuseStrategy.match;
+      }
+    }
+    if (engine.assertionsEnabled && _debugExplainDomReuse) {
       _debugPrintReuseStats(_persistedScene, _debugFrameNumber);
     }
     assert(() {
@@ -518,24 +520,103 @@ class SceneBuilder {
       return true;
     }());
     _lastFrameScene = _persistedScene;
+    if (engine.assertionsEnabled) {
+      _surfaceStats = <PersistedSurface, _DebugSurfaceStats>{};
+    }
     return new Scene._(_persistedScene.rootElement);
   }
 }
 
+/// Compositor information collected for one frame useful for assessing the
+/// efficiency of constructing the frame.
+///
+/// This information is only available in debug mode.
+class _DebugSurfaceStats {
+  /// Whether this surface was retained from a previously rendered frame.
+  bool didRetainSurface = false;
+
+  /// Whether this surface reused an HTML element from a previously rendered
+  /// surface.
+  bool didReuseElement = false;
+
+  /// If this surface is a [PersistedPicture], whether it painted.
+  bool didPaint = false;
+
+  /// If this surface is a [PersistedPicture], whether it reused a previously
+  /// allocated `<canvas>` element when it painted.
+  bool didReuseCanvas = false;
+
+  /// If this surface is a [PersistedPicture], whether it allocated a new
+  /// bitmap canvas.
+  bool didAllocateBitmapCanvas = false;
+
+  /// If this surface is a [PersistedPicture], how many pixels it allocated for
+  /// the bitmap.
+  int allocatedBitmapSizeInPixels = 0;
+
+  /// The number of HTML DOM nodes this surface allocated.
+  int allocatedDomNodeCount = 0;
+}
+
+/// Maps every surface currently active on the screen to debug statistics.
+Map<PersistedSurface, _DebugSurfaceStats> _surfaceStats =
+    <PersistedSurface, _DebugSurfaceStats>{};
+
+/// Returns debug statistics for the given [surface].
+_DebugSurfaceStats _surfaceStatsFor(PersistedSurface surface) {
+  if (!engine.assertionsEnabled) {
+    throw new Exception('_surfaceStatsFor is only available in debug mode.');
+  }
+  return _surfaceStats.putIfAbsent(surface, () => _DebugSurfaceStats());
+}
+
+/// Prints debug statistics for the current frame to the console.
 void _debugPrintReuseStats(PersistedScene scene, int frameNumber) {
-  int canvasCount = 0;
-  int canvasReuseCount = 0;
-  int canvasAllocationCount = 0;
-  int canvasPaintSkipCount = 0;
+  int pictureCount = 0;
+  int paintCount = 0;
+
+  int bitmapCanvasCount = 0;
+  int bitmapReuseCount = 0;
+  int bitmapAllocationCount = 0;
+  int bitmapPaintCount = 0;
+  int bitmapPixelsAllocated = 0;
+
+  int domCanvasCount = 0;
+  int domPaintCount = 0;
+
+  int surfaceRetainCount = 0;
   int elementReuseCount = 0;
+
+  int totalAllocatedDomNodeCount = 0;
+
   void countReusesRecursively(PersistedSurface surface) {
-    elementReuseCount += surface._debugDidReuseElement ? 1 : 0;
+    _DebugSurfaceStats stats = _surfaceStatsFor(surface);
+    assert(stats != null);
+
+    surfaceRetainCount += stats.didRetainSurface ? 1 : 0;
+    elementReuseCount += stats.didReuseElement ? 1 : 0;
+    totalAllocatedDomNodeCount += stats.allocatedDomNodeCount;
+
     if (surface is PersistedStandardPicture) {
-      canvasCount += 1;
-      canvasReuseCount += surface._debugDidReuseCanvas ? 1 : 0;
-      canvasAllocationCount += surface._debugDidAllocateNewCanvas ? 1 : 0;
-      canvasPaintSkipCount += surface._debugDidNotPaint ? 1 : 0;
+      pictureCount += 1;
+      final int paintCountIncrement = stats.didPaint ? 1 : 0;
+      paintCount += paintCountIncrement;
+
+      if (surface._canvas is engine.DomCanvas) {
+        domCanvasCount++;
+        domPaintCount += paintCountIncrement;
+      }
+
+      if (surface._canvas is engine.BitmapCanvas) {
+        bitmapCanvasCount++;
+        bitmapPaintCount += paintCountIncrement;
+      }
+
+      bitmapReuseCount += stats.didReuseCanvas ? 1 : 0;
+      bitmapAllocationCount += stats.didAllocateBitmapCanvas ? 1 : 0;
+      bitmapPixelsAllocated += stats.allocatedBitmapSizeInPixels;
     }
+
     surface.visitChildren(countReusesRecursively);
   }
 
@@ -545,12 +626,21 @@ void _debugPrintReuseStats(PersistedScene scene, int frameNumber) {
   buf
     ..writeln(
         '---------------------- FRAME #${frameNumber} -------------------------')
+    ..writeln('Surfaces retained: $surfaceRetainCount')
     ..writeln('Elements reused: $elementReuseCount')
-    ..writeln('Canvases:')
-    ..writeln('  Active: ${canvasCount}')
-    ..writeln('  Reused: $canvasReuseCount')
-    ..writeln('  Allocated: $canvasAllocationCount')
-    ..writeln('  Skipped painting: $canvasPaintSkipCount')
+    ..writeln('Elements allocated: $totalAllocatedDomNodeCount')
+    ..writeln('Pictures: $pictureCount')
+    ..writeln('  Painted: $paintCount')
+    ..writeln('  Skipped painting: ${pictureCount - paintCount}')
+    ..writeln('DOM canvases:')
+    ..writeln('  Painted: $domPaintCount')
+    ..writeln('  Skipped painting: ${domCanvasCount - domPaintCount}')
+    ..writeln('Bitmap canvases: ${bitmapCanvasCount}')
+    ..writeln('  Painted: $bitmapPaintCount')
+    ..writeln('  Skipped painting: ${bitmapCanvasCount - bitmapPaintCount}')
+    ..writeln('  Reused: $bitmapReuseCount')
+    ..writeln('  Allocated: $bitmapAllocationCount')
+    ..writeln('  Allocated pixels: $bitmapPixelsAllocated')
     ..writeln('  Available for reuse: ${_recycledCanvases.length}');
 
   // A microtask will fire after the DOM is flushed, letting us probe into
@@ -593,6 +683,9 @@ void _debugPrintReuseStats(PersistedScene scene, int frameNumber) {
   });
 }
 
+/// A handle for the framework to hold and retain an engine layer across frames.
+class EngineLayer {}
+
 /// (Fuchsia-only) Hosts content provided by another application.
 class SceneHost {
   /// Creates a host for a child scene.
@@ -620,13 +713,31 @@ class SceneHost {
 /// This is used to traverse surfaces using [PersistedSurface.visitChildren].
 typedef PersistedSurfaceVisitor = void Function(PersistedSurface);
 
+/// Controls the algorithm used to reuse a previously rendered surface.
+enum PersistedSurfaceReuseStrategy {
+  /// This strategy matches a surface to a previously rendered surface using
+  /// its type and descendants.
+  match,
+
+  /// This strategy reuses the surface as is.
+  ///
+  /// This strategy relies on Flutter's retained-mode layer system (see
+  /// [EngineLayer]).
+  retain,
+}
+
 /// A node in the tree built by [SceneBuilder] that contains information used to
 /// compute the fewest amount of mutations necessary to update the browser DOM.
-abstract class PersistedSurface {
+abstract class PersistedSurface implements EngineLayer {
   /// Creates a persisted surface.
   ///
   /// [paintedBy] points to the object that painted this surface.
   PersistedSurface(this.paintedBy) : assert(paintedBy != null);
+
+  /// The strategy that should be used when attempting to reuse the resources
+  /// owned by this surface.
+  PersistedSurfaceReuseStrategy reuseStrategy =
+      PersistedSurfaceReuseStrategy.match;
 
   /// The root element that renders this surface to the DOM.
   ///
@@ -660,10 +771,6 @@ abstract class PersistedSurface {
   //                an order-agnostic comparison.
   Set<Object> _descendants;
 
-  /// Whether this surface reused an HTML element from a previously rendered
-  /// surface.
-  bool _debugDidReuseElement = false;
-
   /// Visits immediate children.
   ///
   /// Does not recurse.
@@ -676,8 +783,13 @@ abstract class PersistedSurface {
   @protected
   @mustCallSuper
   void build() {
+    assert(rootElement == null);
+    assert(reuseStrategy != PersistedSurfaceReuseStrategy.retain);
     recomputeTransformAndClip();
     rootElement = createElement();
+    if (engine.assertionsEnabled) {
+      _surfaceStatsFor(this).allocatedDomNodeCount++;
+    }
     apply();
   }
 
@@ -690,8 +802,11 @@ abstract class PersistedSurface {
   @protected
   @mustCallSuper
   void adoptElements(covariant PersistedSurface oldSurface) {
+    assert(oldSurface.rootElement != null);
     rootElement = oldSurface.rootElement;
-    _debugDidReuseElement = true;
+    if (engine.assertionsEnabled) {
+      _surfaceStatsFor(this).didReuseElement = true;
+    }
   }
 
   /// Updates the attributes of this surface's element.
@@ -702,18 +817,34 @@ abstract class PersistedSurface {
   @mustCallSuper
   void update(covariant PersistedSurface oldSurface) {
     assert(oldSurface != null);
+    assert(!identical(oldSurface, this));
+    assert(reuseStrategy != PersistedSurfaceReuseStrategy.retain);
+    assert(oldSurface.reuseStrategy != PersistedSurfaceReuseStrategy.retain);
+    assert(isTotalMatchFor(oldSurface));
 
     recomputeTransformAndClip();
-
-    if (isTotalMatchFor(oldSurface)) {
-      adoptElements(oldSurface);
-    } else {
-      build();
-    }
+    adoptElements(oldSurface);
 
     // We took ownership of the old element.
     oldSurface.rootElement = null;
     assert(rootElement != null);
+  }
+
+  /// Reuses a [PersistedSurface] rendered in the previous frame.
+  ///
+  /// This is different from [update], which reuses another surface's elements,
+  /// i.e. it was not requested to be retained by the framework.
+  ///
+  /// This is also different from [build], which constructs a brand new surface
+  /// sub-tree.
+  @protected
+  @mustCallSuper
+  void retain() {
+    assert(rootElement != null);
+    recomputeTransformAndClip();
+    if (engine.assertionsEnabled) {
+      _surfaceStatsFor(this).didRetainSurface = true;
+    }
   }
 
   /// Removes the [element] of this surface from the tree.
@@ -723,6 +854,7 @@ abstract class PersistedSurface {
   @protected
   @mustCallSuper
   void recycle() {
+    assert(reuseStrategy != PersistedSurfaceReuseStrategy.retain);
     rootElement.remove();
     rootElement = null;
   }
@@ -732,6 +864,10 @@ abstract class PersistedSurface {
   void debugValidate(List<String> validationErrors) {
     if (rootElement == null) {
       validationErrors.add('$runtimeType has null element.');
+    }
+    if (reuseStrategy == PersistedSurfaceReuseStrategy.retain) {
+      validationErrors.add('$runtimeType is still scheduled to be retained at '
+          'the end of the frame.');
     }
   }
 
@@ -744,6 +880,12 @@ abstract class PersistedSurface {
   //                this correctly.
   bool isTotalMatchFor(PersistedSurface other) {
     assert(other != null);
+    if (reuseStrategy == PersistedSurfaceReuseStrategy.retain ||
+        other.reuseStrategy == PersistedSurfaceReuseStrategy.retain) {
+      // If any of the nodes are being retained, do not match it. It is reused
+      // directly.
+      return false;
+    }
     return other.runtimeType == runtimeType &&
         identical(other.paintedBy, paintedBy) &&
         _hasExactDescendants(other);
@@ -772,7 +914,7 @@ abstract class PersistedSurface {
   html.Element defaultCreateElement(String tagName) {
     final element = html.Element.tag(tagName);
     element.style.position = 'absolute';
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       element.setAttribute(
         'created-by',
         '${this.paintedBy.runtimeType}',
@@ -793,8 +935,8 @@ abstract class PersistedSurface {
   /// transforms as well as this layer's transform (if any).
   ///
   /// The value is update by [recomputeTransformAndClip].
-  Matrix4 get transform => _transform;
-  Matrix4 _transform;
+  engine.Matrix4 get transform => _transform;
+  engine.Matrix4 _transform;
 
   /// The intersection at this surface level.
   ///
@@ -852,7 +994,7 @@ abstract class PersistedSurface {
 
   @override
   String toString() {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       final log = StringBuffer();
       debugPrint(log, 0);
       return log.toString();
@@ -914,7 +1056,12 @@ abstract class PersistedContainerSurface extends PersistedSurface {
     final html.Element containerElement = childContainer;
     for (int i = 0; i < len; i++) {
       final PersistedSurface child = _children[i];
-      child.build();
+      if (child.reuseStrategy == PersistedSurfaceReuseStrategy.retain) {
+        assert(child.rootElement != null);
+        _retainSurface(child);
+      } else {
+        child.build();
+      }
       containerElement.append(child.rootElement);
     }
   }
@@ -934,6 +1081,7 @@ abstract class PersistedContainerSurface extends PersistedSurface {
 
   @override
   void update(PersistedContainerSurface oldContainer) {
+    assert(isTotalMatchFor(oldContainer));
     super.update(oldContainer);
 
     // A simple algorithms that attempts to reuse DOM elements from the previous
@@ -954,47 +1102,72 @@ abstract class PersistedContainerSurface extends PersistedSurface {
     // Memoize container element for efficiency. [childContainer] is polymorphic
     final html.Element containerElement = childContainer;
 
-    while (bottomInNew >= 0 && bottomInOld >= 0) {
-      final newChild = _children[bottomInNew];
-      if (oldContainer._children[bottomInOld].isTotalMatchFor(newChild)) {
-        _updateChild(newChild, oldContainer._children[bottomInOld]);
-        bottomInOld--;
-      } else {
-        // Scan back for a matching old child, if any.
-        int searchPointer = bottomInOld - 1;
-        PersistedSurface match;
+    PersistedSurface nextSibling;
 
-        // Searching by scanning the array backwards may seem inefficient, but
-        // in practice we'll have single-digit child lists. It is better to scan
-        // and not perform any allocations than utilize fancier data structures
-        // (e.g. maps).
-        while (searchPointer >= 0) {
-          final candidate = oldContainer._children[searchPointer];
-          final isNotYetReused = candidate.rootElement != null;
-          if (isNotYetReused && candidate.isTotalMatchFor(newChild)) {
-            match = candidate;
-            break;
-          }
-          searchPointer--;
-        }
-
-        // If we found a match, reuse the element. Otherwise, create a new one.
-        if (match != null) {
-          _updateChild(newChild, match);
+    // Inserts the DOM node of the child before the DOM node of the next sibling
+    // if it has moved as a result of the update. Does nothing if the new child
+    // is already in the right location in the DOM tree.
+    void insertDomNodeIfMoved(PersistedSurface newChild) {
+      assert(newChild.rootElement != null);
+      assert(newChild.parent == this);
+      final bool reparented = newChild.rootElement.parent != containerElement;
+      // Do not check for sibling if reparented. It's obvious that we moved.
+      final bool moved = reparented ||
+          newChild.rootElement.nextElementSibling != nextSibling?.rootElement;
+      if (moved) {
+        if (nextSibling == null) {
+          // We're at the end of the list.
+          containerElement.append(newChild.rootElement);
         } else {
-          newChild.build();
-        }
-
-        if (bottomInNew + 1 < _children.length) {
-          final nextSibling = _children[bottomInNew + 1];
+          // We're in the middle of the list.
           containerElement.insertBefore(
               newChild.rootElement, nextSibling.rootElement);
+        }
+      }
+    }
+
+    while (bottomInNew >= 0 && bottomInOld >= 0) {
+      final PersistedSurface newChild = _children[bottomInNew];
+      if (newChild.reuseStrategy == PersistedSurfaceReuseStrategy.retain) {
+        insertDomNodeIfMoved(newChild);
+        _retainSurface(newChild);
+      } else {
+        final PersistedSurface oldChild = oldContainer._children[bottomInOld];
+        if (oldChild.isTotalMatchFor(newChild)) {
+          _updateChild(newChild, oldChild);
+          bottomInOld--;
         } else {
-          containerElement.append(newChild.rootElement);
+          // Scan back for a matching old child, if any.
+          int searchPointer = bottomInOld - 1;
+          PersistedSurface match;
+
+          // Searching by scanning the array backwards may seem inefficient, but
+          // in practice we'll have single-digit child lists. It is better to scan
+          // and not perform any allocations than utilize fancier data structures
+          // (e.g. maps).
+          while (searchPointer >= 0) {
+            final candidate = oldContainer._children[searchPointer];
+            final isNotYetReused = candidate.rootElement != null;
+            if (isNotYetReused && candidate.isTotalMatchFor(newChild)) {
+              match = candidate;
+              break;
+            }
+            searchPointer--;
+          }
+
+          // If we found a match, reuse the element. Otherwise, create a new one.
+          if (match != null) {
+            _updateChild(newChild, match);
+          } else {
+            newChild.build();
+          }
+
+          insertDomNodeIfMoved(newChild);
         }
       }
       assert(newChild.rootElement != null);
       bottomInNew--;
+      nextSibling = newChild;
     }
 
     while (bottomInNew >= 0) {
@@ -1003,24 +1176,29 @@ abstract class PersistedContainerSurface extends PersistedSurface {
       // Since there are no more old elements to reuse, we build new ones.
       assert(bottomInOld == -1);
       final newChild = _children[bottomInNew];
-      newChild.build();
 
-      if (bottomInNew + 1 < _children.length) {
-        final nextSibling = _children[bottomInNew + 1];
-        containerElement.insertBefore(
-            newChild.rootElement, nextSibling.rootElement);
+      if (newChild.reuseStrategy == PersistedSurfaceReuseStrategy.retain) {
+        _retainSurface(newChild);
       } else {
-        containerElement.append(newChild.rootElement);
+        newChild.build();
       }
+
+      insertDomNodeIfMoved(newChild);
+
       bottomInNew--;
       assert(newChild.rootElement != null);
+      nextSibling = newChild;
     }
 
     // Remove elements that were not reused this frame.
     final len = oldContainer._children.length;
     for (int i = 0; i < len; i++) {
       PersistedSurface oldChild = oldContainer._children[i];
-      if (oldChild.rootElement != null) {
+
+      // Only recycle nodes that still have DOM nodes and they have not been
+      // retained.
+      if (oldChild.rootElement != null &&
+          oldChild.reuseStrategy != PersistedSurfaceReuseStrategy.retain) {
         oldChild.recycle();
       }
     }
@@ -1029,8 +1207,11 @@ abstract class PersistedContainerSurface extends PersistedSurface {
     // should be attached to this container's element.
     assert(() {
       for (int i = 0; i < oldContainer._children.length; i++) {
-        assert(oldContainer._children[i].rootElement == null);
-        assert(oldContainer._children[i].childContainer == null);
+        if (oldContainer._children[i].reuseStrategy !=
+            PersistedSurfaceReuseStrategy.retain) {
+          assert(oldContainer._children[i].rootElement == null);
+          assert(oldContainer._children[i].childContainer == null);
+        }
       }
       for (int i = 0; i < _children.length; i++) {
         assert(_children[i].rootElement != null);
@@ -1041,9 +1222,21 @@ abstract class PersistedContainerSurface extends PersistedSurface {
   }
 
   @override
+  void retain() {
+    super.retain();
+    final int len = _children.length;
+    for (int i = 0; i < len; i++) {
+      _children[i].retain();
+    }
+  }
+
+  @override
   void recycle() {
     for (int i = 0; i < _children.length; i++) {
-      _children[i].recycle();
+      final PersistedSurface child = _children[i];
+      if (child.reuseStrategy != PersistedSurfaceReuseStrategy.retain) {
+        child.recycle();
+      }
     }
     super.recycle();
   }
@@ -1069,7 +1262,17 @@ abstract class PersistedContainerSurface extends PersistedSurface {
 /// A surface that creates a DOM element for whole app.
 class PersistedScene extends PersistedContainerSurface {
   PersistedScene() : super(const Object()) {
-    _transform = Matrix4.identity();
+    _transform = engine.Matrix4.identity();
+  }
+
+  @override
+  bool isTotalMatchFor(PersistedSurface other) {
+    // The scene is a special-case kind of surface in that it is the only root
+    // layer in the tree. Therefore it can always be updated from a previous
+    // scene. There's no ambiguity about whether you can accidentally pick a
+    // false match.
+    assert(other is PersistedScene);
+    return true;
   }
 
   @override
@@ -1090,7 +1293,7 @@ class PersistedScene extends PersistedContainerSurface {
     // Hide the DOM nodes used to render the scene from accessibility, because
     // the accessibility tree is built from the SemanticsNode tree as a parallel
     // DOM tree.
-    domRenderer.setElementAttribute(element, 'aria-hidden', 'true');
+    engine.domRenderer.setElementAttribute(element, 'aria-hidden', 'true');
     return element;
   }
 
@@ -1106,7 +1309,8 @@ class PersistedTransform extends PersistedContainerSurface {
 
   @override
   void recomputeTransformAndClip() {
-    _transform = parent._transform.multiplied(Matrix4.fromFloat64List(matrix4));
+    _transform =
+        parent._transform.multiplied(engine.Matrix4.fromFloat64List(matrix4));
     _globalClip = parent._globalClip;
   }
 
@@ -1118,7 +1322,7 @@ class PersistedTransform extends PersistedContainerSurface {
 
   @override
   void apply() {
-    rootElement.style.transform = float64ListToCssTransform(matrix4);
+    rootElement.style.transform = engine.float64ListToCssTransform(matrix4);
   }
 
   @override
@@ -1214,6 +1418,10 @@ mixin _DomClip on PersistedContainerSurface {
       element.style.boxShadow = 'inset 0 0 10px green';
     }
     _childContainer = html.Element.tag('flt-clip-interior');
+    if (engine.assertionsEnabled) {
+      // This creates an additional interior element. Count it too.
+      _surfaceStatsFor(this).allocatedDomNodeCount++;
+    }
     _childContainer.style.position = 'absolute';
     element.append(_childContainer);
     return element;
@@ -1239,7 +1447,7 @@ class PersistedClipRect extends PersistedContainerSurface with _DomClip {
   @override
   void recomputeTransformAndClip() {
     _transform = parent._transform;
-    _globalClip = parent._globalClip.intersect(localClipRectToGlobalClip(
+    _globalClip = parent._globalClip.intersect(engine.localClipRectToGlobalClip(
       localClip: rect,
       transform: _transform,
     ));
@@ -1285,7 +1493,7 @@ class PersistedClipRRect extends PersistedContainerSurface with _DomClip {
   @override
   void recomputeTransformAndClip() {
     _transform = parent._transform;
-    _globalClip = parent._globalClip.intersect(localClipRectToGlobalClip(
+    _globalClip = parent._globalClip.intersect(engine.localClipRectToGlobalClip(
       localClip: rrect.outerRect,
       transform: _transform,
     ));
@@ -1353,6 +1561,9 @@ class PersistedOpacity extends PersistedContainerSurface {
 
   @override
   void apply() {
+    // TODO(yjbanov): evaluate using `filter: opacity(X)`. It is a longer string
+    //                but it reportedly has better hardware acceleration, so may
+    //                be worth the trade-off.
     rootElement.style.opacity = '${alpha / 255}';
     rootElement.style.transform = 'translate(${offset.dx}px, ${offset.dy}px)';
   }
@@ -1387,7 +1598,9 @@ class _PersistedClipPath extends PersistedContainerSurface {
   void apply() {
     if (clipPath == null) {
       if (_clipElement != null) {
-        domRenderer.setElementStyle(childContainer, 'clip-path', '');
+        engine.domRenderer.setElementStyle(childContainer, 'clip-path', '');
+        engine.domRenderer
+            .setElementStyle(childContainer, '-webkit-clip-path', '');
         _clipElement.remove();
         _clipElement = null;
       }
@@ -1397,9 +1610,11 @@ class _PersistedClipPath extends PersistedContainerSurface {
     _clipElement?.remove();
     _clipElement =
         html.Element.html(svgClipPath, treeSanitizer: _NullTreeSanitizer());
-    domRenderer.append(childContainer, _clipElement);
-    domRenderer.setElementStyle(
+    engine.domRenderer.append(childContainer, _clipElement);
+    engine.domRenderer.setElementStyle(
         childContainer, 'clip-path', 'url(#svgClip${_clipCounter})');
+    engine.domRenderer.setElementStyle(
+        childContainer, '-webkit-clip-path', 'url(#svgClip${_clipCounter})');
   }
 
   @override
@@ -1438,25 +1653,27 @@ class _NullTreeSanitizer implements html.NodeTreeSanitizer {
 const _kCanvasCacheSize = 30;
 
 /// Canvases available for reuse, capped at [_kCanvasCacheSize].
-final List<BitmapCanvas> _recycledCanvases = <BitmapCanvas>[];
-
-/// Clears cached canvases.
-///
-/// After calling this function new canvases will be created for the subsequent
-/// scene. This is useful when tests need predictable canvas sizes. If the cache
-/// is not cleared, then canvases allocated in one test may be reused in another
-/// test.
-void debugClearCanvasCache() {
-  _recycledCanvases.clear();
-}
+final List<engine.BitmapCanvas> _recycledCanvases = <engine.BitmapCanvas>[];
 
 /// Callbacks produced by [PersistedPicture]s that actually paint on the
 /// canvas. Painting is delayed until the layer tree is updated to maximize
 /// the number of reusable canvases.
 List<VoidCallback> _paintQueue = <VoidCallback>[];
 
-void _recycleCanvas(EngineCanvas canvas) {
-  if (canvas is BitmapCanvas) {
+/// Surfaces that were retained this frame.
+///
+/// Surfaces should be added to this list directly. Instead, if a surface needs
+/// to be retained call [_retainSurface].
+List<PersistedSurface> _retainedSurfaces = <PersistedSurface>[];
+
+/// Marks the subtree of surfaces rooted at [surface] as retained.
+void _retainSurface(PersistedSurface surface) {
+  _retainedSurfaces.add(surface);
+  surface.retain();
+}
+
+void _recycleCanvas(engine.EngineCanvas canvas) {
+  if (canvas is engine.BitmapCanvas) {
     _recycledCanvases.add(canvas);
     if (_recycledCanvases.length > _kCanvasCacheSize) {
       _recycledCanvases.removeAt(0);
@@ -1516,11 +1733,11 @@ class PersistedHoudiniPicture extends PersistedPicture {
   }
 
   @override
-  void applyPaint(EngineCanvas oldCanvas) {
+  void applyPaint(engine.EngineCanvas oldCanvas) {
     _recycleCanvas(oldCanvas);
-    final HoudiniCanvas canvas = HoudiniCanvas(_localCullRect);
+    final engine.HoudiniCanvas canvas = engine.HoudiniCanvas(_localCullRect);
     _canvas = canvas;
-    domRenderer.clearDom(rootElement);
+    engine.domRenderer.clearDom(rootElement);
     rootElement.append(_canvas.rootElement);
     picture.recordingCanvas.apply(_canvas);
     canvas.commit();
@@ -1532,11 +1749,8 @@ class PersistedStandardPicture extends PersistedPicture {
       Object paintedBy, double dx, double dy, Picture picture, int hints)
       : super(paintedBy, dx, dy, picture, hints);
 
-  bool _debugDidReuseCanvas = false;
-  bool _debugDidAllocateNewCanvas = false;
-
   @override
-  void applyPaint(EngineCanvas oldCanvas) {
+  void applyPaint(engine.EngineCanvas oldCanvas) {
     if (picture.recordingCanvas.hasArbitraryPaint) {
       _applyBitmapPaint(oldCanvas);
     } else {
@@ -1544,18 +1758,19 @@ class PersistedStandardPicture extends PersistedPicture {
     }
   }
 
-  void _applyDomPaint(EngineCanvas oldCanvas) {
+  void _applyDomPaint(engine.EngineCanvas oldCanvas) {
     _recycleCanvas(oldCanvas);
-    _canvas = DomCanvas();
-    domRenderer.clearDom(rootElement);
+    _canvas = engine.DomCanvas();
+    engine.domRenderer.clearDom(rootElement);
     rootElement.append(_canvas.rootElement);
     picture.recordingCanvas.apply(_canvas);
   }
 
-  void _applyBitmapPaint(EngineCanvas oldCanvas) {
+  void _applyBitmapPaint(engine.EngineCanvas oldCanvas) {
     if (oldCanvas == null ||
-        oldCanvas is DomCanvas ||
-        oldCanvas is BitmapCanvas && _localCullRect != oldCanvas.bounds) {
+        oldCanvas is engine.DomCanvas ||
+        oldCanvas is engine.BitmapCanvas &&
+            _localCullRect != oldCanvas.bounds) {
       // We can't use the old canvas because the size has changed, so we put
       // it in a cache for later reuse.
       _recycleCanvas(oldCanvas);
@@ -1565,7 +1780,7 @@ class PersistedStandardPicture extends PersistedPicture {
       // tree then reuse canvases that were freed up.
       _paintQueue.add(() {
         _canvas = _findOrCreateCanvas(_localCullRect);
-        domRenderer.clearDom(rootElement);
+        engine.domRenderer.clearDom(rootElement);
         rootElement.append(_canvas.rootElement);
         _canvas.clear();
         picture.recordingCanvas.apply(_canvas);
@@ -1588,12 +1803,12 @@ class PersistedStandardPicture extends PersistedPicture {
   ///   reuse more efficient.
   /// - Contains no more than twice the number of requested pixels. This makes
   ///   sure we do not use too much memory for small canvases.
-  BitmapCanvas _findOrCreateCanvas(Rect bounds) {
+  engine.BitmapCanvas _findOrCreateCanvas(Rect bounds) {
     Size canvasSize = bounds.size;
-    BitmapCanvas bestRecycledCanvas;
+    engine.BitmapCanvas bestRecycledCanvas;
     double lastPixelCount = double.infinity;
     for (int i = 0; i < _recycledCanvases.length; i++) {
-      BitmapCanvas candidate = _recycledCanvases[i];
+      engine.BitmapCanvas candidate = _recycledCanvases[i];
       Size candidateSize = candidate.size;
       double pixelCount = canvasSize.width * canvasSize.height;
       double candidatePixelCount = candidateSize.width * candidateSize.height;
@@ -1609,14 +1824,22 @@ class PersistedStandardPicture extends PersistedPicture {
     }
 
     if (bestRecycledCanvas != null) {
-      _debugDidReuseCanvas = true;
+      if (engine.assertionsEnabled) {
+        _surfaceStatsFor(this).didReuseCanvas = true;
+      }
       _recycledCanvases.remove(bestRecycledCanvas);
       bestRecycledCanvas.bounds = bounds;
       return bestRecycledCanvas;
     }
 
-    _debugDidAllocateNewCanvas = true;
-    return BitmapCanvas(bounds);
+    final engine.BitmapCanvas canvas = engine.BitmapCanvas(bounds);
+    if (engine.assertionsEnabled) {
+      _surfaceStatsFor(this)
+        ..didAllocateBitmapCanvas = true
+        ..allocatedBitmapSizeInPixels =
+            canvas.widthInBitmapPixels * canvas.heightInBitmapPixels;
+    }
+    return canvas;
   }
 }
 
@@ -1627,15 +1850,13 @@ abstract class PersistedPicture extends PersistedLeafSurface {
       : localPaintBounds = picture.recordingCanvas.computePaintBounds(),
         super(paintedBy);
 
-  EngineCanvas _canvas;
+  engine.EngineCanvas _canvas;
 
   final double dx;
   final double dy;
   final Picture picture;
   final Rect localPaintBounds;
   final int hints;
-
-  bool _debugDidNotPaint = false;
 
   @override
   html.Element createElement() {
@@ -1668,10 +1889,17 @@ abstract class PersistedPicture extends PersistedLeafSurface {
 
   /// Computes the canvas paint bounds based on the estimated paint bounds and
   /// the scaling produced by transformations.
-  void _recomputeCullRect() {
+  ///
+  /// Return `true` if the local cull rect changed, indicating that a repaint
+  /// may be required. Returns `false` otherwise. Global cull rect changes do
+  /// not necessarily incur repaints. For example, if the layer sub-tree was
+  /// translated from one frame to another we may not need to repaint, just
+  /// translate the canvas.
+  bool _recomputeCullRect() {
     assert(transform != null);
     assert(localPaintBounds != null);
-    final Rect globalPaintBounds = localClipRectToGlobalClip(
+    Rect previousLocalCullRect = _localCullRect;
+    final Rect globalPaintBounds = engine.localClipRectToGlobalClip(
         localClip: localPaintBounds, transform: transform);
     _globalCullRect = globalPaintBounds.intersect(_globalClip);
 
@@ -1679,8 +1907,8 @@ abstract class PersistedPicture extends PersistedLeafSurface {
       _globalCullRect = Rect.zero;
       _localCullRect = Rect.zero;
     } else {
-      final Matrix4 invertedTransform =
-          Matrix4.fromFloat64List(Float64List(16));
+      final engine.Matrix4 invertedTransform =
+          engine.Matrix4.fromFloat64List(Float64List(16));
 
       // TODO(yjbanov): When we move to our own vecto math librari, rewrite this
       //                to check for the case of simple transform before
@@ -1691,16 +1919,17 @@ abstract class PersistedPicture extends PersistedLeafSurface {
         // Determinant is zero, which means the transform is not invertible.
         _localCullRect = Rect.zero;
       } else {
-        _localCullRect = localClipRectToGlobalClip(
+        _localCullRect = engine.localClipRectToGlobalClip(
             localClip: globalCullRect, transform: invertedTransform);
       }
     }
+    return _localCullRect != previousLocalCullRect;
   }
 
-  void _applyPaint(EngineCanvas oldCanvas) {
+  void _applyPaint(engine.EngineCanvas oldCanvas) {
     if (!picture.recordingCanvas.didDraw) {
       _recycleCanvas(oldCanvas);
-      domRenderer.clearDom(rootElement);
+      engine.domRenderer.clearDom(rootElement);
       return;
     }
 
@@ -1708,7 +1937,7 @@ abstract class PersistedPicture extends PersistedLeafSurface {
   }
 
   /// Concrete implementations implement this method to do actual painting.
-  void applyPaint(EngineCanvas oldCanvas);
+  void applyPaint(engine.EngineCanvas oldCanvas);
 
   void _applyTranslate() {
     rootElement.style.transform = 'translate(${dx}px, ${dy}px)';
@@ -1737,8 +1966,18 @@ abstract class PersistedPicture extends PersistedLeafSurface {
       _applyPaint(oldSurface._canvas);
     } else {
       // The picture was not repainted, just adopt its canvas and do nothing.
-      _debugDidNotPaint = true;
+      if (engine.assertionsEnabled) {
+        _surfaceStatsFor(this).didPaint = true;
+      }
       _canvas = oldSurface._canvas;
+    }
+  }
+
+  @override
+  void retain() {
+    super.retain();
+    if (_recomputeCullRect()) {
+      _applyPaint(_canvas);
     }
   }
 
@@ -1751,11 +1990,14 @@ abstract class PersistedPicture extends PersistedLeafSurface {
   @override
   void debugPrintChildren(StringBuffer buffer, int indent) {
     super.debugPrintChildren(buffer, indent);
-    if (rootElement != null) {
+    if (rootElement != null && rootElement.firstChild != null) {
       final canvasTag =
           (rootElement.firstChild as html.Element).tagName.toLowerCase();
       final canvasHash = rootElement.firstChild.hashCode;
       buffer.writeln('${'  ' * (indent + 1)}<$canvasTag @$canvasHash />');
+    } else if (rootElement != null) {
+      buffer.writeln(
+          '${'  ' * (indent + 1)}<${rootElement.tagName.toLowerCase()} @$hashCode />');
     } else {
       buffer.writeln('${'  ' * (indent + 1)}<canvas recycled />');
     }
@@ -1782,14 +2024,16 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
 
     final RRect roundRect = path.webOnlyPathAsRoundedRect;
     if (roundRect != null) {
-      _globalClip = parent._globalClip.intersect(localClipRectToGlobalClip(
+      _globalClip =
+          parent._globalClip.intersect(engine.localClipRectToGlobalClip(
         localClip: roundRect.outerRect,
         transform: transform,
       ));
     } else {
       Rect rect = path.webOnlyPathAsRect;
       if (rect != null) {
-        _globalClip = parent._globalClip.intersect(localClipRectToGlobalClip(
+        _globalClip =
+            parent._globalClip.intersect(engine.localClipRectToGlobalClip(
           localClip: rect,
           transform: transform,
         ));
@@ -1804,7 +2048,8 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
   }
 
   void _applyShadow() {
-    ElevationShadow.applyShadow(rootElement.style, elevation, shadowColor);
+    engine.ElevationShadow.applyShadow(
+        rootElement.style, elevation, shadowColor);
   }
 
   @override
@@ -1854,16 +2099,49 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
           style.overflow = 'hidden';
         }
         return;
+      } else {
+        engine.Ellipse ellipse = path.webOnlyPathAsCircle;
+        if (ellipse != null) {
+          final double rx = ellipse.radiusX;
+          final double ry = ellipse.radiusY;
+          final borderRadius = rx == ry ? '${rx}px ' : '${rx}px ${ry}px ';
+          var style = rootElement.style;
+          final double left = ellipse.x - rx;
+          final double top = ellipse.y - ry;
+          style
+            ..transform = 'translate(${left}px, ${top}px)'
+            ..width = '${rx * 2}px'
+            ..height = '${ry * 2}px'
+            ..borderRadius = borderRadius;
+          childContainer.style.transform = 'translate(${-left}px, ${-top}px)';
+          if (clipBehavior != Clip.none) {
+            style.overflow = 'hidden';
+          }
+          return;
+        }
       }
     }
 
-    String svgClipPath = _pathToSvgClipPath(path);
+    Rect bounds = path.getBounds();
+    String svgClipPath =
+        _pathToSvgClipPath(path, offsetX: -bounds.left, offsetY: -bounds.top);
     assert(_clipElement == null);
     _clipElement =
         html.Element.html(svgClipPath, treeSanitizer: _NullTreeSanitizer());
-    domRenderer.append(rootElement, _clipElement);
-    domRenderer.setElementStyle(
+    engine.domRenderer.append(rootElement, _clipElement);
+    rootElement.style.overflow = '';
+    engine.domRenderer.setElementStyle(
         rootElement, 'clip-path', 'url(#svgClip${_clipCounter})');
+    engine.domRenderer.setElementStyle(
+        rootElement, '-webkit-clip-path', 'url(#svgClip${_clipCounter})');
+    var style = rootElement.style;
+    style
+      ..transform = 'translate(${bounds.left}px, ${bounds.top}px)'
+      ..width = '${bounds.width}px'
+      ..height = '${bounds.height}px'
+      ..borderRadius = '';
+    childContainer.style.transform =
+        'translate(${-bounds.left}px, ${-bounds.top}px)';
   }
 
   @override
@@ -1884,7 +2162,8 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
       style.transform = '';
       style.borderRadius = '';
       style.overflow = '';
-      domRenderer.setElementStyle(rootElement, 'clip-path', '');
+      engine.domRenderer.setElementStyle(rootElement, 'clip-path', '');
+      engine.domRenderer.setElementStyle(rootElement, '-webkit-clip-path', '');
       _applyShape();
     } else {
       _clipElement = oldSurface._clipElement;
@@ -1894,7 +2173,7 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
 }
 
 /// Converts Path to svg element that contains a clip-path definition.
-String _pathToSvgClipPath(Path path) {
+String _pathToSvgClipPath(Path path, {double offsetX = 0, double offsetY = 0}) {
   Rect bounds = path.getBounds();
   StringBuffer sb = new StringBuffer();
   sb.write('<svg width="${bounds.right}" height="${bounds.bottom}" '
@@ -1905,7 +2184,7 @@ String _pathToSvgClipPath(Path path) {
   sb.write('<clipPath id=${clipId}>');
 
   sb.write('<path fill="#FFFFFF" d="');
-  pathToSvg(path, sb);
+  engine.pathToSvg(path, sb, offsetX: offsetX, offsetY: offsetY);
   sb.write('"></path></clipPath></defs></svg');
   return sb.toString();
 }

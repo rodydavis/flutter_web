@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:collection/collection.dart';
-
-import 'word_break_properties.dart';
+part of engine;
 
 enum _ComparisonResult {
   inside,
@@ -63,7 +61,7 @@ class UnicodePropertyLookup<P> {
   final List<UnicodeRange<P>> ranges;
 
   P find(int value) {
-    final int index = binarySearch(ranges, value, compare: (a, b) {
+    final int index = _binarySearch(ranges, value, (a, b) {
       final UnicodeRange<P> range = a;
       switch (range.compare(b)) {
         case _ComparisonResult.higher:
@@ -75,5 +73,23 @@ class UnicodePropertyLookup<P> {
       }
     });
     return index == -1 ? null : ranges[index].property;
+  }
+
+  static int _binarySearch<T>(
+      List<T> sortedList, T value, int compare(T a, T b)) {
+    int min = 0;
+    int max = sortedList.length;
+    while (min < max) {
+      int mid = min + ((max - min) >> 1);
+      var element = sortedList[mid];
+      int comp = compare(element, value);
+      if (comp == 0) return mid;
+      if (comp < 0) {
+        min = mid + 1;
+      } else {
+        max = mid;
+      }
+    }
+    return -1;
   }
 }

@@ -1,11 +1,4 @@
-import 'dart:async';
-import 'dart:convert' show json, utf8;
-import 'dart:html' as html
-    show FontFace, ParagraphElement, StyleElement, document, window;
-import 'dart:typed_data';
-
-import '../assets/assets.dart';
-import '../browser_detection.dart';
+part of engine;
 
 const _testFontFamily = 'Ahem';
 const _testFontUrl = '/packages/flutter_web/assets/Ahem.ttf';

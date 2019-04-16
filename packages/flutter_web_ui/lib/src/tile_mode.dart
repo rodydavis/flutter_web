@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+part of ui;
+
 /// Defines what happens at the edge of the gradient.
 ///
 /// A gradient is defined along a finite inner area. In the case of a linear

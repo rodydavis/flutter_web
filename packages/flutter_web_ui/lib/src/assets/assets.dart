@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:html';
-import 'dart:typed_data';
+part of engine;
 
 /// This class downloads assets over the network.
 ///
@@ -34,12 +32,13 @@ class AssetManager {
   Future<ByteData> load(String asset) async {
     var url = getAssetUrl(asset);
     try {
-      var request = await HttpRequest.request(url, responseType: 'arraybuffer');
+      var request =
+          await html.HttpRequest.request(url, responseType: 'arraybuffer');
 
       return (request.response as ByteBuffer).asByteData();
-    } on ProgressEvent catch (e) {
-      if (e.target is HttpRequest) {
-        throw AssetManagerException(url, (e.target as HttpRequest).status);
+    } on html.ProgressEvent catch (e) {
+      if (e.target is html.HttpRequest) {
+        throw AssetManagerException(url, (e.target as html.HttpRequest).status);
       }
 
       rethrow;

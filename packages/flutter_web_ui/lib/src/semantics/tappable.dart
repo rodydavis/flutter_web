@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-
-import '../../ui.dart' as ui;
-
-import 'semantics.dart';
+part of engine;
 
 /// Listens to HTML "click" gestures detected by the browser.
 ///

@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:math' as math;
-import 'dart:typed_data';
-
-import 'hash_codes.dart';
-import 'lerp.dart';
+part of ui;
 
 /// Base class for [Size] and [Offset], which are both ways to describe
 /// a distance as a two-dimensional axis-aligned vector.

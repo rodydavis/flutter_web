@@ -1,7 +1,7 @@
 import 'package:flutter_web/material.dart';
 import 'package:flutter_web/rendering.dart';
 import 'package:flutter_web_ui/ui.dart' as ui;
-import 'package:flutter_web_ui/src/dom_renderer.dart' as ui;
+import 'package:flutter_web_ui/src/engine.dart' as ui;
 import 'package:html/parser.dart' as html_package;
 import 'package:html/dom.dart' as html_package;
 import 'package:test/test.dart' as test_package;

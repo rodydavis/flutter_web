@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:html' as html;
-
-import '../services.dart';
-import '../window.dart' show window, VoidCallback;
-import 'strategies.dart';
+part of engine;
 
 MethodCall _popRouteMethodCall = MethodCall('popRoute');
 
@@ -38,8 +33,8 @@ bool _isFlutterEntry(dynamic state) {
 ///
 /// There should only be one global instance of this class.
 class BrowserHistory {
-  LocationStrategy _locationStrategy;
-  VoidCallback _unsubscribe;
+  ui.LocationStrategy _locationStrategy;
+  ui.VoidCallback _unsubscribe;
 
   /// Changing the location strategy will unsubscribe from the old strategy's
   /// event listeners, and subscribe to the new one.
@@ -49,7 +44,7 @@ class BrowserHistory {
   ///
   /// If the given strategy is null, it will render this [BrowserHistory]
   /// instance inactive.
-  set locationStrategy(LocationStrategy strategy) {
+  set locationStrategy(ui.LocationStrategy strategy) {
     if (strategy != _locationStrategy) {
       _tearoffStrategy(_locationStrategy);
       _locationStrategy = strategy;
@@ -98,7 +93,7 @@ class BrowserHistory {
       _setupFlutterEntry(_locationStrategy);
 
       // 2. Send a 'popRoute' platform message so the app can handle it accordingly.
-      window.onPlatformMessage(
+      ui.window.onPlatformMessage(
         'flutter/navigation',
         const JSONMethodCodec().encodeMethodCall(_popRouteMethodCall),
         (_) {},
@@ -115,7 +110,7 @@ class BrowserHistory {
       _userProvidedRouteName = null;
 
       // Send a 'pushRoute' platform message so the app handles it accordingly.
-      window.onPlatformMessage(
+      ui.window.onPlatformMessage(
         'flutter/navigation',
         const JSONMethodCodec().encodeMethodCall(
           MethodCall('pushRoute', newRouteName),
@@ -140,7 +135,7 @@ class BrowserHistory {
   /// This method should be called when the Origin Entry is active. It just
   /// replaces the state of the entry so that we can recognize it later using
   /// [_isOriginEntry] inside [_popStateListener].
-  void _setupOriginEntry(LocationStrategy strategy) {
+  void _setupOriginEntry(ui.LocationStrategy strategy) {
     assert(strategy != null);
     strategy.replaceState(_originState, 'origin', '');
   }
@@ -148,7 +143,7 @@ class BrowserHistory {
   /// This method is used manipulate the Flutter Entry which is always the
   /// active entry while the Flutter app is running.
   void _setupFlutterEntry(
-    LocationStrategy strategy, {
+    ui.LocationStrategy strategy, {
     bool replace = false,
     String path,
   }) {
@@ -161,7 +156,7 @@ class BrowserHistory {
     }
   }
 
-  void _setupStrategy(LocationStrategy strategy) {
+  void _setupStrategy(ui.LocationStrategy strategy) {
     if (strategy == null) {
       return;
     }
@@ -179,7 +174,7 @@ class BrowserHistory {
     _unsubscribe = strategy.onPopState(_popStateListener);
   }
 
-  void _tearoffStrategy(LocationStrategy strategy) {
+  void _tearoffStrategy(ui.LocationStrategy strategy) {
     if (strategy == null) {
       return;
     }

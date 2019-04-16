@@ -2,25 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html
-    show
-        window,
-        Event,
-        PointerEvent,
-        TouchEvent,
-        MouseEvent,
-        EventListener,
-        WheelEvent;
-import 'dart:js_util' show hasProperty;
-import 'dart:math' as math;
-
-import 'package:flutter_web_ui/ui.dart' as ui show window;
-import 'package:flutter_web_ui/ui.dart'
-    show PointerData, PointerDataPacket, PointerChange;
-
-import 'engine.dart';
-import 'pointer.dart';
-import 'semantics/semantics.dart' as engine;
+part of ui;
 
 /// Set this flag to true to see all the fired events in the console.
 const _debugLogPointerEvents = false;
@@ -39,7 +21,7 @@ class PointerBinding {
       _detector = const PointerSupportDetector();
       _adapter = _createAdapter();
     }
-    registerHotRestartListener(() {
+    engine.registerHotRestartListener(() {
       _adapter?.clearListeners();
     });
   }
@@ -91,16 +73,16 @@ class PointerBinding {
 
   void _onPointerData(List<PointerData> data) {
     PointerDataPacket packet = PointerDataPacket(data: data);
-    ui.window.onPointerDataPacket(packet);
+    window.onPointerDataPacket(packet);
   }
 }
 
 class PointerSupportDetector {
   const PointerSupportDetector();
 
-  bool get hasPointerEvents => hasProperty(html.window, 'PointerEvent');
-  bool get hasTouchEvents => hasProperty(html.window, 'TouchEvent');
-  bool get hasMouseEvents => hasProperty(html.window, 'MouseEvent');
+  bool get hasPointerEvents => js_util.hasProperty(html.window, 'PointerEvent');
+  bool get hasTouchEvents => js_util.hasProperty(html.window, 'TouchEvent');
+  bool get hasMouseEvents => js_util.hasProperty(html.window, 'MouseEvent');
 
   String toString() =>
       'pointers:$hasPointerEvents, touch:$hasTouchEvents, mouse:$hasMouseEvents';
@@ -222,7 +204,7 @@ class PointerAdapter extends BaseAdapter {
   List<html.PointerEvent> _expandEvents(html.PointerEvent event) {
     // For browsers that don't support `getCoalescedEvents`, we fallback to
     // using the original event.
-    if (hasProperty(event, 'getCoalescedEvents')) {
+    if (js_util.hasProperty(event, 'getCoalescedEvents')) {
       var coalescedEvents = event.getCoalescedEvents();
       // Some events don't perform coalescing, so they return an empty list. In
       // that case, we also fallback to using the original event.
@@ -365,8 +347,8 @@ class MouseAdapter extends BaseAdapter {
         deltaY *= 32.0;
         break;
       case domDeltaPage:
-        deltaX *= ui.window.physicalSize.width;
-        deltaY *= ui.window.physicalSize.height;
+        deltaX *= window.physicalSize.width;
+        deltaY *= window.physicalSize.height;
         break;
       case domDeltaPixel:
       default:

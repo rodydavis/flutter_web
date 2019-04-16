@@ -2,18 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-import 'dart:math' as math;
-
-import 'package:vector_math/vector_math_64.dart';
-
-import 'canvas.dart';
-import 'dom_renderer.dart';
-import 'engine_canvas.dart';
-import 'geometry.dart';
-import 'painting.dart';
-import 'text.dart';
-import 'util.dart';
+part of engine;
 
 /// A canvas that renders to DOM elements and CSS properties.
 class DomCanvas extends EngineCanvas with SaveStackTracking {
@@ -37,22 +26,22 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void clipRect(Rect rect) {
+  void clipRect(ui.Rect rect) {
     throw UnimplementedError();
   }
 
   @override
-  void clipRRect(RRect rrect) {
+  void clipRRect(ui.RRect rrect) {
     throw UnimplementedError();
   }
 
   @override
-  void clipPath(Path path) {
+  void clipPath(ui.Path path) {
     throw UnimplementedError();
   }
 
   @override
-  void drawColor(Color color, BlendMode blendMode) {
+  void drawColor(ui.Color color, ui.BlendMode blendMode) {
     // TODO(yjbanov): implement blendMode
     html.Element box = html.Element.tag('draw-color');
     box.style
@@ -66,17 +55,17 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawLine(Offset p1, Offset p2, PaintData paint) {
+  void drawLine(ui.Offset p1, ui.Offset p2, ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawPaint(PaintData paint) {
+  void drawPaint(ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawRect(Rect rect, PaintData paint) {
+  void drawRect(ui.Rect rect, ui.PaintData paint) {
     assert(paint.shader == null);
     final rectangle = html.Element.tag('draw-rect');
     assert(() {
@@ -85,7 +74,7 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
       return true;
     }());
     String effectiveTransform;
-    bool isStroke = paint.style == PaintingStyle.stroke;
+    bool isStroke = paint.style == ui.PaintingStyle.stroke;
     var left = math.min(rect.left, rect.right);
     var right = math.max(rect.left, rect.right);
     var top = math.min(rect.top, rect.bottom);
@@ -136,48 +125,49 @@ class DomCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawRRect(RRect rrect, PaintData paint) {
+  void drawRRect(ui.RRect rrect, ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawDRRect(RRect outer, RRect inner, PaintData paint) {
+  void drawDRRect(ui.RRect outer, ui.RRect inner, ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawOval(Rect rect, PaintData paint) {
+  void drawOval(ui.Rect rect, ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawCircle(Offset c, double radius, PaintData paint) {
+  void drawCircle(ui.Offset c, double radius, ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawPath(Path path, PaintData paint) {
+  void drawPath(ui.Path path, ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawShadow(
-      Path path, Color color, double elevation, bool transparentOccluder) {
+  void drawShadow(ui.Path path, ui.Color color, double elevation,
+      bool transparentOccluder) {
     throw UnimplementedError();
   }
 
   @override
-  void drawImage(Image image, Offset p, PaintData paint) {
+  void drawImage(ui.Image image, ui.Offset p, ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
+  void drawImageRect(
+      ui.Image image, ui.Rect src, ui.Rect dst, ui.PaintData paint) {
     throw UnimplementedError();
   }
 
   @override
-  void drawParagraph(Paragraph paragraph, Offset offset) {
+  void drawParagraph(ui.Paragraph paragraph, ui.Offset offset) {
     assert(paragraph.webOnlyIsLaidOut);
 
     html.Element paragraphElement =

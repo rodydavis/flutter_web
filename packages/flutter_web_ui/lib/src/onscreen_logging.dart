@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html';
+part of engine;
 
-Element _logElement;
-Element _logContainer;
+html.Element _logElement;
+html.Element _logContainer;
 final StringBuffer _logBuffer = StringBuffer();
 
 int _lineNumber = 1;
@@ -29,7 +29,7 @@ void printOnScreen(Object object) {
 }
 
 void _initialize() {
-  _logElement = Element.tag('flt-onscreen-log');
+  _logElement = html.Element.tag('flt-onscreen-log');
   _logElement.style
     ..position = 'fixed'
     ..left = '0'
@@ -42,11 +42,11 @@ void _initialize() {
     ..whiteSpace = 'pre-wrap'
     ..overflow = 'hidden';
 
-  _logContainer = Element.tag('flt-log-container');
+  _logContainer = html.Element.tag('flt-log-container');
   _logContainer.style
     ..position = 'absolute'
     ..bottom = '0';
   _logElement.append(_logContainer);
 
-  document.body.append(_logElement);
+  html.document.body.append(_logElement);
 }

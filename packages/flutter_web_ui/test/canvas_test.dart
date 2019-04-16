@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter_web_ui/src/bitmap_canvas.dart';
-import 'package:flutter_web_ui/src/dom_canvas.dart';
-import 'package:flutter_web_ui/src/engine_canvas.dart';
-import 'package:flutter_web_ui/src/houdini_canvas.dart';
-import 'package:flutter_web_ui/src/recording_canvas.dart';
-
+import 'package:flutter_web_ui/src/engine.dart';
 import 'package:flutter_web_ui/ui.dart' as ui;
 
 import 'package:test/test.dart';

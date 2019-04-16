@@ -2,14 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-
-import 'package:flutter_web_ui/ui.dart' as ui;
-import 'package:meta/meta.dart';
-
-import '../dom_renderer.dart';
-import '../util.dart';
-import 'measurement.dart';
+part of engine;
 
 /// Contains the subset of [ui.ParagraphStyle] properties that affect layout.
 class ParagraphGeometricStyle {
@@ -92,24 +85,6 @@ class ParagraphGeometricStyle {
     result.write(' ');
     result.write(effectiveFontFamily);
 
-    if (lineHeight != null && lineHeight != 1.0) {
-      result.write(' ');
-      result.write('line-height: $lineHeight');
-    }
-    if (letterSpacing != null && letterSpacing != 0) {
-      result.write(' ');
-      result.write('letter-spacing: ${letterSpacing}px');
-    }
-    if (wordSpacing != null && wordSpacing != 0) {
-      result.write(' ');
-      result.write('word-spacing: ${wordSpacing}px');
-    }
-    if (decoration != null && decoration.isNotEmpty) {
-      // Unline line-through, wavy decoration combined with overline/underline
-      // does change rendering size.
-      result.write(' ');
-      result.write('text-decoration: $decoration');
-    }
     return result.toString();
   }
 

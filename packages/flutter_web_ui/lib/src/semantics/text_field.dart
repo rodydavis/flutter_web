@@ -2,15 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-import 'dart:js_util' as js_util;
-
-import '../../ui.dart' as ui;
-
-import '../browser_detection.dart';
-import '../text_editing.dart';
-
-import 'semantics.dart';
+part of engine;
 
 /// Manages semantics objects that represent editable text fields.
 ///
@@ -23,17 +15,39 @@ import 'semantics.dart';
 class TextField extends RoleManager {
   TextField(SemanticsObject semanticsObject)
       : super(Role.textField, semanticsObject) {
-    _textFieldElement.contentEditable = 'plaintext-only';
-    _textFieldElement.setAttribute('role', 'textbox');
+    final html.HtmlElement editableDomElement =
+        semanticsObject.hasFlag(ui.SemanticsFlag.isMultiline)
+            ? html.TextAreaElement()
+            : html.InputElement();
+    persistentTextEditingElement = PersistentTextEditingElement(
+      editableDomElement,
+      onDomElementSwap: _setupDomElement,
+    );
+    _setupDomElement();
+  }
+
+  PersistentTextEditingElement persistentTextEditingElement;
+  html.Element get _textFieldElement => persistentTextEditingElement.domElement;
+
+  void _setupDomElement() {
+    // On iOS, even though the semantic text field is transparent, the cursor
+    // and text highlighting are still visible. The cursor and text selection
+    // are made invisible by CSS in [DomRenderer.reset].
+    // But there's one more case where iOS highlights text. That's when there's
+    // and autocorrect suggestion. To disable that, we have to do the following:
+    _textFieldElement
+      ..spellcheck = false
+      ..setAttribute('spellcheck', 'false')
+      ..setAttribute('autocorrect', 'off')
+      ..setAttribute('autocomplete', 'off')
+      ..setAttribute('data-semantics-role', 'text-field');
+
     _textFieldElement.style
       ..position = 'absolute'
-      ..top = '0'
-      ..left = '0'
+      ..top = '${semanticsObject.rect.top}px'
+      ..left = '${semanticsObject.rect.left}px'
       ..width = '${semanticsObject.rect.width}px'
-      ..height = '${semanticsObject.rect.height}px'
-      ..userSelect = 'text'
-      ..setProperty('-webkit-user-select', 'text');
-    js_util.setProperty(_textFieldElement.style, 'caretColor', 'transparent');
+      ..height = '${semanticsObject.rect.height}px';
     semanticsObject.element.append(_textFieldElement);
 
     switch (browserEngine) {
@@ -47,26 +61,17 @@ class TextField extends RoleManager {
     }
   }
 
-  final html.Element _textFieldElement =
-      html.Element.tag('flt-semantics-text-field');
-
   /// Chrome on Android reports text field activation as a "click" event.
   ///
   /// When in browser gesture mode, the click is forwarded to the framework as
   /// a tap to initialize editing.
   void _initializeForBlink() {
-    _textFieldElement.addEventListener('click', (_) {
+    _textFieldElement.addEventListener('focus', (html.Event event) {
       if (semanticsObject.owner.gestureMode != GestureMode.browserGestures) {
         return;
       }
 
-      // This works around a seemingly buggy behavior in TalkBack. If the
-      // element is already focused and the keyboard has never been invoked or
-      // has been dismissed, TalkBack will not show the keyboard even when you
-      // double-tap to activate. Artificially blurring the element and
-      // immediately focusing it bring up the keyboard.
-      _textFieldElement.blur();
-      _textFieldElement.focus();
+      textEditing.useCustomEditableElement(persistentTextEditingElement);
       ui.window
           .onSemanticsAction(semanticsObject.id, ui.SemanticsAction.tap, null);
     });
@@ -82,7 +87,7 @@ class TextField extends RoleManager {
     num lastTouchStartOffsetY;
 
     _textFieldElement.addEventListener('touchstart', (html.Event event) {
-      textEditing.useCustomEditableElement(_textFieldElement);
+      textEditing.useCustomEditableElement(persistentTextEditingElement);
       html.TouchEvent touchEvent = event;
       lastTouchStartOffsetX = touchEvent.changedTouches.last.client.x;
       lastTouchStartOffsetY = touchEvent.changedTouches.last.client.y;
@@ -119,18 +124,13 @@ class TextField extends RoleManager {
 
   @override
   void update() {
-    // TODO(yjbanov): This interferes with the editing state because it resets
-    // the selection state in [_textFieldElement].
-    if (semanticsObject.owner.gestureMode == GestureMode.browserGestures &&
-        browserEngine != BrowserEngine.webkit) {
-      _textFieldElement.text = semanticsObject.value ?? '';
-    }
+    // The user is editing the semantic text field directly, so there's no need
+    // to do any update here.
   }
 
   @override
   void dispose() {
     _textFieldElement.remove();
-    semanticsObject.setAriaRole('textbox', false);
     textEditing.stopUsingCustomEditableElement();
   }
 }

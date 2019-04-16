@@ -2,26 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'bitmap_canvas.dart';
-import 'browser_routing/history.dart';
-import 'browser_routing/strategies.dart';
-import 'compositing.dart';
-import 'compositor/layer_scene_builder.dart';
-import 'compositor/rasterizer.dart';
-import 'compositor/surface.dart';
-import 'dom_renderer.dart';
-import 'semantics/semantics.dart' as engine;
-import 'geometry.dart';
-import 'hash_codes.dart';
-import 'initialization.dart' show webOnlyAssetManager;
-import 'painting.dart';
-import 'pointer.dart';
-import 'semantics.dart';
-import 'services.dart';
-import 'text_editing.dart';
+part of ui;
 
 /// When set to true, all platform messages will be printed to the console.
 const _debugPrintPlatformMessages = false;
@@ -508,7 +489,7 @@ class Window {
 
   /// Handles the browser history integration to allow users to use the back
   /// button, etc.
-  final BrowserHistory _browserHistory = BrowserHistory();
+  final engine.BrowserHistory _browserHistory = engine.BrowserHistory();
 
   /// Simulates clicking the browser's back button.
   Future<void> webOnlyBack() => _browserHistory.back();
@@ -959,8 +940,8 @@ class Window {
         return;
 
       case 'flutter/platform':
-        MethodCodec codec = const JSONMethodCodec();
-        MethodCall decoded = codec.decodeMethodCall(data);
+        engine.MethodCodec codec = const engine.JSONMethodCodec();
+        engine.MethodCall decoded = codec.decodeMethodCall(data);
         switch (decoded.method) {
           case 'SystemNavigator.pop':
             _browserHistory.exit().then((_) {
@@ -970,17 +951,17 @@ class Window {
             return;
           case 'HapticFeedback.vibrate':
             String type = decoded.arguments;
-            domRenderer.vibrate(_getHapticFeedbackDuration(type));
+            engine.domRenderer.vibrate(_getHapticFeedbackDuration(type));
             return;
           case 'SystemChrome.setApplicationSwitcherDescription':
             Map<String, dynamic> arguments = decoded.arguments;
-            domRenderer.setTitle(arguments['label']);
-            domRenderer.setThemeColor(Color(arguments['primaryColor']));
+            engine.domRenderer.setTitle(arguments['label']);
+            engine.domRenderer.setThemeColor(Color(arguments['primaryColor']));
         }
         break;
 
       case 'flutter/textinput':
-        textEditing.handleTextInput(data);
+        engine.textEditing.handleTextInput(data);
         break;
     }
 
@@ -997,15 +978,15 @@ class Window {
   int _getHapticFeedbackDuration(String type) {
     switch (type) {
       case 'HapticFeedbackType.lightImpact':
-        return DomRenderer.vibrateLightImpact;
+        return engine.DomRenderer.vibrateLightImpact;
       case 'HapticFeedbackType.mediumImpact':
-        return DomRenderer.vibrateMediumImpact;
+        return engine.DomRenderer.vibrateMediumImpact;
       case 'HapticFeedbackType.heavyImpact':
-        return DomRenderer.vibrateHeavyImpact;
+        return engine.DomRenderer.vibrateHeavyImpact;
       case 'HapticFeedbackType.selectionClick':
-        return DomRenderer.vibrateSelectionClick;
+        return engine.DomRenderer.vibrateSelectionClick;
       default:
-        return DomRenderer.vibrateLongPress;
+        return engine.DomRenderer.vibrateLongPress;
     }
   }
 
@@ -1038,24 +1019,25 @@ class Window {
   ///  * [RendererBinding], the Flutter framework class which manages layout and
   ///    painting.
   void render(Scene scene) {
-    if (scene is LayerScene) {
+    if (scene is engine.LayerScene) {
       _rasterizer.draw(scene.layerTree);
     } else {
-      domRenderer.renderScene(scene.webOnlyRootElement);
+      engine.domRenderer.renderScene(scene.webOnlyRootElement);
     }
   }
 
-  static BitmapCanvas _previousCanvas;
-  static void _submitScene(BitmapCanvas canvas) {
+  static engine.BitmapCanvas _previousCanvas;
+  static void _submitScene(engine.BitmapCanvas canvas) {
     if (canvas == _previousCanvas) return;
     if (_previousCanvas != null) {
       _previousCanvas.rootElement.remove();
     }
     _previousCanvas = canvas;
-    domRenderer.append(domRenderer.rootElement, canvas.rootElement);
+    engine.domRenderer
+        .append(engine.domRenderer.rootElement, canvas.rootElement);
   }
 
-  final _rasterizer = Rasterizer(Surface(_submitScene));
+  final _rasterizer = engine.Rasterizer(engine.Surface(_submitScene));
 }
 
 /// Additional accessibility features that may be enabled by the platform.

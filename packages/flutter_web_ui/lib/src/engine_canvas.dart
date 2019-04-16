@@ -2,15 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-import 'dart:typed_data';
-
-import 'package:vector_math/vector_math_64.dart';
-
-import 'canvas.dart';
-import 'geometry.dart';
-import 'painting.dart';
-import 'text.dart';
+part of engine;
 
 /// Defines canvas interface common across canvases that the [SceneBuilder]
 /// renders to.
@@ -36,38 +28,39 @@ abstract class EngineCanvas {
 
   void transform(Float64List matrix4);
 
-  void clipRect(Rect rect);
+  void clipRect(ui.Rect rect);
 
-  void clipRRect(RRect rrect);
+  void clipRRect(ui.RRect rrect);
 
-  void clipPath(Path path);
+  void clipPath(ui.Path path);
 
-  void drawColor(Color color, BlendMode blendMode);
+  void drawColor(ui.Color color, ui.BlendMode blendMode);
 
-  void drawLine(Offset p1, Offset p2, PaintData paint);
+  void drawLine(ui.Offset p1, ui.Offset p2, ui.PaintData paint);
 
-  void drawPaint(PaintData paint);
+  void drawPaint(ui.PaintData paint);
 
-  void drawRect(Rect rect, PaintData paint);
+  void drawRect(ui.Rect rect, ui.PaintData paint);
 
-  void drawRRect(RRect rrect, PaintData paint);
+  void drawRRect(ui.RRect rrect, ui.PaintData paint);
 
-  void drawDRRect(RRect outer, RRect inner, PaintData paint);
+  void drawDRRect(ui.RRect outer, ui.RRect inner, ui.PaintData paint);
 
-  void drawOval(Rect rect, PaintData paint);
+  void drawOval(ui.Rect rect, ui.PaintData paint);
 
-  void drawCircle(Offset c, double radius, PaintData paint);
+  void drawCircle(ui.Offset c, double radius, ui.PaintData paint);
 
-  void drawPath(Path path, PaintData paint);
+  void drawPath(ui.Path path, ui.PaintData paint);
 
   void drawShadow(
-      Path path, Color color, double elevation, bool transparentOccluder);
+      ui.Path path, ui.Color color, double elevation, bool transparentOccluder);
 
-  void drawImage(Image image, Offset p, PaintData paint);
+  void drawImage(ui.Image image, ui.Offset p, ui.PaintData paint);
 
-  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint);
+  void drawImageRect(
+      ui.Image image, ui.Rect src, ui.Rect dst, ui.PaintData paint);
 
-  void drawParagraph(Paragraph paragraph, Offset offset);
+  void drawParagraph(ui.Paragraph paragraph, ui.Offset offset);
 }
 
 /// Adds an [offset] transformation to a [transform] matrix and returns the
@@ -75,8 +68,8 @@ abstract class EngineCanvas {
 ///
 /// If the given offset is zero, returns [transform] matrix as is. Otherwise,
 /// returns a new [Matrix4] object representing the combined transformation.
-Matrix4 transformWithOffset(Matrix4 transform, Offset offset) {
-  if (offset == Offset.zero) {
+Matrix4 transformWithOffset(Matrix4 transform, ui.Offset offset) {
+  if (offset == ui.Offset.zero) {
     return transform;
   }
 

@@ -10,7 +10,7 @@ import 'package:quiver/testing/async.dart';
 
 import 'package:flutter_web/widgets.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
-import 'package:flutter_web_ui/src/semantics/semantics.dart';
+import 'package:flutter_web_ui/src/engine.dart' hide Matrix4;
 import 'package:flutter_web_ui/ui.dart' as ui;
 
 import '../widgets/semantics_tester.dart';
@@ -675,7 +675,7 @@ void _testTextField() {
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
 <sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
-  <sem-tf style="user-select: text; caret-color: transparent">hello</sem-tf>
+  <input value="hello" />
 </sem>''');
 
     semantics().semanticsEnabled = false;
@@ -702,12 +702,13 @@ void _testTextField() {
 
     semantics().updateSemantics(builder.build());
 
-    final html.Element textField =
-        html.document.querySelectorAll('flt-semantics-text-field').single;
+    final html.Element textField = html.document
+        .querySelectorAll('input[data-semantics-role="text-field"]')
+        .single;
 
     expect(html.document.activeElement, isNot(textField));
 
-    textField.dispatchEvent(html.Event('click'));
+    textField.focus();
 
     expect(html.document.activeElement, textField);
     expect(await logger.idLog.first, 0);

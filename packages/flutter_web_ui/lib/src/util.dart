@@ -2,13 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:math' as math;
-import 'dart:typed_data';
-
-import 'package:vector_math/vector_math_64.dart';
-
-import 'geometry.dart';
+part of engine;
 
 /// Generic callback signature, used by [_futurize].
 typedef Callback<T> = void Function(T result);
@@ -120,7 +114,7 @@ bool get assertionsEnabled {
 /// The resulting clip is a rectangle aligned to the pixel grid, i.e. two of
 /// its sides are vertical and two are horizontal. In the presence of rotations
 /// the rectangle is inflated such that it fits the rotated rectangle.
-Rect localClipRectToGlobalClip({Rect localClip, Matrix4 transform}) {
+ui.Rect localClipRectToGlobalClip({ui.Rect localClip, Matrix4 transform}) {
   return localClipToGlobalClip(
     localLeft: localClip.left,
     localTop: localClip.top,
@@ -135,7 +129,7 @@ Rect localClipRectToGlobalClip({Rect localClip, Matrix4 transform}) {
 ///
 /// This is the same as [localClipRectToGlobalClip], except that the local clip
 /// rect is specified in terms of left, top, right, and bottom edge offsets.
-Rect localClipToGlobalClip({
+ui.Rect localClipToGlobalClip({
   double localLeft,
   double localTop,
   double localRight,
@@ -188,7 +182,7 @@ Rect localClipToGlobalClip({
   final Matrix4 pointMatrix = Matrix4.fromFloat64List(pointData);
   pointMatrix.multiplyTranspose(transform);
 
-  return Rect.fromLTRB(
+  return ui.Rect.fromLTRB(
     math.min(math.min(math.min(pointData[0], pointData[1]), pointData[2]),
         pointData[3]),
     math.min(math.min(math.min(pointData[4], pointData[5]), pointData[6]),

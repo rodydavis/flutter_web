@@ -5,8 +5,7 @@
 import 'dart:html' as html;
 import 'dart:typed_data';
 
-import 'package:flutter_web_ui/src/engine_canvas.dart';
-import 'package:flutter_web_ui/src/painting.dart';
+import 'package:flutter_web_ui/src/engine.dart';
 import 'package:flutter_web_ui/ui.dart';
 
 /// Contains method name that was called on [MockEngineCanvas] and arguments

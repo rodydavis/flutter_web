@@ -2,16 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:html' as html;
-
-import 'package:flutter_web_ui/ui.dart' as ui;
-import 'package:meta/meta.dart';
-
-import 'ruler.dart';
-import '../engine.dart';
-import '../dom_renderer.dart';
-import '../util.dart';
+part of engine;
 
 /// Measures paragraphs of text using a shared top-level absolutely positioned
 /// element and [ParagraphRuler]s.

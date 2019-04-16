@@ -2,25 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:collection' show LinkedHashMap;
-import 'dart:html' as html;
-import 'dart:math' as math;
-import 'dart:typed_data';
-
-import 'package:vector_math/vector_math_64.dart';
-
-import 'package:flutter_web_ui/ui.dart' as ui;
-
-import '../alarm_clock.dart';
-import '../engine.dart';
-import '../util.dart' as util;
-
-import 'checkable.dart';
-import 'incrementable.dart';
-import 'label_and_value.dart';
-import 'scrollable.dart';
-import 'tappable.dart';
-import 'text_field.dart';
+part of engine;
 
 /// Set this flag to `true` to cause the engine to visualize the semantics tree
 /// on the screen.
@@ -55,6 +37,7 @@ class SemanticsNodeUpdate {
     this.actions,
     this.textSelectionBase,
     this.textSelectionExtent,
+    this.platformViewId,
     this.scrollChildren,
     this.scrollIndex,
     this.scrollPosition,
@@ -89,6 +72,9 @@ class SemanticsNodeUpdate {
 
   /// See [ui.SemanticsUpdateBuilder.updateNode].
   final int textSelectionExtent;
+
+  /// See [ui.SemanticsUpdateBuilder.updateNode].
+  final int platformViewId;
 
   /// See [ui.SemanticsUpdateBuilder.updateNode].
   final int scrollChildren;
@@ -800,7 +786,7 @@ class SemanticsObject {
 
     bool hasZeroRectOffset = _rect.top == 0.0 && _rect.left == 0.0;
     bool hasIdentityTransform =
-        _transform == null || util.isIdentityFloat64ListTransform(_transform);
+        _transform == null || isIdentityFloat64ListTransform(_transform);
 
     if (hasZeroRectOffset &&
         hasIdentityTransform &&
@@ -828,7 +814,7 @@ class SemanticsObject {
     if (!effectiveTransform.isIdentity()) {
       element.style
         ..transformOrigin = '0 0 0'
-        ..transform = util.matrix4ToCssTransform(effectiveTransform);
+        ..transform = matrix4ToCssTransform(effectiveTransform);
     } else {
       element.style
         ..removeProperty('transform-origin')
@@ -991,7 +977,7 @@ class SemanticsObject {
 
   @override
   String toString() {
-    if (util.assertionsEnabled) {
+    if (assertionsEnabled) {
       final String children = _childrenInTraversalOrder != null &&
               _childrenInTraversalOrder.isNotEmpty
           ? '[${_childrenInTraversalOrder.join(', ')}]'

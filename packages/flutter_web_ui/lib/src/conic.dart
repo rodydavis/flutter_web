@@ -1,5 +1,8 @@
-import 'dart:math' as math;
-import 'geometry.dart';
+// Copyright 2019 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+part of engine;
 
 /// Converts conic curve to a list of quadratic curves for rendering on
 /// canvas or conversion to svg.
@@ -19,8 +22,8 @@ class Conic {
   ///
   /// First offset is start Point. Each pair of offsets after are quadratic
   /// control and end points.
-  List<Offset> toQuads() {
-    final List<Offset> pointList = <Offset>[];
+  List<ui.Offset> toQuads() {
+    final List<ui.Offset> pointList = <ui.Offset>[];
     // This value specifies error bound.
     const double conicTolerance = 1.0 / 4.0;
 
@@ -32,7 +35,7 @@ class Conic {
     assert(subdivideCount > 0);
     int quadCount = 1 << subdivideCount;
     bool skipSubdivide = false;
-    pointList.add(Offset(p0x, p0y));
+    pointList.add(ui.Offset(p0x, p0y));
     if (subdivideCount == _maxSubdivisionCount) {
       // We have an extreme number of quads, chop this conic and check if
       // it generates a pair of lines, in which case we should not subdivide.
@@ -45,11 +48,11 @@ class Conic {
           conic0.p1y == conic0.p2y &&
           conic1.p0x == conic1.p1x &&
           conic1.p0y == conic1.p1y) {
-        final Offset controlPointOffset = Offset(conic0.p1x, conic0.p1y);
+        final ui.Offset controlPointOffset = ui.Offset(conic0.p1x, conic0.p1y);
         pointList.add(controlPointOffset);
         pointList.add(controlPointOffset);
         pointList.add(controlPointOffset);
-        pointList.add(Offset(conic1.p2x, conic1.p2y));
+        pointList.add(ui.Offset(conic1.p2x, conic1.p2y));
         quadCount = 2;
         skipSubdivide = true;
       }
@@ -69,7 +72,7 @@ class Conic {
     }
     if (hasNonFinitePoints) {
       for (int p = 1; p < pointCount - 1; ++p) {
-        pointList[p] = Offset(p1x, p1y);
+        pointList[p] = ui.Offset(p1x, p1y);
       }
     }
     return pointList;
@@ -80,13 +83,13 @@ class Conic {
   }
 
   // Subdivides a conic and writes to points list.
-  static void _subdivide(Conic src, int level, List<Offset> pointList) {
+  static void _subdivide(Conic src, int level, List<ui.Offset> pointList) {
     assert(level >= 0);
     if (0 == level) {
       // At lowest subdivision point, copy control point and end point to
       // target.
-      pointList.add(Offset(src.p1x, src.p1y));
-      pointList.add(Offset(src.p2x, src.p2y));
+      pointList.add(ui.Offset(src.p1x, src.p1y));
+      pointList.add(ui.Offset(src.p2x, src.p2y));
       return;
     }
     final List<Conic> dst = List<Conic>(2);
@@ -134,13 +137,13 @@ class Conic {
   void _chop(List<Conic> dst) {
     final double scale = 1.0 / (1.0 + fW);
     final double newW = _subdivideWeightValue(fW);
-    final Offset wp1 = Offset(fW * p1x, fW * p1y);
-    Offset m = Offset((p0x + (2 * wp1.dx) + p2x) * scale * 0.5,
+    final ui.Offset wp1 = ui.Offset(fW * p1x, fW * p1y);
+    ui.Offset m = ui.Offset((p0x + (2 * wp1.dx) + p2x) * scale * 0.5,
         (p0y + 2 * wp1.dy + p2y) * scale * 0.5);
     if (m.dx.isNaN || m.dy.isNaN) {
       final double w2 = fW * 2;
       final double scaleHalf = 1.0 / (1 + fW) * 0.5;
-      m = Offset((p0x + (w2 * p1x) + p2x) * scaleHalf,
+      m = ui.Offset((p0x + (w2 * p1x) + p2x) * scaleHalf,
           (p0y + (w2 * p1y) + p2y) * scaleHalf);
     }
     dst[0] = Conic(p0x, p0y, (p0x + wp1.dx) * scale, (p0y + wp1.dy) * scale,

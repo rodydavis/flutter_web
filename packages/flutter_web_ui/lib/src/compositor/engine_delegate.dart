@@ -1,13 +1,8 @@
-import 'dart:convert' show utf8;
+// Copyright 2018 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-import 'layer_tree.dart';
-import 'viewport_metrics.dart';
-import 'runtime_delegate.dart';
-import 'platform_message.dart';
-import '../text/font_collection.dart';
-import '../assets/assets.dart';
-
-import '../geometry.dart';
+part of engine;
 
 const assetChannel = 'flutter/assets';
 
@@ -50,8 +45,8 @@ class Engine extends RuntimeDelegate {
   void render(LayerTree layerTree) {
     if (layerTree == null) return;
 
-    final frameSize =
-        Size(_viewportMetrics.physicalWidth, _viewportMetrics.physicalHeight);
+    final frameSize = ui.Size(
+        _viewportMetrics.physicalWidth, _viewportMetrics.physicalHeight);
 
     if (frameSize.isEmpty) {
       return;

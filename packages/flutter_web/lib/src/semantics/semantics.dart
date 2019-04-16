@@ -574,6 +574,8 @@ class SemanticsProperties extends DiagnosticableTree {
     this.namesRoute,
     this.image,
     this.liveRegion,
+    // TODO(flutter_web): upstream.
+    this.multiline,
     this.label,
     this.value,
     this.increasedValue,
@@ -742,6 +744,13 @@ class SemanticsProperties extends DiagnosticableTree {
   ///  * [SemanticsConfiguration.liveRegion], for a full description of a live region.
   ///  * [UpdateLiveRegionEvent], to trigger a polite announcement of a live region.
   final bool liveRegion;
+
+  // TODO(flutter_web): upstream.
+  /// Whether the [value] is coming from a field that supports multi-line.
+  ///
+  /// This option is only meaningful when used in combination with [textField]
+  /// to indicate whether it's a single-line or multi-line text field.
+  final bool multiline;
 
   /// Provides a textual description of the widget.
   ///
@@ -1684,6 +1693,10 @@ class SemanticsNode extends AbstractNode with DiagnosticableTreeMixin {
   double get scrollExtentMin => _scrollExtentMin;
   double _scrollExtentMin;
 
+  // TODO(flutter_web): upstream.
+  bool get isMultiline => _isMultiline;
+  bool _isMultiline;
+
   bool _canPerformAction(SemanticsAction action) =>
       _actions.containsKey(action);
 
@@ -1729,6 +1742,8 @@ class SemanticsNode extends AbstractNode with DiagnosticableTreeMixin {
     _scrollChildCount = config.scrollChildCount;
     _scrollIndex = config.scrollIndex;
     indexInParent = config.indexInParent;
+    // TODO(flutter_web): upstream.
+    _isMultiline = config.isMultiline;
     _replaceChildren(childrenInInversePaintOrder ?? const <SemanticsNode>[]);
 
     assert(
@@ -2094,6 +2109,9 @@ class SemanticsNode extends AbstractNode with DiagnosticableTreeMixin {
         FlagProperty('isInvisible', value: isInvisible, ifTrue: 'invisible'));
     properties.add(FlagProperty('isHidden',
         value: hasFlag(SemanticsFlag.isHidden), ifTrue: 'HIDDEN'));
+    // TODO(flutter_web): upstream.
+    properties.add(FlagProperty('isMultiline',
+        value: hasFlag(SemanticsFlag.isMultiline), ifTrue: 'MULTI-LINE'));
     properties.add(StringProperty('label', _label, defaultValue: ''));
     properties.add(StringProperty('value', _value, defaultValue: ''));
     properties.add(
@@ -3572,6 +3590,16 @@ class SemanticsConfiguration {
   bool get hasImplicitScrolling => _hasFlag(SemanticsFlag.hasImplicitScrolling);
   set hasImplicitScrolling(bool value) {
     _setFlag(SemanticsFlag.hasImplicitScrolling, value);
+  }
+
+  // TODO(flutter_web): upstream.
+  /// Whether the text field is multi-line.
+  ///
+  /// This option is usually set in combination with [textField] to indicate
+  /// that the text field is configured to be multi-line.
+  bool get isMultiline => _hasFlag(SemanticsFlag.isMultiline);
+  set isMultiline(bool value) {
+    _setFlag(SemanticsFlag.isMultiline, value);
   }
 
   /// The currently selected text (or the position of the cursor) within [value]

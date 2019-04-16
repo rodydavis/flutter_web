@@ -2,22 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-export 'src/canvas.dart';
-export 'src/compositing.dart';
-export 'src/engine.dart';
-export 'src/geometry.dart';
-export 'src/hash_codes.dart';
-export 'src/initialization.dart';
-export 'src/lerp.dart';
-export 'src/natives.dart';
-export 'src/painting.dart' hide PaintData;
-export 'src/pointer.dart';
-export 'src/pointer_binding.dart';
-export 'src/semantics.dart';
-export 'src/browser_routing/strategies.dart';
-export 'src/text.dart';
-export 'src/tile_mode.dart';
-export 'src/window.dart';
+/// This library defines the web equivalent of the native dart:ui.
+///
+/// All types in this library are public.
+library ui;
+
+import 'dart:async';
+import 'dart:convert' hide Codec;
+import 'dart:collection';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:html' as html;
+import 'dart:js_util' as js_util;
+
+import 'src/engine.dart' as engine;
+
+import 'package:meta/meta.dart';
+
+export 'src/engine.dart' show webOnlyInitializeEngine;
+
+part 'src/canvas.dart';
+part 'src/compositing.dart';
+part 'src/geometry.dart';
+part 'src/hash_codes.dart';
+part 'src/initialization.dart';
+part 'src/lerp.dart';
+part 'src/natives.dart';
+part 'src/painting.dart';
+part 'src/pointer.dart';
+part 'src/pointer_binding.dart';
+part 'src/semantics.dart';
+part 'src/browser_routing/strategies.dart';
+part 'src/text.dart';
+part 'src/tile_mode.dart';
+part 'src/window.dart';
 
 /// Provides a compile time constant to customize flutter framework and other
 /// users of ui engine for web runtime.

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'word_break_properties.dart';
+part of engine;
 
 enum _FindBreakDirection {
   /// Indicates to find the word break by looking forward.

@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:html' as html;
-
-import '../window.dart' show VoidCallback;
+part of ui;
 
 // TODO(mdebbar): add other strategies.
 

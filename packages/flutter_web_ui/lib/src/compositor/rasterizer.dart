@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'layer_tree.dart';
-import 'surface.dart';
-import '../window.dart';
+part of engine;
 
 /// A class that can rasterize [LayerTree]s into a given [Surface].
 class Rasterizer {
@@ -16,7 +14,7 @@ class Rasterizer {
   /// Creates a new frame from this rasterizer's surface, draws the given
   /// [LayerTree] into it, and then submits the frame.
   void draw(LayerTree layerTree) {
-    final frame = surface.acquireFrame(window.physicalSize);
+    final frame = surface.acquireFrame(ui.window.physicalSize);
     final canvas = frame.canvas;
     final compositorFrame = context.acquireFrame(canvas);
 

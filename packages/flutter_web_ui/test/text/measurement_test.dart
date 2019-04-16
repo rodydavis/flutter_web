@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter_web_ui/ui.dart' as ui;
-import 'package:flutter_web_ui/src/text/measurement.dart';
-import 'package:flutter_web_ui/src/text/ruler.dart';
+import 'package:flutter_web_ui/src/engine.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
 
 void main() {

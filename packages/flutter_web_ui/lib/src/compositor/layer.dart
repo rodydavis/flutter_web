@@ -2,16 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:math' as math;
-
-import 'package:vector_math/vector_math_64.dart';
-
-import '../bitmap_canvas.dart';
-import '../canvas.dart';
-import '../geometry.dart';
-import '../painting.dart';
-import '../shadow.dart';
-import 'raster_cache.dart';
+part of engine;
 
 /// A layer to be composed into a scene.
 ///
@@ -22,7 +13,7 @@ abstract class Layer {
   ContainerLayer parent;
 
   /// An estimated rectangle that this layer will draw into.
-  Rect paintBounds = Rect.zero;
+  ui.Rect paintBounds = ui.Rect.zero;
 
   /// Whether or not this layer actually needs to be painted in the scene.
   bool get needsPainting => !paintBounds.isEmpty;
@@ -77,8 +68,8 @@ abstract class ContainerLayer extends Layer {
   /// Returns a [Rect] that covers the paint bounds of all of the child layers.
   /// If all of the child layers have empty paint bounds, then the returned
   /// [Rect] is empty.
-  Rect prerollChildren(PrerollContext context, Matrix4 childMatrix) {
-    var childPaintBounds = Rect.zero;
+  ui.Rect prerollChildren(PrerollContext context, Matrix4 childMatrix) {
+    var childPaintBounds = ui.Rect.zero;
     for (var layer in _layers) {
       layer.preroll(context, childMatrix);
       if (childPaintBounds.isEmpty) {
@@ -105,7 +96,7 @@ abstract class ContainerLayer extends Layer {
 /// A layer that clips its child layers by a given [Path].
 class ClipPathLayer extends ContainerLayer {
   /// The path used to clip child layers.
-  final Path _clipPath;
+  final ui.Path _clipPath;
 
   ClipPathLayer(this._clipPath);
 
@@ -132,7 +123,7 @@ class ClipPathLayer extends ContainerLayer {
 /// A layer that clips its child layers by a given [Rect].
 class ClipRectLayer extends ContainerLayer {
   /// The rectangle used to clip child layers.
-  final Rect _clipRect;
+  final ui.Rect _clipRect;
 
   ClipRectLayer(this._clipRect);
 
@@ -158,7 +149,7 @@ class ClipRectLayer extends ContainerLayer {
 /// A layer that clips its child layers by a given [RRect].
 class ClipRRectLayer extends ContainerLayer {
   /// The rounded rectangle used to clip child layers.
-  final RRect _clipRRect;
+  final ui.RRect _clipRRect;
 
   ClipRRectLayer(this._clipRRect);
 
@@ -199,10 +190,10 @@ class TransformLayer extends ContainerLayer {
   ///
   /// This function assumes the given point has a z-coordinate of 0.0. The
   /// z-coordinate of the result is ignored.
-  static Offset _transformPoint(Matrix4 transform, Offset point) {
+  static ui.Offset _transformPoint(Matrix4 transform, ui.Offset point) {
     final Vector3 position3 = Vector3(point.dx, point.dy, 0.0);
     final Vector3 transformed3 = transform.perspectiveTransform(position3);
-    return Offset(transformed3.x, transformed3.y);
+    return ui.Offset(transformed3.x, transformed3.y);
   }
 
   /// Returns a rect that bounds the result of applying the given matrix as a
@@ -211,12 +202,12 @@ class TransformLayer extends ContainerLayer {
   /// This function assumes the given rect is in the plane with z equals 0.0.
   /// The transformed rect is then projected back into the plane with z equals
   /// 0.0 before computing its bounding rect.
-  static Rect _transformRect(Matrix4 transform, Rect rect) {
-    final Offset point1 = _transformPoint(transform, rect.topLeft);
-    final Offset point2 = _transformPoint(transform, rect.topRight);
-    final Offset point3 = _transformPoint(transform, rect.bottomLeft);
-    final Offset point4 = _transformPoint(transform, rect.bottomRight);
-    return Rect.fromLTRB(
+  static ui.Rect _transformRect(Matrix4 transform, ui.Rect rect) {
+    final ui.Offset point1 = _transformPoint(transform, rect.topLeft);
+    final ui.Offset point2 = _transformPoint(transform, rect.topRight);
+    final ui.Offset point3 = _transformPoint(transform, rect.bottomLeft);
+    final ui.Offset point4 = _transformPoint(transform, rect.bottomRight);
+    return ui.Rect.fromLTRB(
         _min4(point1.dx, point2.dx, point3.dx, point4.dx),
         _min4(point1.dy, point2.dy, point3.dy, point4.dy),
         _max4(point1.dx, point2.dx, point3.dx, point4.dx),
@@ -245,10 +236,10 @@ class TransformLayer extends ContainerLayer {
 /// A layer containing a [Picture].
 class PictureLayer extends Layer {
   /// The picture to paint into the canvas.
-  final Picture picture;
+  final ui.Picture picture;
 
   /// The offset at which to paint the picture.
-  final Offset offset;
+  final ui.Offset offset;
 
   /// A hint to the compositor about whether this picture is complex.
   final bool isComplex;
@@ -298,10 +289,10 @@ class PictureLayer extends Layer {
 /// on the given elevation.
 class PhysicalShapeLayer extends ContainerLayer {
   final double _elevation;
-  final Color _color;
-  final Color _shadowColor;
-  final Path _path;
-  final Clip _clipBehavior;
+  final ui.Color _color;
+  final ui.Color _shadowColor;
+  final ui.Path _path;
+  final ui.Clip _clipBehavior;
 
   PhysicalShapeLayer(
     this._elevation,
@@ -327,31 +318,31 @@ class PhysicalShapeLayer extends ContainerLayer {
           _color.alpha != 0xff);
     }
 
-    final paint = (Paint()..color = _color).webOnlyPaintData;
-    if (_clipBehavior != Clip.antiAliasWithSaveLayer) {
+    final paint = (ui.Paint()..color = _color).webOnlyPaintData;
+    if (_clipBehavior != ui.Clip.antiAliasWithSaveLayer) {
       context.canvas.drawPath(_path, paint);
     }
 
     int saveCount = context.canvas.save();
     switch (_clipBehavior) {
-      case Clip.hardEdge:
+      case ui.Clip.hardEdge:
         context.canvas.clipPath(_path);
         break;
-      case Clip.antiAlias:
+      case ui.Clip.antiAlias:
         // TODO(het): This is supposed to be different from Clip.hardEdge in
         // that it anti-aliases the clip. The canvas clipPath() method
         // should support this.
         context.canvas.clipPath(_path);
         break;
-      case Clip.antiAliasWithSaveLayer:
+      case ui.Clip.antiAliasWithSaveLayer:
         context.canvas.clipPath(_path);
         context.canvas.saveLayer(paintBounds, null);
         break;
-      case Clip.none:
+      case ui.Clip.none:
         break;
     }
 
-    if (_clipBehavior == Clip.antiAliasWithSaveLayer) {
+    if (_clipBehavior == ui.Clip.antiAliasWithSaveLayer) {
       // If we want to avoid the bleeding edge artifact
       // (https://github.com/flutter/flutter/issues/18057#issue-328003931)
       // using saveLayer, we have to call drawPaint instead of drawPath as
@@ -368,7 +359,7 @@ class PhysicalShapeLayer extends ContainerLayer {
   ///
   /// The blur of the shadow is decided by the [elevation], and the
   /// shadow is painted with the given [color].
-  static void drawShadow(BitmapCanvas canvas, Path path, Color color,
+  static void drawShadow(BitmapCanvas canvas, ui.Path path, ui.Color color,
       double elevation, bool transparentOccluder) {
     canvas.drawShadow(path, color, elevation, transparentOccluder);
   }

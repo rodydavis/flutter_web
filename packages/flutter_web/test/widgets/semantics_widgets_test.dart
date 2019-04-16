@@ -493,6 +493,7 @@ void main() {
       namesRoute: true,
       image: true,
       liveRegion: true,
+      multiline: true,
     ));
     final List<SemanticsFlag> flags = SemanticsFlag.values.values.toList();
     flags

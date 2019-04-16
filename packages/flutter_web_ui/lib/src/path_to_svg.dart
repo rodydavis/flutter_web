@@ -2,66 +2,90 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:math' as math;
-
-import 'canvas.dart';
-import 'geometry.dart';
-import 'recording_canvas.dart';
+part of engine;
 
 /// Converts [path] to SVG path syntax to be used as "d" attribute in path
 /// element.
-void pathToSvg(Path path, StringBuffer sb) {
+void pathToSvg(ui.Path path, StringBuffer sb,
+    {double offsetX = 0, double offsetY = 0}) {
   for (Subpath subPath in path.subpaths) {
     for (PathCommand command in subPath.commands) {
       switch (command.type) {
         case PathCommandTypes.moveTo:
           MoveTo moveTo = command;
-          sb.write('M ${moveTo.x} ${moveTo.y}');
+          sb.write('M ${moveTo.x + offsetX} ${moveTo.y + offsetY}');
           break;
         case PathCommandTypes.lineTo:
           LineTo lineTo = command;
-          sb.write('L ${lineTo.x} ${lineTo.y}');
+          sb.write('L ${lineTo.x + offsetX} ${lineTo.y + offsetY}');
           break;
         case PathCommandTypes.bezierCurveTo:
           BezierCurveTo curve = command;
-          sb.write('C ${curve.x1} ${curve.y1} '
-              '${curve.x2} ${curve.y2} ${curve.x3} ${curve.y3}');
+          sb.write('C ${curve.x1 + offsetX} ${curve.y1 + offsetY} '
+              '${curve.x2 + offsetX} ${curve.y2 + offsetY} ${curve.x3 + offsetX} ${curve.y3 + offsetY}');
           break;
         case PathCommandTypes.quadraticCurveTo:
           QuadraticCurveTo quadraticCurveTo = command;
-          sb.write('Q ${quadraticCurveTo.x1} ${quadraticCurveTo.y1} '
-              '${quadraticCurveTo.x2} ${quadraticCurveTo.y2}');
+          sb.write(
+              'Q ${quadraticCurveTo.x1 + offsetX} ${quadraticCurveTo.y1 + offsetY} '
+              '${quadraticCurveTo.x2 + offsetX} ${quadraticCurveTo.y2 + offsetY}');
           break;
         case PathCommandTypes.close:
           sb.write('Z');
           break;
         case PathCommandTypes.ellipse:
           Ellipse ellipse = command;
-          _writeEllipse(
-              sb,
-              ellipse.x,
-              ellipse.y,
-              ellipse.radiusX,
-              ellipse.radiusY,
-              ellipse.rotation,
-              ellipse.startAngle,
-              ellipse.endAngle,
-              ellipse.anticlockwise);
+          // Handle edge case where start and end points are the same by drawing
+          // 2 half arcs.
+          if ((ellipse.endAngle - ellipse.startAngle) % (2 * math.pi) == 0.0) {
+            _writeEllipse(
+                sb,
+                ellipse.x + offsetX,
+                ellipse.y + offsetY,
+                ellipse.radiusX,
+                ellipse.radiusY,
+                ellipse.rotation,
+                -math.pi,
+                0,
+                ellipse.anticlockwise,
+                moveToStartPoint: true);
+            _writeEllipse(
+                sb,
+                ellipse.x + offsetX,
+                ellipse.y + offsetY,
+                ellipse.radiusX,
+                ellipse.radiusY,
+                ellipse.rotation,
+                0,
+                math.pi,
+                ellipse.anticlockwise);
+          } else {
+            _writeEllipse(
+                sb,
+                ellipse.x + offsetX,
+                ellipse.y + offsetY,
+                ellipse.radiusX,
+                ellipse.radiusY,
+                ellipse.rotation,
+                ellipse.startAngle,
+                ellipse.endAngle,
+                ellipse.anticlockwise);
+          }
           break;
         case PathCommandTypes.rRect:
           RRectCommand rrectCommand = command;
-          RRect rrect = rrectCommand.rrect;
-          var left = rrect.left;
-          var right = rrect.right;
-          var top = rrect.top;
-          var bottom = rrect.bottom;
+          ui.RRect rrect = rrectCommand.rrect;
+          var left = rrect.left + offsetX;
+          var right = rrect.right + offsetX;
+          var top = rrect.top + offsetY;
+          var bottom = rrect.bottom + offsetY;
           if (left > right) {
             left = right;
-            right = rrect.left;
+            right = rrect.left + offsetX;
           }
           if (top > bottom) {
             top = bottom;
-            bottom = rrect.top;
+            bottom = rrect.top + offsetY;
           }
           var trRadiusX = rrect.trRadiusX.abs();
           var tlRadiusX = rrect.tlRadiusX.abs();
@@ -102,13 +126,16 @@ void pathToSvg(Path path, StringBuffer sb) {
         case PathCommandTypes.rect:
           RectCommand rectCommand = command;
           bool horizontalSwap = rectCommand.width < 0;
-          final left = horizontalSwap
-              ? rectCommand.x - rectCommand.width
-              : rectCommand.x;
+          final left = offsetX +
+              (horizontalSwap
+                  ? rectCommand.x - rectCommand.width
+                  : rectCommand.x);
           final width = horizontalSwap ? -rectCommand.width : rectCommand.width;
           bool verticalSwap = rectCommand.height < 0;
-          final top =
-              verticalSwap ? rectCommand.y - rectCommand.height : rectCommand.y;
+          final top = offsetY +
+              (verticalSwap
+                  ? rectCommand.y - rectCommand.height
+                  : rectCommand.y);
           final height =
               verticalSwap ? -rectCommand.height : rectCommand.height;
           sb.write('M $left $top ');
@@ -135,7 +162,8 @@ void _writeEllipse(
     double rotation,
     double startAngle,
     double endAngle,
-    bool antiClockwise) {
+    bool antiClockwise,
+    {bool moveToStartPoint = false}) {
   double cosRotation = math.cos(rotation);
   double sinRotation = math.sin(rotation);
   double x = math.cos(startAngle) * radiusX;
@@ -154,6 +182,9 @@ void _writeEllipse(
   bool largeArc = delta.abs() > math.pi;
 
   double rotationDeg = rotation / math.pi * 180.0;
-  sb.write('M $startPx $startPy A $radiusX $radiusY ${rotationDeg} '
+  if (moveToStartPoint) {
+    sb.write('M $startPx $startPy ');
+  }
+  sb.write('A $radiusX $radiusY ${rotationDeg} '
       '${largeArc ? 1 : 0} ${antiClockwise ? 0 : 1} $endPx $endPy');
 }

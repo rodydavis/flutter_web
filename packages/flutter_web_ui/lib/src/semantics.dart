@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:typed_data';
-
-import 'semantics/semantics.dart' as engine;
-import 'geometry.dart';
-import 'text.dart';
+part of ui;
 
 /// The possible actions that can be conveyed from the operating system
 /// accessibility APIs to a semantics node.
@@ -301,6 +297,7 @@ class SemanticsFlag {
   static const int _kHasToggledStateIndex = 1 << 16;
   static const int _kIsToggledIndex = 1 << 17;
   static const int _kHasImplicitScrollingIndex = 1 << 18;
+  static const int _kIsMultilineIndex = 1 << 19;
 
   const SemanticsFlag._(this.index);
 
@@ -510,6 +507,14 @@ class SemanticsFlag {
   static const SemanticsFlag hasImplicitScrolling =
       const SemanticsFlag._(_kHasImplicitScrollingIndex);
 
+  /// Whether the value of the semantics node is coming from a multi-line text
+  /// field.
+  ///
+  /// This isused for text fields to distinguish single-line text field from
+  /// multi-line ones.
+  static const SemanticsFlag isMultiline =
+      const SemanticsFlag._(_kIsMultilineIndex);
+
   /// The possible semantics flags.
   ///
   /// The map's key is the [index] of the flag and the value is the flag itself.
@@ -533,6 +538,7 @@ class SemanticsFlag {
     _kHasToggledStateIndex: hasToggledState,
     _kIsToggledIndex: isToggled,
     _kHasImplicitScrollingIndex: hasImplicitScrolling,
+    _kIsMultilineIndex: isMultiline,
   };
 
   @override
@@ -576,6 +582,8 @@ class SemanticsFlag {
         return 'SemanticsFlag.isToggled';
       case _kHasImplicitScrollingIndex:
         return 'SemanticsFlag.hasImplicitScrolling';
+      case _kIsMultilineIndex:
+        return 'SemanticsFlag.isMultiline';
     }
     return null;
   }

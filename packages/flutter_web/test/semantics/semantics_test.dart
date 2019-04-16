@@ -336,6 +336,8 @@ void main() {
         '   flags: []\n'
         '   invisible\n'
         '   isHidden: false\n'
+        // TODO(flutter_web): upstream.
+        '   isMultiline: false\n'
         '   label: ""\n'
         '   value: ""\n'
         '   increasedValue: ""\n'
@@ -431,6 +433,8 @@ void main() {
         '   flags: []\n'
         '   invisible\n'
         '   isHidden: false\n'
+        // TODO(flutter_web): upstream.
+        '   isMultiline: false\n'
         '   label: ""\n'
         '   value: ""\n'
         '   increasedValue: ""\n'

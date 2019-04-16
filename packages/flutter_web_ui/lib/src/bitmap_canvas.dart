@@ -2,21 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html' as html;
-import 'dart:math' as math;
-import 'dart:typed_data';
-
-import 'browser_detection.dart';
-import 'canvas.dart';
-import 'engine_canvas.dart';
-import 'geometry.dart';
-import 'html_image_codec.dart';
-import 'painting.dart';
-import 'recording_canvas.dart';
-import 'shadow.dart';
-import 'text/ruler.dart';
-import 'text.dart';
-import 'util.dart';
+part of engine;
 
 /// A raw HTML canvas that is directly written to.
 class BitmapCanvas extends EngineCanvas with SaveStackTracking {
@@ -24,14 +10,14 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   /// system's origin, within which this canvas paints.
   ///
   /// Painting outside these bounds will result in cropping.
-  Rect bounds;
+  ui.Rect bounds;
 
   final html.Element rootElement = new html.Element.tag('flt-canvas');
   html.CanvasElement _canvas;
   html.CanvasRenderingContext2D _ctx;
 
   /// The size of the paint [bounds].
-  Size get size => bounds.size;
+  ui.Size get size => bounds.size;
 
   /// The last paragraph style is cached to optimize the case where the style
   /// hasn't changed.
@@ -39,8 +25,21 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   final _paragraphs = new Set<html.Element>();
 
-  int _width;
-  int _height;
+  /// The number of pixels along the width of the bitmap that the canvas element
+  /// renders into.
+  ///
+  /// These pixels are different from the logical CSS pixels. Here a pixel
+  /// literally means 1 point with a RGBA color.
+  int get widthInBitmapPixels => _widthInBitmapPixels;
+  int _widthInBitmapPixels;
+
+  /// The number of pixels along the width of the bitmap that the canvas element
+  /// renders into.
+  ///
+  /// These pixels are different from the logical CSS pixels. Here a pixel
+  /// literally means 1 point with a RGBA color.
+  int get heightInBitmapPixels => _heightInBitmapPixels;
+  int _heightInBitmapPixels;
 
   int _saveCount = 0;
 
@@ -58,8 +57,9 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     // painting to overflow by at most 1 pixel.
     final double boundsWidth = size.width + 1;
     final double boundsHeight = size.height + 1;
-    _width = (boundsWidth * html.window.devicePixelRatio).ceil();
-    _height = (boundsHeight * html.window.devicePixelRatio).ceil();
+    _widthInBitmapPixels = (boundsWidth * html.window.devicePixelRatio).ceil();
+    _heightInBitmapPixels =
+        (boundsHeight * html.window.devicePixelRatio).ceil();
 
     // Compute the final CSS canvas size given the actual pixel count we
     // allocated. This is done for the following reasons:
@@ -67,12 +67,13 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     // * To satisfy the invariant: pixel size = css size * device pixel ratio.
     // * To make sure that when we scale the canvas by devicePixelRatio (see
     //   _initializeViewport below) the pixels line up.
-    final double cssWidth = _width / html.window.devicePixelRatio;
-    final double cssHeight = _height / html.window.devicePixelRatio;
+    final double cssWidth = _widthInBitmapPixels / html.window.devicePixelRatio;
+    final double cssHeight =
+        _heightInBitmapPixels / html.window.devicePixelRatio;
 
     _canvas = new html.CanvasElement(
-      width: _width,
-      height: _height,
+      width: _widthInBitmapPixels,
+      height: _heightInBitmapPixels,
     );
     _canvas.style
       ..position = 'absolute'
@@ -93,7 +94,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     // Restore to the state where we have only applied the scaling.
     if (_ctx != null) {
       _ctx.restore();
-      _ctx.clearRect(0, 0, _width, _height);
+      _ctx.clearRect(0, 0, _widthInBitmapPixels, _heightInBitmapPixels);
       _ctx.font = '';
       _initializeViewport();
     }
@@ -153,7 +154,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   html.CanvasRenderingContext2D get ctx => _ctx;
 
   /// Sets the global paint styles to correspond to [paint].
-  void _applyPaint(PaintData paint) {
+  void _applyPaint(ui.PaintData paint) {
     ctx.globalCompositeOperation =
         _stringForBlendMode(paint.blendMode) ?? 'source-over';
     ctx.lineWidth = paint.strokeWidth ?? 1.0;
@@ -183,12 +184,12 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     }
   }
 
-  void _strokeOrFill(PaintData paint, {bool resetPaint = true}) {
+  void _strokeOrFill(ui.PaintData paint, {bool resetPaint = true}) {
     switch (paint.style) {
-      case PaintingStyle.stroke:
+      case ui.PaintingStyle.stroke:
         ctx.stroke();
         break;
-      case PaintingStyle.fill:
+      case ui.PaintingStyle.fill:
       default:
         ctx.fill();
         break;
@@ -217,7 +218,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     return _saveCount++;
   }
 
-  void saveLayer(Rect bounds, _) {
+  void saveLayer(ui.Rect bounds, _) {
     save();
   }
 
@@ -323,27 +324,27 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void clipRect(Rect rect) {
+  void clipRect(ui.Rect rect) {
     ctx.beginPath();
     ctx.rect(rect.left, rect.top, rect.width, rect.height);
     ctx.clip();
   }
 
   @override
-  void clipRRect(RRect rrect) {
-    var path = new Path()..addRRect(rrect);
+  void clipRRect(ui.RRect rrect) {
+    var path = new ui.Path()..addRRect(rrect);
     _runPath(path);
     ctx.clip();
   }
 
   @override
-  void clipPath(Path path) {
+  void clipPath(ui.Path path) {
     _runPath(path);
     ctx.clip();
   }
 
   @override
-  void drawColor(Color color, BlendMode blendMode) {
+  void drawColor(ui.Color color, ui.BlendMode blendMode) {
     ctx.globalCompositeOperation = _stringForBlendMode(blendMode);
 
     // Fill a virtually infinite rect with the color.
@@ -354,7 +355,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawLine(Offset p1, Offset p2, PaintData paint) {
+  void drawLine(ui.Offset p1, ui.Offset p2, ui.PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.moveTo(p1.dx, p1.dy);
@@ -364,7 +365,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawPaint(PaintData paint) {
+  void drawPaint(ui.PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
 
@@ -377,7 +378,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawRect(Rect rect, PaintData paint) {
+  void drawRect(ui.Rect rect, ui.PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.rect(rect.left, rect.top, rect.width, rect.height);
@@ -385,13 +386,13 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawRRect(RRect rrect, PaintData paint) {
+  void drawRRect(ui.RRect rrect, ui.PaintData paint) {
     _applyPaint(paint);
     _drawRRectPath(rrect);
     _strokeOrFill(paint);
   }
 
-  void _drawRRectPath(RRect rrect, {bool startNewPath = true}) {
+  void _drawRRectPath(ui.RRect rrect, {bool startNewPath = true}) {
     // TODO(mdebbar): there's a bug in this code, it doesn't correctly handle
     //                the case when the radius is greater than the width of the
     //                rect. When we fix that in houdini_painter.js, we need to
@@ -492,7 +493,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     );
   }
 
-  void _drawRRectPathReverse(RRect rrect, {bool startNewPath = true}) {
+  void _drawRRectPathReverse(ui.RRect rrect, {bool startNewPath = true}) {
     var left = rrect.left;
     var right = rrect.right;
     var top = rrect.top;
@@ -575,7 +576,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawDRRect(RRect outer, RRect inner, PaintData paint) {
+  void drawDRRect(ui.RRect outer, ui.RRect inner, ui.PaintData paint) {
     _applyPaint(paint);
     _drawRRectPath(outer);
     _drawRRectPathReverse(inner, startNewPath: false);
@@ -583,7 +584,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawOval(Rect rect, PaintData paint) {
+  void drawOval(ui.Rect rect, ui.PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.ellipse(rect.center.dx, rect.center.dy, rect.width / 2, rect.height / 2,
@@ -592,7 +593,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawCircle(Offset c, double radius, PaintData paint) {
+  void drawCircle(ui.Offset c, double radius, ui.PaintData paint) {
     _applyPaint(paint);
     ctx.beginPath();
     ctx.ellipse(c.dx, c.dy, radius, radius, 0, 0, 2.0 * math.pi, false);
@@ -600,15 +601,15 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawPath(Path path, PaintData paint) {
+  void drawPath(ui.Path path, ui.PaintData paint) {
     _applyPaint(paint);
     _runPath(path);
     _strokeOrFill(paint);
   }
 
   @override
-  void drawShadow(
-      Path path, Color color, double elevation, bool transparentOccluder) {
+  void drawShadow(ui.Path path, ui.Color color, double elevation,
+      bool transparentOccluder) {
     final shadows = ElevationShadow.computeCanvasShadows(elevation, color);
     if (shadows.isNotEmpty) {
       for (final shadow in shadows) {
@@ -621,11 +622,11 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
           // paint the shadow without the path itself, but if we use a non-zero
           // alpha for the paint the path is painted in addition to the shadow,
           // which is undesirable.
-          final paint = Paint()
+          final paint = ui.Paint()
             ..color = shadow.color
-            ..style = PaintingStyle.fill
+            ..style = ui.PaintingStyle.fill
             ..strokeWidth = 0.0
-            ..maskFilter = MaskFilter.blur(BlurStyle.normal, shadow.blur);
+            ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, shadow.blur);
           _ctx.save();
           _ctx.translate(shadow.offsetX, shadow.offsetY);
           final paintData = paint.webOnlyPaintData;
@@ -642,9 +643,9 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
           // the opaque occluder. For that reason, we fill with the shadow color,
           // and set the shadow color to fully opaque. This way, the visible
           // pixels are less opaque and less noticeable.
-          final paint = Paint()
+          final paint = ui.Paint()
             ..color = shadow.color
-            ..style = PaintingStyle.fill
+            ..style = ui.PaintingStyle.fill
             ..strokeWidth = 0.0;
           _ctx.save();
           final paintData = paint.webOnlyPaintData;
@@ -663,7 +664,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawImage(Image image, Offset p, PaintData paint) {
+  void drawImage(ui.Image image, ui.Offset p, ui.PaintData paint) {
     _applyPaint(paint);
     html.Element imgElement = (image as HtmlImage).imgElement.clone(true);
     imgElement.style
@@ -673,7 +674,8 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
+  void drawImageRect(
+      ui.Image image, ui.Rect src, ui.Rect dst, ui.PaintData paint) {
     // TODO(het): Check if the src rect is the entire image, and if so just
     // append the imgElement and set it's height and width.
     ctx.drawImageScaledFromSource(
@@ -690,7 +692,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawParagraph(Paragraph paragraph, Offset offset) {
+  void drawParagraph(ui.Paragraph paragraph, ui.Offset offset) {
     assert(paragraph.webOnlyIsLaidOut);
 
     if (paragraph.webOnlyDrawOnCanvas) {
@@ -737,12 +739,12 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   /// Paints the [picture] into this canvas.
-  void drawPicture(Picture picture) {
+  void drawPicture(ui.Picture picture) {
     picture.recordingCanvas.apply(this);
   }
 
   /// 'Runs' the given [path] by applying all of its commands to the canvas.
-  void _runPath(Path path) {
+  void _runPath(ui.Path path) {
     ctx.beginPath();
     for (var subpath in path.subpaths) {
       for (var command in subpath.commands) {
@@ -797,63 +799,63 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   }
 }
 
-String _stringForBlendMode(BlendMode blendMode) {
+String _stringForBlendMode(ui.BlendMode blendMode) {
   if (blendMode == null) return null;
   switch (blendMode) {
-    case BlendMode.srcOver:
+    case ui.BlendMode.srcOver:
       return 'source-over';
-    case BlendMode.srcIn:
+    case ui.BlendMode.srcIn:
       return 'source-in';
-    case BlendMode.srcOut:
+    case ui.BlendMode.srcOut:
       return 'source-out';
-    case BlendMode.srcATop:
+    case ui.BlendMode.srcATop:
       return 'source-atop';
-    case BlendMode.dstOver:
+    case ui.BlendMode.dstOver:
       return 'destination-over';
-    case BlendMode.dstIn:
+    case ui.BlendMode.dstIn:
       return 'destination-in';
-    case BlendMode.dstOut:
+    case ui.BlendMode.dstOut:
       return 'destination-out';
-    case BlendMode.dstATop:
+    case ui.BlendMode.dstATop:
       return 'destination-atop';
-    case BlendMode.plus:
+    case ui.BlendMode.plus:
       return 'lighten';
-    case BlendMode.src:
+    case ui.BlendMode.src:
       return 'copy';
-    case BlendMode.xor:
+    case ui.BlendMode.xor:
       return 'xor';
-    case BlendMode.multiply:
+    case ui.BlendMode.multiply:
     // Falling back to multiply, ignoring alpha channel.
     // TODO(flutter_web): only used for debug, find better fallback for web.
-    case BlendMode.modulate:
+    case ui.BlendMode.modulate:
       return 'multiply';
-    case BlendMode.screen:
+    case ui.BlendMode.screen:
       return 'screen';
-    case BlendMode.overlay:
+    case ui.BlendMode.overlay:
       return 'overlay';
-    case BlendMode.darken:
+    case ui.BlendMode.darken:
       return 'darken';
-    case BlendMode.lighten:
+    case ui.BlendMode.lighten:
       return 'lighten';
-    case BlendMode.colorDodge:
+    case ui.BlendMode.colorDodge:
       return 'color-dodge';
-    case BlendMode.colorBurn:
+    case ui.BlendMode.colorBurn:
       return 'color-burn';
-    case BlendMode.hardLight:
+    case ui.BlendMode.hardLight:
       return 'hard-light';
-    case BlendMode.softLight:
+    case ui.BlendMode.softLight:
       return 'soft-light';
-    case BlendMode.difference:
+    case ui.BlendMode.difference:
       return 'difference';
-    case BlendMode.exclusion:
+    case ui.BlendMode.exclusion:
       return 'exclusion';
-    case BlendMode.hue:
+    case ui.BlendMode.hue:
       return 'hue';
-    case BlendMode.saturation:
+    case ui.BlendMode.saturation:
       return 'saturation';
-    case BlendMode.color:
+    case ui.BlendMode.color:
       return 'color';
-    case BlendMode.luminosity:
+    case ui.BlendMode.luminosity:
       return 'luminosity';
     default:
       throw new UnimplementedError(
@@ -861,27 +863,27 @@ String _stringForBlendMode(BlendMode blendMode) {
   }
 }
 
-String _stringForStrokeCap(StrokeCap strokeCap) {
+String _stringForStrokeCap(ui.StrokeCap strokeCap) {
   if (strokeCap == null) return null;
   switch (strokeCap) {
-    case StrokeCap.butt:
+    case ui.StrokeCap.butt:
       return 'butt';
-    case StrokeCap.round:
+    case ui.StrokeCap.round:
       return 'round';
-    case StrokeCap.square:
+    case ui.StrokeCap.square:
     default:
       return 'square';
   }
 }
 
-String _stringForStrokeJoin(StrokeJoin strokeJoin) {
+String _stringForStrokeJoin(ui.StrokeJoin strokeJoin) {
   assert(strokeJoin != null);
   switch (strokeJoin) {
-    case StrokeJoin.round:
+    case ui.StrokeJoin.round:
       return 'round';
-    case StrokeJoin.bevel:
+    case ui.StrokeJoin.bevel:
       return 'bevel';
-    case StrokeJoin.miter:
+    case ui.StrokeJoin.miter:
     default:
       return 'miter';
   }

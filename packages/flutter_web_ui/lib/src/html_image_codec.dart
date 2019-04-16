@@ -2,14 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:html' as html;
-import 'dart:typed_data';
+part of engine;
 
-import 'painting.dart';
-import 'util.dart';
-
-class HtmlCodec implements Codec {
+class HtmlCodec implements ui.Codec {
   final String src;
 
   HtmlCodec(this.src);
@@ -21,10 +16,10 @@ class HtmlCodec implements Codec {
   int get repetitionCount => 0;
 
   @override
-  Future<FrameInfo> getNextFrame() async {
+  Future<ui.FrameInfo> getNextFrame() async {
     StreamSubscription subscription;
     StreamSubscription errorSubscription;
-    final completer = Completer<FrameInfo>();
+    final completer = Completer<ui.FrameInfo>();
     final html.ImageElement imgElement = html.ImageElement();
     subscription = imgElement.onLoad.listen((_) {
       subscription.cancel();
@@ -60,17 +55,17 @@ class HtmlBlobCodec extends HtmlCodec {
   }
 }
 
-class SingleFrameInfo implements FrameInfo {
+class SingleFrameInfo implements ui.FrameInfo {
   SingleFrameInfo(this.image);
 
   @override
   Duration get duration => const Duration(milliseconds: 0);
 
   @override
-  final Image image;
+  final ui.Image image;
 }
 
-class HtmlImage implements Image {
+class HtmlImage implements ui.Image {
   final html.ImageElement imgElement;
 
   HtmlImage(this.imgElement, this.width, this.height);
@@ -89,7 +84,7 @@ class HtmlImage implements Image {
 
   @override
   Future<ByteData> toByteData(
-      {ImageByteFormat format = ImageByteFormat.rawRgba}) {
+      {ui.ImageByteFormat format = ui.ImageByteFormat.rawRgba}) {
     return futurize((Callback<ByteData> callback) {
       return _toByteData(format.index, (Uint8List encoded) {
         callback(encoded?.buffer?.asByteData());

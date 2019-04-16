@@ -2,22 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html';
-import 'dart:math' as math;
-
-import 'package:meta/meta.dart';
-
-import 'canvas.dart';
-import 'dom_renderer.dart';
-import 'geometry.dart';
-import 'hash_codes.dart';
-import 'lerp.dart';
-import 'painting.dart';
-import 'text/ruler.dart';
-import 'text/measurement.dart';
-import 'text/word_breaker.dart';
-import 'util.dart';
-import 'window.dart';
+part of ui;
 
 /// Whether to slant the glyphs in the font
 enum FontStyle {
@@ -320,6 +305,7 @@ class TextStyle {
     TextDecoration decoration,
     Color decorationColor,
     TextDecorationStyle decorationStyle,
+    double decorationThickness,
     FontWeight fontWeight,
     FontStyle fontStyle,
     TextBaseline textBaseline,
@@ -379,15 +365,15 @@ class TextStyle {
   final List<Shadow> _shadows;
 
   String get _effectiveFontFamily {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       // In widget tests we use a predictable-size font "Ahem". This makes
       // widget tests predictable and less flaky.
-      if (domRenderer.debugIsInWidgetTest) {
+      if (engine.domRenderer.debugIsInWidgetTest) {
         return 'Ahem';
       }
     }
     if (_fontFamily == null || _fontFamily.isEmpty) {
-      return DomRenderer.defaultFontFamily;
+      return engine.DomRenderer.defaultFontFamily;
     }
     return _fontFamily;
   }
@@ -440,7 +426,7 @@ class TextStyle {
 
   @override
   String toString() {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       return 'TextStyle('
           'color: ${_color != null ? _color : "unspecified"}, '
           'decoration: ${_decoration ?? "unspecified"}, '
@@ -561,15 +547,15 @@ class ParagraphStyle {
   final Locale _locale;
 
   String get _effectiveFontFamily {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       // In widget tests we use a predictable-size font "Ahem". This makes
       // widget tests predictable and less flaky.
-      if (domRenderer.debugIsInWidgetTest) {
+      if (engine.domRenderer.debugIsInWidgetTest) {
         return 'Ahem';
       }
     }
     if (_fontFamily == null || _fontFamily.isEmpty) {
-      return DomRenderer.defaultFontFamily;
+      return engine.DomRenderer.defaultFontFamily;
     }
     return _fontFamily;
   }
@@ -611,7 +597,7 @@ class ParagraphStyle {
 
   @override
   String toString() {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       return '$runtimeType('
           'textAlign: ${_textAlign ?? "unspecified"}, '
           'textDirection: ${_textDirection ?? "unspecified"}, '
@@ -898,7 +884,7 @@ class TextBox {
 
   @override
   String toString() {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       return 'TextBox.fromLTRBD(${left.toStringAsFixed(1)}, ${top.toStringAsFixed(1)}, ${right.toStringAsFixed(1)}, ${bottom.toStringAsFixed(1)}, $direction)';
     }
     return super.toString();
@@ -1135,8 +1121,8 @@ class Paragraph {
   ///
   /// To create a [Paragraph] object, use a [ParagraphBuilder].
   Paragraph._({
-    @required HtmlElement paragraphElement,
-    @required ParagraphGeometricStyle paragraphGeometricStyle,
+    @required html.HtmlElement paragraphElement,
+    @required engine.ParagraphGeometricStyle paragraphGeometricStyle,
     @required String plainText,
     @required Paint paint,
     @required TextAlign textAlign,
@@ -1150,8 +1136,8 @@ class Paragraph {
         _textDirection = textDirection,
         _paint = paint;
 
-  final HtmlElement _paragraphElement;
-  final ParagraphGeometricStyle _paragraphGeometricStyle;
+  final html.HtmlElement _paragraphElement;
+  final engine.ParagraphGeometricStyle _paragraphGeometricStyle;
   final String _plainText;
   final Paint _paint;
   final TextAlign _textAlign;
@@ -1162,7 +1148,7 @@ class Paragraph {
   ///
   /// It is likely that we will switch over to [Canvas] soon, and so this method
   /// of painting should be considered deprecated.
-  HtmlElement webOnlyGetParagraphElement() => _paragraphElement;
+  html.HtmlElement webOnlyGetParagraphElement() => _paragraphElement;
 
   /// The amount of horizontal space this paragraph occupies.
   ///
@@ -1224,7 +1210,7 @@ class Paragraph {
       return;
     }
 
-    TextMeasurementService.instance.measure(this, constraints);
+    engine.TextMeasurementService.instance.measure(this, constraints);
     _lastUsedConstraints = constraints;
 
     if (_webOnlyIsSingleLine && constraints != null) {
@@ -1253,7 +1239,7 @@ class Paragraph {
   }
 
   /// Returns the style that contains properties for layout computation.
-  ParagraphGeometricStyle webOnlyGetParagraphGeometricStyle() =>
+  engine.ParagraphGeometricStyle webOnlyGetParagraphGeometricStyle() =>
       _paragraphGeometricStyle;
 
   /// This paragraph's text as a plain string.
@@ -1324,7 +1310,7 @@ class Paragraph {
   ///
   /// Ignores properties that do not affect layout, such as
   /// [ParagraphStyle.textAlign].
-  bool webOnlyDebugHasSameRootStyle(ParagraphGeometricStyle style) {
+  bool webOnlyDebugHasSameRootStyle(engine.ParagraphGeometricStyle style) {
     assert(() {
       if (style != _paragraphGeometricStyle) {
         throw Exception('Attempted to measure a paragraph whose style is '
@@ -1366,7 +1352,7 @@ class Paragraph {
 
     final double boxLeftOffset = _getBoxLeftOffset(start);
     end = math.min(end, _plainText.length);
-    final TextDimensions box = end < _plainText.length
+    final engine.TextDimensions box = end < _plainText.length
         ? _measureBox(_plainText.substring(0, end))
         : _measureBox(_plainText);
 
@@ -1381,9 +1367,9 @@ class Paragraph {
     ];
   }
 
-  TextDimensions _measureBox(String plainText) {
+  engine.TextDimensions _measureBox(String plainText) {
     final Paragraph clone = _cloneWithText(plainText);
-    return TextMeasurementService.instance.measureSingleLineText(clone);
+    return engine.TextMeasurementService.instance.measureSingleLineText(clone);
   }
 
   double _getBoxLeftOffset(int start) {
@@ -1391,7 +1377,7 @@ class Paragraph {
       return 0;
     }
 
-    return TextMeasurementService.instance.measureSingleLineWidth(
+    return engine.TextMeasurementService.instance.measureSingleLineWidth(
         _plainText.substring(0, start), _paragraphGeometricStyle);
   }
 
@@ -1416,7 +1402,8 @@ class Paragraph {
     }
 
     final double dx = offset.dx - webOnlyAlignOffset;
-    final TextMeasurementService instance = TextMeasurementService.instance;
+    final engine.TextMeasurementService instance =
+        engine.TextMeasurementService.instance;
 
     double _measureSingleLineWidth(String text) {
       if (_paragraphGeometricStyle.letterSpacing != null ||
@@ -1474,8 +1461,8 @@ class Paragraph {
       return [offset, offset];
     }
 
-    final int start = WordBreaker.prevBreakIndex(_plainText, offset);
-    final int end = WordBreaker.nextBreakIndex(_plainText, offset);
+    final int start = engine.WordBreaker.prevBreakIndex(_plainText, offset);
+    final int end = engine.WordBreaker.nextBreakIndex(_plainText, offset);
     return [start, end];
   }
 
@@ -1504,7 +1491,8 @@ class ParagraphBuilder {
   /// Marks a call to the [pop] method in the [_ops] list.
   static final _paragraphBuilderPop = Object();
 
-  final HtmlElement _paragraphElement = domRenderer.createElement('p');
+  final html.HtmlElement _paragraphElement =
+      engine.domRenderer.createElement('p');
   final ParagraphStyle _paragraphStyle;
   final List<dynamic> _ops = <dynamic>[];
 
@@ -1685,7 +1673,7 @@ class ParagraphBuilder {
           element: _paragraphElement, style: cumulativeStyle);
       return new Paragraph._(
         paragraphElement: _paragraphElement,
-        paragraphGeometricStyle: ParagraphGeometricStyle(
+        paragraphGeometricStyle: engine.ParagraphGeometricStyle(
           fontFamily: fontFamily,
           fontWeight: fontWeight,
           fontStyle: fontStyle,
@@ -1724,7 +1712,7 @@ class ParagraphBuilder {
     }
 
     final String plainText = plainTextBuffer.toString();
-    domRenderer.appendText(_paragraphElement, plainText);
+    engine.domRenderer.appendText(_paragraphElement, plainText);
     applyTextStyleToElement(element: _paragraphElement, style: cumulativeStyle);
     // Since this is a plain paragraph apply background color to paragraph tag
     // instead of individual spans.
@@ -1734,7 +1722,7 @@ class ParagraphBuilder {
     }
     return new Paragraph._(
       paragraphElement: _paragraphElement,
-      paragraphGeometricStyle: ParagraphGeometricStyle(
+      paragraphGeometricStyle: engine.ParagraphGeometricStyle(
         fontFamily: fontFamily,
         fontWeight: fontWeight,
         fontStyle: fontStyle,
@@ -1759,15 +1747,15 @@ class ParagraphBuilder {
     for (int i = 0; i < _ops.length; i++) {
       dynamic op = _ops[i];
       if (op is TextStyle) {
-        var span = domRenderer.createElement('span');
+        var span = engine.domRenderer.createElement('span');
         applyTextStyleToElement(element: span, style: op);
         if (op._background != null) {
           applyTextBackgroundToElement(element: span, style: op);
         }
-        domRenderer.append(currentElement(), span);
+        engine.domRenderer.append(currentElement(), span);
         elementStack.add(span);
       } else if (op is String) {
-        domRenderer.appendText(currentElement(), op);
+        engine.domRenderer.appendText(currentElement(), op);
       } else if (identical(op, _paragraphBuilderPop)) {
         elementStack.removeLast();
       } else {
@@ -1777,7 +1765,7 @@ class ParagraphBuilder {
 
     return new Paragraph._(
       paragraphElement: _paragraphElement,
-      paragraphGeometricStyle: ParagraphGeometricStyle(
+      paragraphGeometricStyle: engine.ParagraphGeometricStyle(
           fontFamily: _paragraphStyle._fontFamily,
           fontWeight: _paragraphStyle._fontWeight,
           fontStyle: _paragraphStyle._fontStyle,
@@ -1794,19 +1782,19 @@ class ParagraphBuilder {
 /// Applies background color properties in text style to paragraph or span
 /// elements.
 void applyTextBackgroundToElement({
-  @required HtmlElement element,
+  @required html.HtmlElement element,
   @required TextStyle style,
   TextStyle previousStyle,
 }) {
   var newBackground = style._background;
   if (previousStyle == null) {
     if (newBackground != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'background-color', newBackground.color.toCssString());
     }
   } else {
     if (newBackground != previousStyle._background) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'background-color', newBackground.color?.toCssString());
     }
   }
@@ -1817,7 +1805,7 @@ void applyTextBackgroundToElement({
 ///
 /// If [previousStyle] is not null, updates only the mismatching attributes.
 void applyTextStyleToElement({
-  @required HtmlElement element,
+  @required html.HtmlElement element,
   @required TextStyle style,
   TextStyle previousStyle,
 }) {
@@ -1828,31 +1816,31 @@ void applyTextStyleToElement({
     var color = style._color;
     if (style._foreground?.color != null) color = style._foreground.color;
     if (color != null) {
-      domRenderer.setElementStyle(element, 'color', color.toCssString());
+      engine.domRenderer.setElementStyle(element, 'color', color.toCssString());
     }
     if (style._fontSize != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'font-size', '${style._fontSize.floor()}px');
     }
     if (style._fontWeight != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'font-weight', webOnlyFontWeightToCss(style._fontWeight));
     }
     if (style._fontStyle != null) {
-      domRenderer.setElementStyle(element, 'font-style',
+      engine.domRenderer.setElementStyle(element, 'font-style',
           style._fontStyle == FontStyle.normal ? 'normal' : 'italic');
     }
     if (style._effectiveFontFamily != null) {
-      domRenderer.setElementStyle(
-          element, 'font-family', style._effectiveFontFamily);
+      engine.domRenderer
+          .setElementStyle(element, 'font-family', style._effectiveFontFamily);
     }
     if (style._letterSpacing != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'letter-spacing', '${style._letterSpacing}px');
     }
     if (style._wordSpacing != null) {
-      domRenderer.setElementStyle(
-          element, 'word-spacing', '${style._wordSpacing}px');
+      engine.domRenderer
+          .setElementStyle(element, 'word-spacing', '${style._wordSpacing}px');
     }
     if (style._decoration != null) {
       updateDecoration = true;
@@ -1864,21 +1852,22 @@ void applyTextStyleToElement({
       if (style._foreground?.color != null) {
         color = style._foreground.color;
       }
-      domRenderer.setElementStyle(element, 'color', color?.toCssString());
+      engine.domRenderer
+          .setElementStyle(element, 'color', color?.toCssString());
     }
 
     if (style._fontSize != previousStyle._fontSize) {
-      domRenderer.setElementStyle(element, 'font-size',
+      engine.domRenderer.setElementStyle(element, 'font-size',
           style._fontSize != null ? '${style._fontSize.floor()}px' : null);
     }
 
     if (style._fontWeight != previousStyle._fontWeight) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'font-weight', webOnlyFontWeightToCss(style._fontWeight));
     }
 
     if (style._fontStyle != previousStyle._fontStyle) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element,
           'font-style',
           style._fontStyle != null
@@ -1886,15 +1875,16 @@ void applyTextStyleToElement({
               : null);
     }
     if (style._fontFamily != previousStyle._fontFamily) {
-      domRenderer.setElementStyle(element, 'font-family', style._fontFamily);
+      engine.domRenderer
+          .setElementStyle(element, 'font-family', style._fontFamily);
     }
     if (style._letterSpacing != previousStyle._letterSpacing) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'letter-spacing', '${style._letterSpacing}px');
     }
     if (style._wordSpacing != previousStyle._wordSpacing) {
-      domRenderer.setElementStyle(
-          element, 'word-spacing', '${style._wordSpacing}px');
+      engine.domRenderer
+          .setElementStyle(element, 'word-spacing', '${style._wordSpacing}px');
     }
     if (style._decoration != previousStyle._decoration ||
         style._decorationStyle != previousStyle._decorationStyle ||
@@ -1908,10 +1898,11 @@ void applyTextStyleToElement({
       String textDecoration =
           _textDecorationToCssString(style._decoration, style._decorationStyle);
       if (textDecoration != null) {
-        domRenderer.setElementStyle(element, 'text-decoration', textDecoration);
+        engine.domRenderer
+            .setElementStyle(element, 'text-decoration', textDecoration);
         var decorationColor = style._decorationColor;
         if (decorationColor != null) {
-          domRenderer.setElementStyle(
+          engine.domRenderer.setElementStyle(
               element, 'text-decoration-color', decorationColor.toCssString());
         }
       }
@@ -1962,7 +1953,7 @@ String _decorationStyleToCssString(TextDecorationStyle decorationStyle) {
 ///
 /// If [previousStyle] is not null, updates only the mismatching attributes.
 void applyParagraphStyleToElement({
-  @required HtmlElement element,
+  @required html.HtmlElement element,
   @required ParagraphStyle style,
   ParagraphStyle previousStyle,
 }) {
@@ -1971,68 +1962,70 @@ void applyParagraphStyleToElement({
   // TODO(yjbanov): What do we do about ParagraphStyle._locale and ellipsis?
   if (previousStyle == null) {
     if (style._textAlign != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element,
           'text-align',
           textAlignToCssValue(
               style._textAlign, style._textDirection ?? TextDirection.ltr));
     }
     if (style._maxLines != null) {
-      domRenderer.setElementStyle(element, 'max-lines', '${style._maxLines}');
+      engine.domRenderer
+          .setElementStyle(element, 'max-lines', '${style._maxLines}');
     }
     if (style._webOnlyLineHeight != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'line-height', '${style._webOnlyLineHeight}');
     }
     if (style._textDirection != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'direction', textDirectionToCssValue(style._textDirection));
     }
     if (style._fontSize != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'font-size', '${style._fontSize.floor()}px');
     }
     if (style._fontWeight != null) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'font-weight', webOnlyFontWeightToCss(style._fontWeight));
     }
     if (style._fontStyle != null) {
-      domRenderer.setElementStyle(element, 'font-style',
+      engine.domRenderer.setElementStyle(element, 'font-style',
           style._fontStyle == FontStyle.normal ? 'normal' : 'italic');
     }
     if (style._effectiveFontFamily != null) {
-      domRenderer.setElementStyle(
-          element, 'font-family', style._effectiveFontFamily);
+      engine.domRenderer
+          .setElementStyle(element, 'font-family', style._effectiveFontFamily);
     }
   } else {
     if (style._textAlign != previousStyle._textAlign) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element,
           'text-align',
           textAlignToCssValue(
               style._textAlign, style._textDirection ?? TextDirection.ltr));
     }
     if (style._maxLines != previousStyle._maxLines) {
-      domRenderer.setElementStyle(element, 'max-lines', '${style._maxLines}');
+      engine.domRenderer
+          .setElementStyle(element, 'max-lines', '${style._maxLines}');
     }
     if (style._webOnlyLineHeight != style._webOnlyLineHeight) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'line-height', '${style._webOnlyLineHeight}');
     }
     if (style._textDirection != previousStyle._textDirection) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'direction', textDirectionToCssValue(style._textDirection));
     }
     if (style._fontSize != previousStyle._fontSize) {
-      domRenderer.setElementStyle(element, 'font-size',
+      engine.domRenderer.setElementStyle(element, 'font-size',
           style._fontSize != null ? '${style._fontSize.floor()}px' : null);
     }
     if (style._fontWeight != previousStyle._fontWeight) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element, 'font-weight', webOnlyFontWeightToCss(style._fontWeight));
     }
     if (style._fontStyle != previousStyle._fontStyle) {
-      domRenderer.setElementStyle(
+      engine.domRenderer.setElementStyle(
           element,
           'font-style',
           style._fontStyle != null
@@ -2040,7 +2033,8 @@ void applyParagraphStyleToElement({
               : null);
     }
     if (style._fontFamily != previousStyle._fontFamily) {
-      domRenderer.setElementStyle(element, 'font-family', style._fontFamily);
+      engine.domRenderer
+          .setElementStyle(element, 'font-family', style._fontFamily);
     }
   }
 }
@@ -2079,4 +2073,16 @@ String webOnlyFontWeightToCss(FontWeight fontWeight) {
   }());
 
   return '';
+}
+
+/// Loads a font from a buffer and makes it available for rendering text.
+///
+/// * `list`: A list of bytes containing the font file.
+/// * `fontFamily`: The family name used to identify the font in text styles.
+///  If this is not provided, then the family name will be extracted from the font file.
+Future<void> loadFontFromList(Uint8List list, {String fontFamily}) {
+  if (engine.assertionsEnabled) {
+    throw UnsupportedError('loadFontFromList is not supported.');
+  }
+  return Future<void>.value(null);
 }

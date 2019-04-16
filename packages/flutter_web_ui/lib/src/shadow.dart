@@ -2,24 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html';
-
-import 'package:flutter_web_ui/ui.dart' show Rect;
-import 'package:meta/meta.dart';
-
-import 'painting.dart';
+part of engine;
 
 /// This code is ported from the AngularDart SCSS.
 ///
 /// See: https://github.com/dart-lang/angular_components/blob/master/lib/css/material/_shadow.scss
 class ElevationShadow {
   /// Applies a standard transition style for box-shadow to box-shadow.
-  static void applyShadowTransition(CssStyleDeclaration style) {
+  static void applyShadowTransition(html.CssStyleDeclaration style) {
     style.transition = 'box-shadow .28s cubic-bezier(.4, 0, .2, 1)';
   }
 
   /// Disables box-shadow.
-  static void applyShadowNone(CssStyleDeclaration style) {
+  static void applyShadowNone(html.CssStyleDeclaration style) {
     style.boxShadow = 'none';
   }
 
@@ -29,8 +24,8 @@ class ElevationShadow {
   /// of the shadow needs to be changed dynamically, use [applyShadow].
   ///
   /// Valid values: 2, 3, 4, 6, 8, 12, 16, 24
-  static void applyShadowElevation(CssStyleDeclaration style,
-      {@required int dp, @required Color color}) {
+  static void applyShadowElevation(html.CssStyleDeclaration style,
+      {@required int dp, @required ui.Color color}) {
     const keyUmbraOpacity = 0.2;
     const keyPenumbraOpacity = 0.14;
     const ambientShadowOpacity = 0.12;
@@ -78,7 +73,7 @@ class ElevationShadow {
   /// - `animated` -- Whether to animate the shadow transition.
   /// - `elevation` -- Z-elevation of shadow. Valid Values: 1,2,3,4,5
   static void applyShadow(
-      CssStyleDeclaration style, double elevation, Color color) {
+      html.CssStyleDeclaration style, double elevation, ui.Color color) {
     applyShadowTransition(style);
 
     if (elevation <= 0.0) {
@@ -99,7 +94,7 @@ class ElevationShadow {
   }
 
   static List<CanvasShadow> computeCanvasShadows(
-      double elevation, Color color) {
+      double elevation, ui.Color color) {
     if (elevation <= 0.0) {
       return const <CanvasShadow>[];
     } else if (elevation <= 1.0) {
@@ -120,33 +115,33 @@ class ElevationShadow {
   /// Expands rect to include size of shadow.
   ///
   /// Computed from shadow elevation offset + spread, blur
-  static Rect computeShadowRect(Rect r, double elevation) {
+  static ui.Rect computeShadowRect(ui.Rect r, double elevation) {
     if (elevation <= 0.0) {
       return r;
     } else if (elevation <= 1.0) {
-      return Rect.fromLTRB(r.left, r.top, r.right + 3, r.bottom + 4);
+      return ui.Rect.fromLTRB(r.left, r.top, r.right + 3, r.bottom + 4);
     } else if (elevation <= 2.0) {
-      return Rect.fromLTRB(r.left, r.top, r.right + 6, r.bottom + 7);
+      return ui.Rect.fromLTRB(r.left, r.top, r.right + 6, r.bottom + 7);
     } else if (elevation <= 3.0) {
-      return Rect.fromLTRB(r.left, r.top, r.right + 9, r.bottom + 11);
+      return ui.Rect.fromLTRB(r.left, r.top, r.right + 9, r.bottom + 11);
     } else if (elevation <= 4.0) {
-      return Rect.fromLTRB(r.left, r.top, r.right + 10, r.bottom + 14);
+      return ui.Rect.fromLTRB(r.left, r.top, r.right + 10, r.bottom + 14);
     } else if (elevation <= 5.0) {
-      return Rect.fromLTRB(r.left, r.top, r.right + 20, r.bottom + 30);
+      return ui.Rect.fromLTRB(r.left, r.top, r.right + 20, r.bottom + 30);
     } else {
-      return Rect.fromLTRB(r.left, r.top, r.right + 23, r.bottom + 45);
+      return ui.Rect.fromLTRB(r.left, r.top, r.right + 23, r.bottom + 45);
     }
   }
 
   static List<CanvasShadow> computeShadowElevation(
-      {@required int dp, @required Color color}) {
+      {@required int dp, @required ui.Color color}) {
     final int red = color.red;
     final int green = color.green;
     final int blue = color.blue;
 
-    final penumbraColor = Color.fromARGB(36, red, green, blue);
-    final ambientShadowColor = Color.fromARGB(31, red, green, blue);
-    final umbraColor = Color.fromARGB(51, red, green, blue);
+    final penumbraColor = ui.Color.fromARGB(36, red, green, blue);
+    final ambientShadowColor = ui.Color.fromARGB(31, red, green, blue);
+    final umbraColor = ui.Color.fromARGB(51, red, green, blue);
 
     final List<CanvasShadow> result = <CanvasShadow>[];
     if (dp == 2) {
@@ -360,5 +355,5 @@ class CanvasShadow {
   final double blur;
   // TODO(yjbanov): is there a way to implement/emulate spread on Canvas2D?
   final double spread;
-  final Color color;
+  final ui.Color color;
 }

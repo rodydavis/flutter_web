@@ -4,9 +4,7 @@
 
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter_web_ui/ui.dart' as ui show Image;
-import 'package:flutter_web_ui/src/painting.dart';
-
+import 'package:flutter_web_ui/ui.dart' as ui show Image, ImageByteFormat;
 import 'package:flutter_web/foundation.dart';
 import 'package:flutter_web/painting.dart';
 
@@ -69,7 +67,7 @@ class TestImage implements ui.Image {
 
   @override
   Future<ByteData> toByteData(
-      {ImageByteFormat format = ImageByteFormat.rawRgba}) {
+      {ui.ImageByteFormat format = ui.ImageByteFormat.rawRgba}) {
     throw UnsupportedError('Not supported in this test');
   }
 }

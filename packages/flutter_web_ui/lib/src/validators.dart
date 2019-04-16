@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:typed_data';
+part of engine;
 
-import 'geometry.dart';
-
-bool rectIsValid(Rect rect) {
+bool rectIsValid(ui.Rect rect) {
   assert(rect != null, 'Rect argument was null.');
   assert(
       !(rect.left.isNaN ||
@@ -17,7 +15,7 @@ bool rectIsValid(Rect rect) {
   return true;
 }
 
-bool rrectIsValid(RRect rrect) {
+bool rrectIsValid(ui.RRect rrect) {
   assert(rrect != null, 'RRect argument was null.');
   assert(
       !(rrect.left.isNaN ||
@@ -28,7 +26,7 @@ bool rrectIsValid(RRect rrect) {
   return true;
 }
 
-bool offsetIsValid(Offset offset) {
+bool offsetIsValid(ui.Offset offset) {
   assert(offset != null, 'Offset argument was null.');
   assert(!offset.dx.isNaN && !offset.dy.isNaN,
       'Offset argument contained a NaN value.');
@@ -41,7 +39,7 @@ bool matrix4IsValid(Float64List matrix4) {
   return true;
 }
 
-bool radiusIsValid(Radius radius) {
+bool radiusIsValid(ui.Radius radius) {
   assert(radius != null, 'Radius argument was null.');
   assert(!radius.x.isNaN && !radius.y.isNaN,
       'Radius argument contained a NaN value.');

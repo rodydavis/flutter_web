@@ -1,10 +1,12 @@
+# See https://github.com/dart-lang/build/tree/master/build_web_compilers#configuration
 targets:
   $default:
     builders:
       build_web_compilers|entrypoint:
+        generate_for:
+        - web/**.dart
         options:
           dart2js_args:
-          #- --minify
-          #- --fast-startup
-          - --omit-implicit-checks
-          - --trust-primitives
+            - --minify
+            - --no-source-maps
+            - -O4

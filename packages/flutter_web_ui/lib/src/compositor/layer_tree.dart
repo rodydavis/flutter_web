@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'layer.dart';
-import 'raster_cache.dart';
-import '../geometry.dart';
-import '../bitmap_canvas.dart';
-
-import 'package:vector_math/vector_math_64.dart';
+part of engine;
 
 /// A tree of [Layer]s that, together with a [Size] compose a frame.
 class LayerTree {
@@ -15,7 +10,7 @@ class LayerTree {
   Layer rootLayer;
 
   /// The size (in physical pixels) of the frame to paint this layer tree into.
-  Size frameSize;
+  ui.Size frameSize;
 
   /// Performs a preroll phase before painting the layer tree.
   ///

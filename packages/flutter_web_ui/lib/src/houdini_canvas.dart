@@ -7,18 +7,7 @@
 // - avoid producing DOM-based clips if there is no text
 // - evaluate using stylesheets for static CSS properties
 // - evaluate reusing houdini canvases
-import 'dart:convert' as convert;
-import 'dart:html' as html;
-
-import 'canvas.dart';
-import 'dom_renderer.dart';
-import 'engine_canvas.dart';
-import 'geometry.dart';
-import 'html_image_codec.dart';
-import 'painting.dart';
-import 'recording_canvas.dart';
-import 'text.dart';
-import 'util.dart';
+part of engine;
 
 /// A canvas that renders to a combination of HTML DOM and CSS Custom Paint API.
 ///
@@ -31,7 +20,7 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
   /// where this canvas paints.
   ///
   /// Painting outside the bounds of this rectangle is cropped.
-  final Rect bounds;
+  final ui.Rect bounds;
 
   HoudiniCanvas(this.bounds) {
     // TODO(yjbanov): would it be faster to specify static values in a
@@ -71,18 +60,17 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
   /// Sends the paint commands to the CSS custom painter for painting.
   void commit() {
     if (_serializedCommands.isNotEmpty) {
-      rootElement.style
-          .setProperty('--flt', convert.json.encode(_serializedCommands));
+      rootElement.style.setProperty('--flt', json.encode(_serializedCommands));
     } else {
       rootElement.style.removeProperty('--flt');
     }
   }
 
   @override
-  void clipRect(Rect rect) {
+  void clipRect(ui.Rect rect) {
     final clip = html.Element.tag('flt-clip-rect');
     String cssTransform = matrix4ToCssTransform(
-        transformWithOffset(currentTransform, Offset(rect.left, rect.top)));
+        transformWithOffset(currentTransform, ui.Offset(rect.left, rect.top)));
     clip.style
       ..overflow = 'hidden'
       ..position = 'absolute'
@@ -100,7 +88,7 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void clipRRect(RRect rrect) {
+  void clipRRect(ui.RRect rrect) {
     final outer = rrect.outerRect;
     if (rrect.isRect) {
       clipRect(outer);
@@ -152,73 +140,74 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void clipPath(Path path) {
+  void clipPath(ui.Path path) {
     // TODO(yjbanov): implement.
   }
 
   @override
-  void drawColor(Color color, BlendMode blendMode) {
+  void drawColor(ui.Color color, ui.BlendMode blendMode) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawLine(Offset p1, Offset p2, PaintData paint) {
+  void drawLine(ui.Offset p1, ui.Offset p2, ui.PaintData paint) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawPaint(PaintData paint) {
+  void drawPaint(ui.PaintData paint) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawRect(Rect rect, PaintData paint) {
+  void drawRect(ui.Rect rect, ui.PaintData paint) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawRRect(RRect rrect, PaintData paint) {
+  void drawRRect(ui.RRect rrect, ui.PaintData paint) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawDRRect(RRect outer, RRect inner, PaintData paint) {
+  void drawDRRect(ui.RRect outer, ui.RRect inner, ui.PaintData paint) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawOval(Rect rect, PaintData paint) {
+  void drawOval(ui.Rect rect, ui.PaintData paint) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawCircle(Offset c, double radius, PaintData paint) {
+  void drawCircle(ui.Offset c, double radius, ui.PaintData paint) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawPath(Path path, PaintData paint) {
+  void drawPath(ui.Path path, ui.PaintData paint) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawShadow(
-      Path path, Color color, double elevation, bool transparentOccluder) {
+  void drawShadow(ui.Path path, ui.Color color, double elevation,
+      bool transparentOccluder) {
     // Drawn using CSS Paint.
   }
 
   @override
-  void drawImage(Image image, Offset p, PaintData paint) {
+  void drawImage(ui.Image image, ui.Offset p, ui.PaintData paint) {
     // TODO(yjbanov): implement.
   }
 
   @override
-  void drawImageRect(Image image, Rect src, Rect dst, PaintData paint) {
+  void drawImageRect(
+      ui.Image image, ui.Rect src, ui.Rect dst, ui.PaintData paint) {
     // TODO(yjbanov): implement src rectangle
-    HtmlImage htmlImage = image;
+    HtmlImage htmlImage = image as HtmlImage;
     html.Element imageBox = html.Element.tag('flt-img');
     String cssTransform = matrix4ToCssTransform(
-        transformWithOffset(currentTransform, Offset(dst.left, dst.top)));
+        transformWithOffset(currentTransform, ui.Offset(dst.left, dst.top)));
     imageBox.style
       ..position = 'absolute'
       ..transformOrigin = '0 0 0'
@@ -232,7 +221,7 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
   }
 
   @override
-  void drawParagraph(Paragraph paragraph, Offset offset) {
+  void drawParagraph(ui.Paragraph paragraph, ui.Offset offset) {
     assert(paragraph.webOnlyIsLaidOut);
 
     html.Element paragraphElement =

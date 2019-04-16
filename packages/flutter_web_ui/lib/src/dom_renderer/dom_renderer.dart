@@ -2,24 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-import 'dart:html' as html
-    show
-        CssStyleSheet,
-        DivElement,
-        document,
-        Element,
-        MetaElement,
-        StyleElement,
-        Node,
-        window;
-import 'dart:js_util' as js_util;
-
-import 'package:flutter_web_ui/ui.dart' as ui;
-
-import '../engine.dart';
-import '../text/measurement.dart';
-import '../util.dart';
+part of engine;
 
 class DomRenderer {
   DomRenderer() {
@@ -217,6 +200,23 @@ flt-semantics input[type=range] {
     sheet.insertRule('''
 flt-semantics input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
+}
+''', sheet.cssRules.length);
+
+    // On iOS, the invisible semantic text field has a visible cursor and
+    // selection highlight. The following 2 CSS rules force everything to be
+    // transparent.
+    sheet.insertRule('''
+flt-semantics ::selection {
+  background-color: transparent;
+}
+''', sheet.cssRules.length);
+
+    sheet.insertRule('''
+flt-semantics input,
+flt-semantics textarea,
+flt-semantics [contentEditable="true"] {
+  caret-color: transparent;
 }
 ''', sheet.cssRules.length);
 

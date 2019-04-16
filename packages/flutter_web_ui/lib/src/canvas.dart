@@ -2,19 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:collection' as collection;
-import 'dart:math' as math;
-import 'dart:typed_data';
-
-import 'bitmap_canvas.dart';
-import 'conic.dart';
-import 'geometry.dart';
-import 'painting.dart';
-import 'recording_canvas.dart';
-import 'text.dart';
-import 'util.dart';
-import 'validators.dart';
-import 'window.dart' show window;
+part of ui;
 
 /// Defines how a list of points is interpreted when drawing a set of points.
 ///
@@ -71,15 +59,15 @@ class PictureRecorder {
   /// [Canvas] constructor.
   PictureRecorder();
 
-  RecordingCanvas _canvas;
+  engine.RecordingCanvas _canvas;
   Rect cullRect;
   bool _isRecording = false;
 
-  RecordingCanvas beginRecording(Rect bounds) {
+  engine.RecordingCanvas beginRecording(Rect bounds) {
     assert(!_isRecording);
     cullRect = bounds;
     _isRecording = true;
-    _canvas = new RecordingCanvas(cullRect);
+    _canvas = new engine.RecordingCanvas(cullRect);
     return _canvas;
   }
 
@@ -128,7 +116,7 @@ class PictureRecorder {
 /// The current transform and clip can be saved and restored using the stack
 /// managed by the [save], [saveLayer], and [restore] methods.
 class Canvas {
-  RecordingCanvas _canvas;
+  engine.RecordingCanvas _canvas;
 
   /// Creates a canvas for recording graphical operations into the
   /// given picture recorder.
@@ -276,7 +264,7 @@ class Canvas {
     if (bounds == null) {
       _saveLayerWithoutBounds(paint);
     } else {
-      assert(rectIsValid(bounds));
+      assert(engine.rectIsValid(bounds));
       _saveLayer(bounds, paint);
     }
   }
@@ -365,7 +353,7 @@ class Canvas {
   /// current clip.
   void clipRect(Rect rect,
       {ClipOp clipOp = ClipOp.intersect, bool doAntiAlias = true}) {
-    assert(rectIsValid(rect));
+    assert(engine.rectIsValid(rect));
     assert(clipOp != null);
     assert(doAntiAlias != null);
     _clipRect(rect, clipOp, doAntiAlias);
@@ -384,7 +372,7 @@ class Canvas {
   /// in incorrect blending at the clip boundary. See [saveLayer] for a
   /// discussion of how to address that and some examples of using [clipRRect].
   void clipRRect(RRect rrect, {bool doAntiAlias = true}) {
-    assert(rrectIsValid(rrect));
+    assert(engine.rrectIsValid(rrect));
     assert(doAntiAlias != null);
     _clipRRect(rrect, doAntiAlias);
   }
@@ -430,8 +418,8 @@ class Canvas {
   ///
   /// The `p1` and `p2` arguments are interpreted as offsets from the origin.
   void drawLine(Offset p1, Offset p2, Paint paint) {
-    assert(offsetIsValid(p1));
-    assert(offsetIsValid(p2));
+    assert(engine.offsetIsValid(p1));
+    assert(engine.offsetIsValid(p2));
     assert(paint != null);
     _drawLine(p1, p2, paint);
   }
@@ -456,7 +444,7 @@ class Canvas {
   /// Draws a rectangle with the given [Paint]. Whether the rectangle is filled
   /// or stroked (or both) is controlled by [Paint.style].
   void drawRect(Rect rect, Paint paint) {
-    assert(rectIsValid(rect));
+    assert(engine.rectIsValid(rect));
     assert(paint != null);
     _drawRect(rect, paint);
   }
@@ -468,7 +456,7 @@ class Canvas {
   /// Draws a rounded rectangle with the given [Paint]. Whether the rectangle is
   /// filled or stroked (or both) is controlled by [Paint.style].
   void drawRRect(RRect rrect, Paint paint) {
-    assert(rrectIsValid(rrect));
+    assert(engine.rrectIsValid(rrect));
     assert(paint != null);
     _drawRRect(rrect, paint);
   }
@@ -483,8 +471,8 @@ class Canvas {
   ///
   /// This shape is almost but not quite entirely unlike an annulus.
   void drawDRRect(RRect outer, RRect inner, Paint paint) {
-    assert(rrectIsValid(outer));
-    assert(rrectIsValid(inner));
+    assert(engine.rrectIsValid(outer));
+    assert(engine.rrectIsValid(inner));
     assert(paint != null);
     _drawDRRect(outer, inner, paint);
   }
@@ -497,7 +485,7 @@ class Canvas {
   /// with the given [Paint]. Whether the oval is filled or stroked (or both) is
   /// controlled by [Paint.style].
   void drawOval(Rect rect, Paint paint) {
-    assert(rectIsValid(rect));
+    assert(engine.rectIsValid(rect));
     assert(paint != null);
     _drawOval(rect, paint);
   }
@@ -511,7 +499,7 @@ class Canvas {
   /// the third argument. Whether the circle is filled or stroked (or both) is
   /// controlled by [Paint.style].
   void drawCircle(Offset c, double radius, Paint paint) {
-    assert(offsetIsValid(c));
+    assert(engine.offsetIsValid(c));
     assert(paint != null);
     _drawCircle(c, radius, paint);
   }
@@ -532,7 +520,7 @@ class Canvas {
   /// This method is optimized for drawing arcs and should be faster than [Path.arcTo].
   void drawArc(Rect rect, double startAngle, double sweepAngle, bool useCenter,
       Paint paint) {
-    assert(rectIsValid(rect));
+    assert(engine.rectIsValid(rect));
     assert(paint != null);
     final pi = math.pi;
     final pi2 = 2.0 * pi;
@@ -583,7 +571,7 @@ class Canvas {
   /// given [Offset]. The image is composited into the canvas using the given [Paint].
   void drawImage(Image image, Offset p, Paint paint) {
     assert(image != null); // image is checked on the engine side
-    assert(offsetIsValid(p));
+    assert(engine.offsetIsValid(p));
     assert(paint != null);
     _drawImage(image, p, paint);
   }
@@ -603,8 +591,8 @@ class Canvas {
   /// performance.
   void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
     assert(image != null); // image is checked on the engine side
-    assert(rectIsValid(src));
-    assert(rectIsValid(dst));
+    assert(engine.rectIsValid(src));
+    assert(engine.rectIsValid(dst));
     assert(paint != null);
     _drawImageRect(image, src, dst, paint);
   }
@@ -628,8 +616,8 @@ class Canvas {
   /// positions.
   void drawImageNine(Image image, Rect center, Rect dst, Paint paint) {
     assert(image != null); // image is checked on the engine side
-    assert(rectIsValid(center));
-    assert(rectIsValid(dst));
+    assert(engine.rectIsValid(center));
+    assert(engine.rectIsValid(dst));
     assert(paint != null);
 
     // Assert you can fit the scaled image into dst.
@@ -804,7 +792,7 @@ class Canvas {
   /// [Paragraph.layout], to the `offset` argument's [Offset.dx] coordinate.
   void drawParagraph(Paragraph paragraph, Offset offset) {
     assert(paragraph != null);
-    assert(offsetIsValid(offset));
+    assert(engine.offsetIsValid(offset));
     _drawParagraph(paragraph, offset);
   }
 
@@ -964,7 +952,7 @@ class Picture {
   /// references to image or other large objects.
   int get approximateBytesUsed => 0;
 
-  final RecordingCanvas recordingCanvas;
+  final engine.RecordingCanvas recordingCanvas;
   final Rect cullRect;
 }
 
@@ -1071,11 +1059,11 @@ enum PathOperation {
 /// Paths can be drawn on canvases using [Canvas.drawPath], and can
 /// used to create clip regions using [Canvas.clipPath].
 class Path {
-  final List<Subpath> subpaths;
+  final List<engine.Subpath> subpaths;
 
-  Subpath get _currentSubpath => subpaths.isEmpty ? null : subpaths.last;
+  engine.Subpath get _currentSubpath => subpaths.isEmpty ? null : subpaths.last;
 
-  List<PathCommand> get _commands => _currentSubpath?.commands;
+  List<engine.PathCommand> get _commands => _currentSubpath?.commands;
 
   /// The current x-coordinate for this path.
   double get _currentX => _currentSubpath?.currentX ?? 0.0;
@@ -1087,13 +1075,14 @@ class Path {
   static RawRecordingCanvas _rawRecorder;
 
   /// Create a new empty [Path] object.
-  Path() : subpaths = <Subpath>[];
+  Path() : subpaths = <engine.Subpath>[];
 
   /// Creates a copy of another [Path].
   ///
   /// This copy is fast and does not require additional memory unless either
   /// the `source` path or the path returned by this constructor are modified.
-  Path.from(Path source) : subpaths = new List<Subpath>.from(source.subpaths);
+  Path.from(Path source)
+      : subpaths = new List<engine.Subpath>.from(source.subpaths);
 
   Path._clone(this.subpaths, this.fillType);
 
@@ -1104,7 +1093,7 @@ class Path {
 
   /// Opens a new subpath with starting point (x, y).
   void _openNewSubpath(double x, double y) {
-    subpaths.add(new Subpath(x, y));
+    subpaths.add(new engine.Subpath(x, y));
     _setCurrentPoint(x, y);
   }
 
@@ -1117,7 +1106,7 @@ class Path {
   /// Starts a new subpath at the given coordinate.
   void moveTo(double x, double y) {
     _openNewSubpath(x, y);
-    _commands.add(new MoveTo(x, y));
+    _commands.add(new engine.MoveTo(x, y));
   }
 
   /// Starts a new subpath at the given offset from the current point.
@@ -1125,13 +1114,13 @@ class Path {
     var newX = _currentX + dx;
     var newY = _currentY + dy;
     _openNewSubpath(newX, newY);
-    _commands.add(new MoveTo(newX, newY));
+    _commands.add(new engine.MoveTo(newX, newY));
   }
 
   /// Adds a straight line segment from the current point to the given
   /// point.
   void lineTo(double x, double y) {
-    _commands.add(new LineTo(x, y));
+    _commands.add(new engine.LineTo(x, y));
     _setCurrentPoint(x, y);
   }
 
@@ -1141,12 +1130,12 @@ class Path {
     var newX = _currentX + dx;
     var newY = _currentY + dy;
     _ensurePathStarted();
-    _commands.add(new LineTo(newX, newY));
+    _commands.add(new engine.LineTo(newX, newY));
     _setCurrentPoint(newX, newY);
   }
 
   void _ensurePathStarted() {
-    if (subpaths.isEmpty) subpaths.add(new Subpath(0.0, 0.0));
+    if (subpaths.isEmpty) subpaths.add(new engine.Subpath(0.0, 0.0));
   }
 
   /// Adds a quadratic bezier segment that curves from the current
@@ -1154,7 +1143,7 @@ class Path {
   /// (x1,y1).
   void quadraticBezierTo(double x1, double y1, double x2, double y2) {
     _ensurePathStarted();
-    _commands.add(new QuadraticCurveTo(x1, y1, x2, y2));
+    _commands.add(new engine.QuadraticCurveTo(x1, y1, x2, y2));
     _setCurrentPoint(x2, y2);
   }
 
@@ -1164,7 +1153,7 @@ class Path {
   /// point.
   void relativeQuadraticBezierTo(double x1, double y1, double x2, double y2) {
     _ensurePathStarted();
-    _commands.add(new QuadraticCurveTo(
+    _commands.add(new engine.QuadraticCurveTo(
         x1 + _currentX, y1 + _currentY, x2 + _currentX, y2 + _currentY));
     _setCurrentPoint(x2 + _currentX, y2 + _currentY);
   }
@@ -1175,7 +1164,7 @@ class Path {
   void cubicTo(
       double x1, double y1, double x2, double y2, double x3, double y3) {
     _ensurePathStarted();
-    _commands.add(new BezierCurveTo(x1, y1, x2, y2, x3, y3));
+    _commands.add(new engine.BezierCurveTo(x1, y1, x2, y2, x3, y3));
     _setCurrentPoint(x3, y3);
   }
 
@@ -1186,7 +1175,7 @@ class Path {
   void relativeCubicTo(
       double x1, double y1, double x2, double y2, double x3, double y3) {
     _ensurePathStarted();
-    _commands.add(new BezierCurveTo(x1 + _currentX, y1 + _currentY,
+    _commands.add(new engine.BezierCurveTo(x1 + _currentX, y1 + _currentY,
         x2 + _currentX, y2 + _currentY, x3 + _currentX, y3 + _currentY));
     _setCurrentPoint(x3 + _currentX, y3 + _currentY);
   }
@@ -1198,7 +1187,7 @@ class Path {
   /// less than 1, it is an ellipse.
   void conicTo(double x1, double y1, double x2, double y2, double w) {
     List<Offset> quads =
-        Conic(_currentX, _currentY, x1, y1, x2, y2, w).toQuads();
+        engine.Conic(_currentX, _currentY, x1, y1, x2, y2, w).toQuads();
     for (int i = 1, len = quads.length; i < len; i += 2) {
       quadraticBezierTo(
           quads[i].dx, quads[i].dy, quads[i + 1].dx, quads[i + 1].dy);
@@ -1233,7 +1222,7 @@ class Path {
   /// current point and ends at the start of the arc.
   void arcTo(
       Rect rect, double startAngle, double sweepAngle, bool forceMoveTo) {
-    assert(rectIsValid(rect));
+    assert(engine.rectIsValid(rect));
     var center = rect.center;
     var radiusX = rect.width / 2;
     var radiusY = rect.height / 2;
@@ -1244,8 +1233,8 @@ class Path {
     } else {
       lineTo(startX, startY);
     }
-    _commands.add(new Ellipse(center.dx, center.dy, radiusX, radiusY, 0.0,
-        startAngle, startAngle + sweepAngle, sweepAngle.isNegative));
+    _commands.add(new engine.Ellipse(center.dx, center.dy, radiusX, radiusY,
+        0.0, startAngle, startAngle + sweepAngle, sweepAngle.isNegative));
 
     _setCurrentPoint(radiusX * math.cos(startAngle + sweepAngle) + center.dx,
         radiusY * math.sin(startAngle + sweepAngle) + center.dy);
@@ -1273,8 +1262,8 @@ class Path {
     bool largeArc = false,
     bool clockwise = true,
   }) {
-    assert(offsetIsValid(arcEnd));
-    assert(radiusIsValid(radius));
+    assert(engine.offsetIsValid(arcEnd));
+    assert(engine.radiusIsValid(radius));
     // _currentX, _currentY are the coordinates of start point on path,
     // arcEnd is final point of arc.
     // rx,ry are the radii of the eclipse (semi-major/semi-minor axis)
@@ -1296,7 +1285,7 @@ class Path {
     // (a "lineto") joining the endpoints.
     // http://www.w3.org/TR/SVG/implnote.html#ArcOutOfRangeParameters
     if (isSamePoint || rx.toInt() == 0 || ry.toInt() == 0) {
-      _commands.add(new LineTo(arcEnd.dx, arcEnd.dy));
+      _commands.add(new engine.LineTo(arcEnd.dx, arcEnd.dy));
       _setCurrentPoint(arcEnd.dx, arcEnd.dy);
       return;
     }
@@ -1369,7 +1358,7 @@ class Path {
       sweepAngle -= math.pi * 2.0;
     }
 
-    _commands.add(new Ellipse(cx, cy, rx, ry, xAxisRotation, startAngle,
+    _commands.add(new engine.Ellipse(cx, cy, rx, ry, xAxisRotation, startAngle,
         startAngle + sweepAngle, sweepAngle.isNegative));
 
     _setCurrentPoint(arcEnd.dx, arcEnd.dy);
@@ -1396,8 +1385,8 @@ class Path {
     bool largeArc = false,
     bool clockwise = true,
   }) {
-    assert(offsetIsValid(arcEndDelta));
-    assert(radiusIsValid(radius));
+    assert(engine.offsetIsValid(arcEndDelta));
+    assert(engine.radiusIsValid(radius));
     arcToPoint(
         new Offset(_currentX + arcEndDelta.dx, _currentY + arcEndDelta.dy),
         radius: radius,
@@ -1409,10 +1398,10 @@ class Path {
   /// Adds a new subpath that consists of four lines that outline the
   /// given rectangle.
   void addRect(Rect rect) {
-    assert(rectIsValid(rect));
+    assert(engine.rectIsValid(rect));
     _openNewSubpath(rect.left, rect.top);
-    _commands
-        .add(new RectCommand(rect.left, rect.top, rect.width, rect.height));
+    _commands.add(
+        new engine.RectCommand(rect.left, rect.top, rect.width, rect.height));
   }
 
   /// Adds a new subpath that consists of a curve that forms the
@@ -1422,12 +1411,14 @@ class Path {
   /// [Rect.fromCircle] can be used to easily describe the circle's center
   /// [Offset] and radius.
   void addOval(Rect oval) {
-    assert(rectIsValid(oval));
+    assert(engine.rectIsValid(oval));
     var center = oval.center;
     var radiusX = oval.width / 2;
     var radiusY = oval.height / 2;
+
+    /// At startAngle = 0, the path will begin at center + cos(0) * radius.
     _openNewSubpath(center.dx + radiusX, center.dy);
-    _commands.add(new Ellipse(
+    _commands.add(new engine.Ellipse(
         center.dx, center.dy, radiusX, radiusY, 0.0, 0.0, 2 * math.pi, false));
   }
 
@@ -1440,14 +1431,14 @@ class Path {
   /// rectangle and with positive angles going clockwise around the
   /// oval.
   void addArc(Rect oval, double startAngle, double sweepAngle) {
-    assert(rectIsValid(oval));
+    assert(engine.rectIsValid(oval));
     var center = oval.center;
     var radiusX = oval.width / 2;
     var radiusY = oval.height / 2;
     _openNewSubpath(radiusX * math.cos(startAngle) + center.dx,
         radiusY * math.sin(startAngle) + center.dy);
-    _commands.add(new Ellipse(center.dx, center.dy, radiusX, radiusY, 0.0,
-        startAngle, startAngle + sweepAngle, sweepAngle.isNegative));
+    _commands.add(new engine.Ellipse(center.dx, center.dy, radiusX, radiusY,
+        0.0, startAngle, startAngle + sweepAngle, sweepAngle.isNegative));
 
     _setCurrentPoint(radiusX * math.cos(startAngle + sweepAngle) + center.dx,
         radiusY * math.sin(startAngle + sweepAngle) + center.dy);
@@ -1480,14 +1471,14 @@ class Path {
   /// curves needed to form the rounded rectangle described by the
   /// argument.
   void addRRect(RRect rrect) {
-    assert(rrectIsValid(rrect));
+    assert(engine.rrectIsValid(rrect));
 
     // Set the current point to the top left corner of the rectangle (the
     // point on the top of the rectangle farthest to the left that isn't in
     // the rounded corner).
     // TODO(het): Is this the current point in Flutter?
     _openNewSubpath(rrect.tallMiddleRect.left, rrect.top);
-    _commands.add(new RRectCommand(rrect));
+    _commands.add(new engine.RRectCommand(rrect));
   }
 
   /// Adds a new subpath that consists of the given `path` offset by the given
@@ -1498,9 +1489,9 @@ class Path {
   /// matrix stored in column major order.
   void addPath(Path path, Offset offset, {Float64List matrix4}) {
     assert(path != null); // path is checked on the engine side
-    assert(offsetIsValid(offset));
+    assert(engine.offsetIsValid(offset));
     if (matrix4 != null) {
-      assert(matrix4IsValid(matrix4));
+      assert(engine.matrix4IsValid(matrix4));
       _addPathWithMatrix(path, offset.dx, offset.dy, matrix4);
     } else {
       _addPath(path, offset.dx, offset.dy);
@@ -1527,9 +1518,9 @@ class Path {
   /// matrix stored in column major order.
   void extendWithPath(Path path, Offset offset, {Float64List matrix4}) {
     assert(path != null); // path is checked on the engine side
-    assert(offsetIsValid(offset));
+    assert(engine.offsetIsValid(offset));
     if (matrix4 != null) {
-      assert(matrix4IsValid(matrix4));
+      assert(engine.matrix4IsValid(matrix4));
       _extendWithPathAndMatrix(path, offset.dx, offset.dy, matrix4);
     } else {
       _extendWithPath(path, offset.dx, offset.dy);
@@ -1557,7 +1548,7 @@ class Path {
   /// from the current point to the first point of the subpath.
   void close() {
     _ensurePathStarted();
-    _commands.add(new CloseCommand());
+    _commands.add(new engine.CloseCommand());
     _setCurrentPoint(_currentSubpath.startX, _currentSubpath.startY);
   }
 
@@ -1580,7 +1571,7 @@ class Path {
   /// Context2D isPointInPath. If performance becomes issue, retaining
   /// RawRecordingCanvas can remove create/remove rootElement cost.
   bool contains(Offset point) {
-    assert(offsetIsValid(point));
+    assert(engine.offsetIsValid(point));
     int subPathCount = subpaths.length;
     if (subPathCount == 0) return false;
     double pointX = point.dx;
@@ -1590,11 +1581,11 @@ class Path {
       var subPath = subpaths[0];
       if (subPath.commands.length == 1) {
         var cmd = subPath.commands[0];
-        if (cmd is RectCommand) {
+        if (cmd is engine.RectCommand) {
           if (pointY < cmd.y || pointY > (cmd.y + cmd.height)) return false;
           if (pointX < cmd.x || pointX > (cmd.x + cmd.width)) return false;
           return true;
-        } else if (cmd is RRectCommand) {
+        } else if (cmd is engine.RRectCommand) {
           var rRect = cmd.rrect;
           if (pointY < rRect.top || pointY > rRect.bottom) return false;
           if (pointX < rRect.left || pointX > rRect.right) return false;
@@ -1655,8 +1646,8 @@ class Path {
   /// Returns a copy of the path with all the segments of every
   /// subpath translated by the given offset.
   Path shift(Offset offset) {
-    assert(offsetIsValid(offset));
-    final shiftedSubpaths = <Subpath>[];
+    assert(engine.offsetIsValid(offset));
+    final shiftedSubpaths = <engine.Subpath>[];
     for (final subpath in subpaths) {
       shiftedSubpaths.add(subpath.shift(offset));
     }
@@ -1666,7 +1657,7 @@ class Path {
   /// Returns a copy of the path with all the segments of every
   /// subpath transformed by the given matrix.
   Path transform(Float64List matrix4) {
-    assert(matrix4IsValid(matrix4));
+    assert(engine.matrix4IsValid(matrix4));
     throw new UnimplementedError();
   }
 
@@ -1693,22 +1684,22 @@ class Path {
     double curX = 0.0;
     double curY = 0.0;
     double minX = 0.0, maxX = 0.0, minY = 0.0, maxY = 0.0;
-    for (Subpath subpath in subpaths) {
-      for (PathCommand op in subpath.commands) {
+    for (engine.Subpath subpath in subpaths) {
+      for (engine.PathCommand op in subpath.commands) {
         bool skipBounds = false;
         switch (op.type) {
-          case PathCommandTypes.moveTo:
-            MoveTo cmd = op;
+          case engine.PathCommandTypes.moveTo:
+            engine.MoveTo cmd = op;
             curX = minX = maxX = cmd.x;
             curY = minY = maxY = cmd.y;
             break;
-          case PathCommandTypes.lineTo:
-            LineTo cmd = op;
+          case engine.PathCommandTypes.lineTo:
+            engine.LineTo cmd = op;
             curX = minX = maxX = cmd.x;
             curY = minY = maxY = cmd.y;
             break;
-          case PathCommandTypes.ellipse:
-            Ellipse cmd = op;
+          case engine.PathCommandTypes.ellipse:
+            engine.Ellipse cmd = op;
             // Rotate 4 corners of bounding box.
             final double rx = cmd.radiusX;
             final double ry = cmd.radiusY;
@@ -1756,8 +1747,8 @@ class Path {
             curX = centerX + cmd.radiusX;
             curY = centerY;
             break;
-          case PathCommandTypes.quadraticCurveTo:
-            QuadraticCurveTo cmd = op;
+          case engine.PathCommandTypes.quadraticCurveTo:
+            engine.QuadraticCurveTo cmd = op;
             var x1 = curX;
             var y1 = curY;
             var cpX = cmd.x1;
@@ -1818,8 +1809,8 @@ class Path {
             curX = x2;
             curY = y2;
             break;
-          case PathCommandTypes.bezierCurveTo:
-            BezierCurveTo cmd = op;
+          case engine.PathCommandTypes.bezierCurveTo:
+            engine.BezierCurveTo cmd = op;
             var startX = curX;
             var startY = curY;
             var cpX1 = cmd.x1;
@@ -1955,8 +1946,8 @@ class Path {
               }
             }
             break;
-          case PathCommandTypes.rect:
-            RectCommand cmd = op;
+          case engine.PathCommandTypes.rect:
+            engine.RectCommand cmd = op;
             var left = cmd.x;
             var width = cmd.width;
             if (cmd.width < 0) {
@@ -1974,15 +1965,15 @@ class Path {
             curY = minY = top;
             maxY = top + height;
             break;
-          case PathCommandTypes.rRect:
-            RRectCommand cmd = op;
+          case engine.PathCommandTypes.rRect:
+            engine.RRectCommand cmd = op;
             RRect rRect = cmd.rrect;
             curX = minX = rRect.left;
             maxX = rRect.left + rRect.width;
             curY = minY = rRect.top;
             maxY = rRect.top + rRect.height;
             break;
-          case PathCommandTypes.close:
+          case engine.PathCommandTypes.close:
           default:
             skipBounds = false;
             break;
@@ -2035,10 +2026,10 @@ class Path {
   /// a persistent div.
   RRect get webOnlyPathAsRoundedRect {
     if (subpaths.length != 1) return null;
-    Subpath subPath = subpaths[0];
+    engine.Subpath subPath = subpaths[0];
     if (subPath.commands.length != 1) return null;
     var command = subPath.commands[0];
-    return (command is RRectCommand) ? command.rrect : null;
+    return (command is engine.RRectCommand) ? command.rrect : null;
   }
 
   /// Detects if path is simple rectangle and returns rectangle or null.
@@ -2047,12 +2038,30 @@ class Path {
   /// a persistent div.
   Rect get webOnlyPathAsRect {
     if (subpaths.length != 1) return null;
-    Subpath subPath = subpaths[0];
+    engine.Subpath subPath = subpaths[0];
     if (subPath.commands.length != 1) return null;
     var command = subPath.commands[0];
-    return (command is RectCommand)
+    return (command is engine.RectCommand)
         ? new Rect.fromLTWH(command.x, command.y, command.width, command.height)
         : null;
+  }
+
+  /// Detects if path is simple oval and returns [engine.Ellipse] or null.
+  ///
+  /// Used for web optimization of physical shape represented as
+  /// a persistent div.
+  engine.Ellipse get webOnlyPathAsCircle {
+    if (subpaths.length != 1) return null;
+    engine.Subpath subPath = subpaths[0];
+    if (subPath.commands.length != 1) return null;
+    var command = subPath.commands[0];
+    if (command is engine.Ellipse) {
+      engine.Ellipse ellipse = command;
+      if ((ellipse.endAngle - ellipse.startAngle) % (2 * math.pi) == 0.0) {
+        return ellipse;
+      }
+    }
+    return null;
   }
 
   /// Serializes this path to a value that's sent to a CSS custom painter for
@@ -2067,7 +2076,7 @@ class Path {
 
   @override
   String toString() {
-    if (assertionsEnabled) {
+    if (engine.assertionsEnabled) {
       return 'Path(${subpaths.join(', ')})';
     } else {
       return super.toString();
@@ -2089,7 +2098,7 @@ class Path {
 ///
 /// When iterating across a [PathMetrics]' contours, the [PathMetric] objects
 /// are only valid until the next one is obtained.
-class PathMetrics extends collection.IterableBase<PathMetric> {
+class PathMetrics extends IterableBase<PathMetric> {
   PathMetrics._(Path path, bool forceClosed)
       : _iterator =
             new PathMetricIterator._(new PathMetric._(path, forceClosed));
@@ -2244,7 +2253,8 @@ class Tangent {
   double get angle => -math.atan2(vector.dy, vector.dx);
 }
 
-class RawRecordingCanvas extends BitmapCanvas implements PictureRecorder {
+class RawRecordingCanvas extends engine.BitmapCanvas
+    implements PictureRecorder {
   RawRecordingCanvas(Size size) : super(Offset.zero & size);
 
   void dispose() {
@@ -2252,11 +2262,12 @@ class RawRecordingCanvas extends BitmapCanvas implements PictureRecorder {
   }
 
   @override
-  RecordingCanvas beginRecording(Rect bounds) => throw UnsupportedError('');
+  engine.RecordingCanvas beginRecording(Rect bounds) =>
+      throw UnsupportedError('');
   @override
   Picture endRecording() => throw UnsupportedError('');
 
-  RecordingCanvas _canvas;
+  engine.RecordingCanvas _canvas;
   bool _isRecording = true;
   bool get isRecording => true;
   Rect cullRect;
