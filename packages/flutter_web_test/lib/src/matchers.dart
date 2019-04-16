@@ -150,6 +150,9 @@ const Matcher hasAGoodToStringDeep = _HasGoodToStringDeep();
 ///
 /// This is equivalent to `throwsA(isInstanceOf<FlutterError>())`.
 ///
+/// If you are trying to test whether a call to [WidgetTester.pumpWidget]
+/// results in a [FlutterError], see [TestWidgetsFlutterBinding.takeException].
+///
 /// See also:
 ///
 ///  * [throwsAssertionError], to test if a function throws any [AssertionError].
@@ -160,6 +163,10 @@ final Matcher throwsFlutterError = throwsA(isFlutterError);
 /// A matcher for functions that throw [AssertionError].
 ///
 /// This is equivalent to `throwsA(isInstanceOf<AssertionError>())`.
+///
+/// If you are trying to test whether a call to [WidgetTester.pumpWidget]
+/// results in an [AssertionError], see
+/// [TestWidgetsFlutterBinding.takeException].
 ///
 /// See also:
 ///
@@ -347,6 +354,9 @@ Matcher matchesSemantics({
   TextDirection textDirection,
   Rect rect,
   Size size,
+  double elevation,
+  double thickness,
+  int platformViewId,
   // Flags //
   bool hasCheckedState = false,
   bool isChecked = false,
@@ -463,6 +473,9 @@ Matcher matchesSemantics({
     textDirection: textDirection,
     rect: rect,
     size: size,
+    elevation: elevation,
+    thickness: thickness,
+    platformViewId: platformViewId,
     customActions: customActions,
     hintOverrides: hintOverrides,
     children: children,
@@ -549,8 +562,12 @@ class _FindsWidgetMatcher extends Matcher {
   }
 
   @override
-  Description describeMismatch(dynamic item, Description mismatchDescription,
-      Map<dynamic, dynamic> matchState, bool verbose) {
+  Description describeMismatch(
+    dynamic item,
+    Description mismatchDescription,
+    Map<dynamic, dynamic> matchState,
+    bool verbose,
+  ) {
     final Finder finder = matchState[Finder];
     final int count = finder.evaluate().length;
     if (count == 0) {
@@ -699,8 +716,12 @@ class _EqualsIgnoringHashCodes extends Matcher {
   }
 
   @override
-  Description describeMismatch(dynamic item, Description mismatchDescription,
-      Map<dynamic, dynamic> matchState, bool verbose) {
+  Description describeMismatch(
+    dynamic item,
+    Description mismatchDescription,
+    Map<dynamic, dynamic> matchState,
+    bool verbose,
+  ) {
     if (matchState.containsKey(_mismatchedValueKey)) {
       final String actualValue = matchState[_mismatchedValueKey];
       // Leading whitespace is added so that lines in the multi-line
@@ -843,8 +864,12 @@ class _HasGoodToStringDeep extends Matcher {
   }
 
   @override
-  Description describeMismatch(dynamic item, Description mismatchDescription,
-      Map<dynamic, dynamic> matchState, bool verbose) {
+  Description describeMismatch(
+    dynamic item,
+    Description mismatchDescription,
+    Map<dynamic, dynamic> matchState,
+    bool verbose,
+  ) {
     if (matchState.containsKey(_toStringDeepErrorDescriptionKey)) {
       return mismatchDescription
           .add(matchState[_toStringDeepErrorDescriptionKey]);
@@ -1162,8 +1187,12 @@ abstract class _FailWithDescriptionMatcher extends Matcher {
   }
 
   @override
-  Description describeMismatch(dynamic item, Description mismatchDescription,
-      Map<dynamic, dynamic> matchState, bool verbose) {
+  Description describeMismatch(
+    dynamic item,
+    Description mismatchDescription,
+    Map<dynamic, dynamic> matchState,
+    bool verbose,
+  ) {
     return mismatchDescription.add(matchState['failure']);
   }
 }
@@ -1267,12 +1296,15 @@ class _RendersOnPhysicalModel
 
     if (borderRadius == null &&
         shape == BoxShape.rectangle &&
-        !assertRoundedRectangle(shapeClipper, BorderRadius.zero, matchState))
+        !assertRoundedRectangle(shapeClipper, BorderRadius.zero, matchState)) {
       return false;
+    }
 
     if (borderRadius == null &&
         shape == BoxShape.circle &&
-        !assertCircle(shapeClipper, matchState)) return false;
+        !assertCircle(shapeClipper, matchState)) {
+      return false;
+    }
 
     if (elevation != null && renderObject.elevation != elevation)
       return failWithDescription(
@@ -1484,8 +1516,10 @@ class _CoversSameAreaAs extends Matcher {
   bool matches(covariant Path actualPath, Map<dynamic, dynamic> matchState) {
     for (int i = 0; i < sampleSize; i += 1) {
       for (int j = 0; j < sampleSize; j += 1) {
-        final Offset offset = Offset(i * (areaToCompare.width / sampleSize),
-            j * (areaToCompare.height / sampleSize));
+        final Offset offset = Offset(
+          i * (areaToCompare.width / sampleSize),
+          j * (areaToCompare.height / sampleSize),
+        );
 
         if (!_samplePoint(matchState, actualPath, offset)) return false;
 
@@ -1520,8 +1554,12 @@ class _CoversSameAreaAs extends Matcher {
   }
 
   @override
-  Description describeMismatch(dynamic item, Description mismatchDescription,
-      Map<dynamic, dynamic> matchState, bool verbose) {
+  Description describeMismatch(
+    dynamic item,
+    Description mismatchDescription,
+    Map<dynamic, dynamic> matchState,
+    bool verbose,
+  ) {
     return mismatchDescription.add(matchState['failure']);
   }
 
@@ -1618,6 +1656,59 @@ class _MatchesReferenceImage extends AsyncMatcher {
   }
 }
 
+class _MatchesGoldenFile extends AsyncMatcher {
+  const _MatchesGoldenFile(this.key);
+
+  _MatchesGoldenFile.forStringPath(String path) : key = Uri.parse(path);
+
+  final Uri key;
+
+  @override
+  Future<String> matchAsync(dynamic item) async {
+    Future<ui.Image> imageFuture;
+    if (item is Future<ui.Image>) {
+      imageFuture = item;
+    } else if (item is ui.Image) {
+      imageFuture = Future<ui.Image>.value(item);
+    } else {
+      final Finder finder = item;
+      final Iterable<Element> elements = finder.evaluate();
+      if (elements.isEmpty) {
+        return 'could not be rendered because no widget was found';
+      } else if (elements.length > 1) {
+        return 'matched too many widgets';
+      }
+      imageFuture = _captureImage(elements.single);
+    }
+
+    final TestWidgetsFlutterBinding binding =
+        TestWidgetsFlutterBinding.ensureInitialized();
+    return binding.runAsync<String>(() async {
+      final ui.Image image = await imageFuture;
+      final ByteData bytes = await image
+          .toByteData(format: ui.ImageByteFormat.png)
+          .timeout(const Duration(seconds: 10), onTimeout: () => null);
+      if (bytes == null)
+        return 'Failed to generate screenshot from engine within the 10,000ms timeout.';
+      // TODO(flutter_web): Implement {
+      // if (autoUpdateGoldenFiles) throw new UnimplementedError();
+      //        await goldenFileComparator.update(key, bytes.buffer.asUint8List());
+      //        return null;
+      //      }
+      //      try {
+      //        final bool success = await goldenFileComparator.compare(bytes.buffer.asUint8List(), key);
+      //        return success ? null : 'does not match';
+      //      } on TestFailure catch (ex) {
+      //        return ex.message;
+      //      }
+    }, additionalTime: const Duration(seconds: 11));
+  }
+
+  @override
+  Description describe(Description description) => description
+      .add('one widget whose rasterized image matches golden image "$key"');
+}
+
 class _MatchesSemanticsData extends Matcher {
   _MatchesSemanticsData({
     this.label,
@@ -1630,6 +1721,9 @@ class _MatchesSemanticsData extends Matcher {
     this.textDirection,
     this.rect,
     this.size,
+    this.elevation,
+    this.thickness,
+    this.platformViewId,
     this.customActions,
     this.hintOverrides,
     this.children,
@@ -1647,6 +1741,9 @@ class _MatchesSemanticsData extends Matcher {
   final TextDirection textDirection;
   final Rect rect;
   final Size size;
+  final double elevation;
+  final double thickness;
+  final int platformViewId;
   final List<Matcher> children;
 
   @override
@@ -1666,6 +1763,10 @@ class _MatchesSemanticsData extends Matcher {
       description.add(' with textDirection: $textDirection ');
     if (rect != null) description.add(' with rect: $rect');
     if (size != null) description.add(' with size: $size');
+    if (elevation != null) description.add(' with elevation: $elevation');
+    if (thickness != null) description.add(' with thickness: $thickness');
+    if (platformViewId != null)
+      description.add(' with platformViewId: $platformViewId');
     if (customActions != null)
       description.add(' with custom actions: $customActions');
     if (hintOverrides != null)
@@ -1706,6 +1807,15 @@ class _MatchesSemanticsData extends Matcher {
       return failWithDescription(matchState, 'rect was: ${data.rect}');
     if (size != null && size != data.rect.size)
       return failWithDescription(matchState, 'size was: ${data.rect.size}');
+    if (elevation != null && elevation != data.elevation)
+      return failWithDescription(
+          matchState, 'elevation was: ${data.elevation}');
+    if (thickness != null && thickness != data.thickness)
+      return failWithDescription(
+          matchState, 'thickness was: ${data.thickness}');
+    if (platformViewId != null && platformViewId != data.platformViewId)
+      return failWithDescription(
+          matchState, 'platformViewId was: ${data.platformViewId}');
     if (actions != null) {
       int actionBits = 0;
       for (SemanticsAction action in actions) actionBits |= action.index;
@@ -1724,7 +1834,7 @@ class _MatchesSemanticsData extends Matcher {
         return CustomSemanticsAction.getAction(id);
       }).toList();
       final List<CustomSemanticsAction> expectedCustomActions =
-          List<CustomSemanticsAction>.from(customActions ?? const <int>[]);
+          customActions?.toList() ?? <CustomSemanticsAction>[];
       if (hintOverrides?.onTapHint != null)
         expectedCustomActions.add(CustomSemanticsAction.overridingAction(
             hint: hintOverrides.onTapHint, action: SemanticsAction.tap));
@@ -1779,8 +1889,12 @@ class _MatchesSemanticsData extends Matcher {
   }
 
   @override
-  Description describeMismatch(dynamic item, Description mismatchDescription,
-      Map<dynamic, dynamic> matchState, bool verbose) {
+  Description describeMismatch(
+    dynamic item,
+    Description mismatchDescription,
+    Map<dynamic, dynamic> matchState,
+    bool verbose,
+  ) {
     return mismatchDescription.add(matchState['failure']);
   }
 }

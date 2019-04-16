@@ -101,12 +101,12 @@ void main() {
       coloredBox.toStringDeep(minLevel: DiagnosticLevel.info),
       equalsIgnoringHashCodes(
         'RenderDecoratedBox#00000 NEEDS-PAINT\n'
-            '   parentData: offset=Offset(10.0, 10.0) (can use size)\n'
-            '   constraints: BoxConstraints(w=780.0, h=580.0)\n'
-            '   size: Size(780.0, 580.0)\n'
-            '   decoration: BoxDecoration:\n'
-            '     <no decorations specified>\n'
-            '   configuration: ImageConfiguration()\n',
+        '   parentData: offset=Offset(10.0, 10.0) (can use size)\n'
+        '   constraints: BoxConstraints(w=780.0, h=580.0)\n'
+        '   size: Size(780.0, 580.0)\n'
+        '   decoration: BoxDecoration:\n'
+        '     <no decorations specified>\n'
+        '   configuration: ImageConfiguration()\n',
       ),
     );
   });

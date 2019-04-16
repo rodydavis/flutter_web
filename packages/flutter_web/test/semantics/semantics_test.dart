@@ -69,21 +69,25 @@ void main() {
 
       TestRender middle;
       final TestRender root = TestRender(
-          hasTapAction: true,
-          isSemanticBoundary: true,
-          child: TestRender(
-              hasLongPressAction: true,
+        hasTapAction: true,
+        isSemanticBoundary: true,
+        child: TestRender(
+          hasLongPressAction: true,
+          isSemanticBoundary: false,
+          child: middle = TestRender(
+            hasScrollLeftAction: true,
+            isSemanticBoundary: false,
+            child: TestRender(
+              hasScrollRightAction: true,
               isSemanticBoundary: false,
-              child: middle = TestRender(
-                  hasScrollLeftAction: true,
-                  isSemanticBoundary: false,
-                  child: TestRender(
-                      hasScrollRightAction: true,
-                      isSemanticBoundary: false,
-                      child: TestRender(
-                        hasScrollUpAction: true,
-                        isSemanticBoundary: true,
-                      )))));
+              child: TestRender(
+                hasScrollUpAction: true,
+                isSemanticBoundary: true,
+              ),
+            ),
+          ),
+        ),
+      );
 
       layout(root);
       pumpFrame(phase: EnginePhase.flushSemantics);
@@ -126,21 +130,22 @@ void main() {
     expect(child2.transform, isNull);
 
     expect(
-        root.toStringDeep(childOrder: DebugSemanticsDumpOrder.traversalOrder),
-        'SemanticsNode#3\n'
-        ' │ STALE\n'
-        ' │ owner: null\n'
-        ' │ Rect.fromLTRB(0.0, 0.0, 10.0, 5.0)\n'
-        ' │\n'
-        ' ├─SemanticsNode#1\n'
-        ' │   STALE\n'
-        ' │   owner: null\n'
-        ' │   Rect.fromLTRB(0.0, 0.0, 5.0, 5.0)\n'
-        ' │\n'
-        ' └─SemanticsNode#2\n'
-        '     STALE\n'
-        '     owner: null\n'
-        '     Rect.fromLTRB(5.0, 0.0, 10.0, 5.0)\n');
+      root.toStringDeep(childOrder: DebugSemanticsDumpOrder.traversalOrder),
+      'SemanticsNode#3\n'
+      ' │ STALE\n'
+      ' │ owner: null\n'
+      ' │ Rect.fromLTRB(0.0, 0.0, 10.0, 5.0)\n'
+      ' │\n'
+      ' ├─SemanticsNode#1\n'
+      ' │   STALE\n'
+      ' │   owner: null\n'
+      ' │   Rect.fromLTRB(0.0, 0.0, 5.0, 5.0)\n'
+      ' │\n'
+      ' └─SemanticsNode#2\n'
+      '     STALE\n'
+      '     owner: null\n'
+      '     Rect.fromLTRB(5.0, 0.0, 10.0, 5.0)\n',
+    );
   });
 
   test('Incompatible OrdinalSortKey throw AssertionError when compared', () {
@@ -200,38 +205,40 @@ void main() {
       childrenInInversePaintOrder: <SemanticsNode>[child1, child2],
     );
     expect(
-        root.toStringDeep(childOrder: DebugSemanticsDumpOrder.traversalOrder),
-        'SemanticsNode#3\n'
-        ' │ STALE\n'
-        ' │ owner: null\n'
-        ' │ Rect.fromLTRB(0.0, 0.0, 20.0, 5.0)\n'
-        ' │\n'
-        ' ├─SemanticsNode#1\n'
-        ' │   STALE\n'
-        ' │   owner: null\n'
-        ' │   Rect.fromLTRB(15.0, 0.0, 20.0, 5.0)\n'
-        ' │\n'
-        ' └─SemanticsNode#2\n'
-        '     STALE\n'
-        '     owner: null\n'
-        '     Rect.fromLTRB(10.0, 0.0, 15.0, 5.0)\n');
+      root.toStringDeep(childOrder: DebugSemanticsDumpOrder.traversalOrder),
+      'SemanticsNode#3\n'
+      ' │ STALE\n'
+      ' │ owner: null\n'
+      ' │ Rect.fromLTRB(0.0, 0.0, 20.0, 5.0)\n'
+      ' │\n'
+      ' ├─SemanticsNode#1\n'
+      ' │   STALE\n'
+      ' │   owner: null\n'
+      ' │   Rect.fromLTRB(15.0, 0.0, 20.0, 5.0)\n'
+      ' │\n'
+      ' └─SemanticsNode#2\n'
+      '     STALE\n'
+      '     owner: null\n'
+      '     Rect.fromLTRB(10.0, 0.0, 15.0, 5.0)\n',
+    );
 
     expect(
-        root.toStringDeep(childOrder: DebugSemanticsDumpOrder.inverseHitTest),
-        'SemanticsNode#3\n'
-        ' │ STALE\n'
-        ' │ owner: null\n'
-        ' │ Rect.fromLTRB(0.0, 0.0, 20.0, 5.0)\n'
-        ' │\n'
-        ' ├─SemanticsNode#1\n'
-        ' │   STALE\n'
-        ' │   owner: null\n'
-        ' │   Rect.fromLTRB(15.0, 0.0, 20.0, 5.0)\n'
-        ' │\n'
-        ' └─SemanticsNode#2\n'
-        '     STALE\n'
-        '     owner: null\n'
-        '     Rect.fromLTRB(10.0, 0.0, 15.0, 5.0)\n');
+      root.toStringDeep(childOrder: DebugSemanticsDumpOrder.inverseHitTest),
+      'SemanticsNode#3\n'
+      ' │ STALE\n'
+      ' │ owner: null\n'
+      ' │ Rect.fromLTRB(0.0, 0.0, 20.0, 5.0)\n'
+      ' │\n'
+      ' ├─SemanticsNode#1\n'
+      ' │   STALE\n'
+      ' │   owner: null\n'
+      ' │   Rect.fromLTRB(15.0, 0.0, 20.0, 5.0)\n'
+      ' │\n'
+      ' └─SemanticsNode#2\n'
+      '     STALE\n'
+      '     owner: null\n'
+      '     Rect.fromLTRB(10.0, 0.0, 15.0, 5.0)\n',
+    );
 
     final SemanticsNode child3 = SemanticsNode()
       ..rect = Rect.fromLTRB(0.0, 0.0, 10.0, 5.0);
@@ -246,112 +253,118 @@ void main() {
     final SemanticsNode rootComplex = SemanticsNode()
       ..rect = Rect.fromLTRB(0.0, 0.0, 25.0, 5.0);
     rootComplex.updateWith(
-        config: null,
-        childrenInInversePaintOrder: <SemanticsNode>[child1, child2, child3]);
+      config: null,
+      childrenInInversePaintOrder: <SemanticsNode>[child1, child2, child3],
+    );
 
     expect(
-        rootComplex.toStringDeep(
-            childOrder: DebugSemanticsDumpOrder.traversalOrder),
-        'SemanticsNode#7\n'
-        ' │ STALE\n'
-        ' │ owner: null\n'
-        ' │ Rect.fromLTRB(0.0, 0.0, 25.0, 5.0)\n'
-        ' │\n'
-        ' ├─SemanticsNode#1\n'
-        ' │   STALE\n'
-        ' │   owner: null\n'
-        ' │   Rect.fromLTRB(15.0, 0.0, 20.0, 5.0)\n'
-        ' │\n'
-        ' ├─SemanticsNode#2\n'
-        ' │   STALE\n'
-        ' │   owner: null\n'
-        ' │   Rect.fromLTRB(10.0, 0.0, 15.0, 5.0)\n'
-        ' │\n'
-        ' └─SemanticsNode#4\n'
-        '   │ STALE\n'
-        '   │ owner: null\n'
-        '   │ Rect.fromLTRB(0.0, 0.0, 10.0, 5.0)\n'
-        '   │\n'
-        '   ├─SemanticsNode#5\n'
-        '   │   STALE\n'
-        '   │   owner: null\n'
-        '   │   Rect.fromLTRB(5.0, 0.0, 10.0, 5.0)\n'
-        '   │\n'
-        '   └─SemanticsNode#6\n'
-        '       STALE\n'
-        '       owner: null\n'
-        '       Rect.fromLTRB(0.0, 0.0, 5.0, 5.0)\n');
+      rootComplex.toStringDeep(
+          childOrder: DebugSemanticsDumpOrder.traversalOrder),
+      'SemanticsNode#7\n'
+      ' │ STALE\n'
+      ' │ owner: null\n'
+      ' │ Rect.fromLTRB(0.0, 0.0, 25.0, 5.0)\n'
+      ' │\n'
+      ' ├─SemanticsNode#1\n'
+      ' │   STALE\n'
+      ' │   owner: null\n'
+      ' │   Rect.fromLTRB(15.0, 0.0, 20.0, 5.0)\n'
+      ' │\n'
+      ' ├─SemanticsNode#2\n'
+      ' │   STALE\n'
+      ' │   owner: null\n'
+      ' │   Rect.fromLTRB(10.0, 0.0, 15.0, 5.0)\n'
+      ' │\n'
+      ' └─SemanticsNode#4\n'
+      '   │ STALE\n'
+      '   │ owner: null\n'
+      '   │ Rect.fromLTRB(0.0, 0.0, 10.0, 5.0)\n'
+      '   │\n'
+      '   ├─SemanticsNode#5\n'
+      '   │   STALE\n'
+      '   │   owner: null\n'
+      '   │   Rect.fromLTRB(5.0, 0.0, 10.0, 5.0)\n'
+      '   │\n'
+      '   └─SemanticsNode#6\n'
+      '       STALE\n'
+      '       owner: null\n'
+      '       Rect.fromLTRB(0.0, 0.0, 5.0, 5.0)\n',
+    );
 
     expect(
-        rootComplex.toStringDeep(
-            childOrder: DebugSemanticsDumpOrder.inverseHitTest),
-        'SemanticsNode#7\n'
-        ' │ STALE\n'
-        ' │ owner: null\n'
-        ' │ Rect.fromLTRB(0.0, 0.0, 25.0, 5.0)\n'
-        ' │\n'
-        ' ├─SemanticsNode#1\n'
-        ' │   STALE\n'
-        ' │   owner: null\n'
-        ' │   Rect.fromLTRB(15.0, 0.0, 20.0, 5.0)\n'
-        ' │\n'
-        ' ├─SemanticsNode#2\n'
-        ' │   STALE\n'
-        ' │   owner: null\n'
-        ' │   Rect.fromLTRB(10.0, 0.0, 15.0, 5.0)\n'
-        ' │\n'
-        ' └─SemanticsNode#4\n'
-        '   │ STALE\n'
-        '   │ owner: null\n'
-        '   │ Rect.fromLTRB(0.0, 0.0, 10.0, 5.0)\n'
-        '   │\n'
-        '   ├─SemanticsNode#5\n'
-        '   │   STALE\n'
-        '   │   owner: null\n'
-        '   │   Rect.fromLTRB(5.0, 0.0, 10.0, 5.0)\n'
-        '   │\n'
-        '   └─SemanticsNode#6\n'
-        '       STALE\n'
-        '       owner: null\n'
-        '       Rect.fromLTRB(0.0, 0.0, 5.0, 5.0)\n');
+      rootComplex.toStringDeep(
+          childOrder: DebugSemanticsDumpOrder.inverseHitTest),
+      'SemanticsNode#7\n'
+      ' │ STALE\n'
+      ' │ owner: null\n'
+      ' │ Rect.fromLTRB(0.0, 0.0, 25.0, 5.0)\n'
+      ' │\n'
+      ' ├─SemanticsNode#1\n'
+      ' │   STALE\n'
+      ' │   owner: null\n'
+      ' │   Rect.fromLTRB(15.0, 0.0, 20.0, 5.0)\n'
+      ' │\n'
+      ' ├─SemanticsNode#2\n'
+      ' │   STALE\n'
+      ' │   owner: null\n'
+      ' │   Rect.fromLTRB(10.0, 0.0, 15.0, 5.0)\n'
+      ' │\n'
+      ' └─SemanticsNode#4\n'
+      '   │ STALE\n'
+      '   │ owner: null\n'
+      '   │ Rect.fromLTRB(0.0, 0.0, 10.0, 5.0)\n'
+      '   │\n'
+      '   ├─SemanticsNode#5\n'
+      '   │   STALE\n'
+      '   │   owner: null\n'
+      '   │   Rect.fromLTRB(5.0, 0.0, 10.0, 5.0)\n'
+      '   │\n'
+      '   └─SemanticsNode#6\n'
+      '       STALE\n'
+      '       owner: null\n'
+      '       Rect.fromLTRB(0.0, 0.0, 5.0, 5.0)\n',
+    );
   });
 
   test('debug properties', () {
     final SemanticsNode minimalProperties = SemanticsNode();
     expect(
-        minimalProperties.toStringDeep(),
-        'SemanticsNode#1\n'
-        '   Rect.fromLTRB(0.0, 0.0, 0.0, 0.0)\n'
-        '   invisible\n');
+      minimalProperties.toStringDeep(),
+      'SemanticsNode#1\n'
+      '   Rect.fromLTRB(0.0, 0.0, 0.0, 0.0)\n'
+      '   invisible\n',
+    );
 
     expect(
-        minimalProperties.toStringDeep(minLevel: DiagnosticLevel.hidden),
-        'SemanticsNode#1\n'
-        '   owner: null\n'
-        '   isMergedIntoParent: false\n'
-        '   mergeAllDescendantsIntoThisNode: false\n'
-        '   Rect.fromLTRB(0.0, 0.0, 0.0, 0.0)\n'
-        '   actions: []\n'
-        '   customActions: []\n'
-        '   flags: []\n'
-        '   invisible\n'
-        '   isHidden: false\n'
-        // TODO(flutter_web): upstream.
-        '   isMultiline: false\n'
-        '   label: ""\n'
-        '   value: ""\n'
-        '   increasedValue: ""\n'
-        '   decreasedValue: ""\n'
-        '   hint: ""\n'
-        '   textDirection: null\n'
-        '   sortKey: null\n'
-        '   scrollChildren: null\n'
-        '   scrollIndex: null\n'
-        '   scrollExtentMin: null\n'
-        '   scrollPosition: null\n'
-        '   scrollExtentMax: null\n'
-        '   elevation: 0.0\n'
-        '   thicknes: 0.0\n');
+      minimalProperties.toStringDeep(minLevel: DiagnosticLevel.hidden),
+      'SemanticsNode#1\n'
+      '   owner: null\n'
+      '   isMergedIntoParent: false\n'
+      '   mergeAllDescendantsIntoThisNode: false\n'
+      '   Rect.fromLTRB(0.0, 0.0, 0.0, 0.0)\n'
+      '   actions: []\n'
+      '   customActions: []\n'
+      '   flags: []\n'
+      '   invisible\n'
+      '   isHidden: false\n'
+      // TODO(flutter_web): upstream.
+      '   isMultiline: false\n'
+      '   label: ""\n'
+      '   value: ""\n'
+      '   increasedValue: ""\n'
+      '   decreasedValue: ""\n'
+      '   hint: ""\n'
+      '   textDirection: null\n'
+      '   sortKey: null\n'
+      '   platformViewId: null\n'
+      '   scrollChildren: null\n'
+      '   scrollIndex: null\n'
+      '   scrollExtentMin: null\n'
+      '   scrollPosition: null\n'
+      '   scrollExtentMax: null\n'
+      '   elevation: 0.0\n'
+      '   thicknes: 0.0\n',
+    );
 
     final SemanticsConfiguration config = SemanticsConfiguration()
       ..isSemanticBoundary = true
@@ -393,9 +406,9 @@ void main() {
     expect(
       scaled.toStringDeep(),
       'SemanticsNode#3\n'
-          '   STALE\n'
-          '   owner: null\n'
-          '   Rect.fromLTRB(50.0, 10.0, 70.0, 40.0) scaled by 10.0x\n',
+      '   STALE\n'
+      '   owner: null\n'
+      '   Rect.fromLTRB(50.0, 10.0, 70.0, 40.0) scaled by 10.0x\n',
     );
     expect(
       scaled.getSemanticsData().toString(),
@@ -421,34 +434,36 @@ void main() {
     actionNode.updateWith(config: configuration);
 
     expect(
-        actionNode.toStringDeep(minLevel: DiagnosticLevel.hidden),
-        'SemanticsNode#1\n'
-        '   STALE\n'
-        '   owner: null\n'
-        '   isMergedIntoParent: false\n'
-        '   mergeAllDescendantsIntoThisNode: false\n'
-        '   Rect.fromLTRB(0.0, 0.0, 0.0, 0.0)\n'
-        '   actions: customAction\n'
-        '   customActions: action1, action2, action3\n'
-        '   flags: []\n'
-        '   invisible\n'
-        '   isHidden: false\n'
-        // TODO(flutter_web): upstream.
-        '   isMultiline: false\n'
-        '   label: ""\n'
-        '   value: ""\n'
-        '   increasedValue: ""\n'
-        '   decreasedValue: ""\n'
-        '   hint: ""\n'
-        '   textDirection: null\n'
-        '   sortKey: null\n'
-        '   scrollChildren: null\n'
-        '   scrollIndex: null\n'
-        '   scrollExtentMin: null\n'
-        '   scrollPosition: null\n'
-        '   scrollExtentMax: null\n'
-        '   elevation: 0.0\n'
-        '   thicknes: 0.0\n');
+      actionNode.toStringDeep(minLevel: DiagnosticLevel.hidden),
+      'SemanticsNode#1\n'
+      '   STALE\n'
+      '   owner: null\n'
+      '   isMergedIntoParent: false\n'
+      '   mergeAllDescendantsIntoThisNode: false\n'
+      '   Rect.fromLTRB(0.0, 0.0, 0.0, 0.0)\n'
+      '   actions: customAction\n'
+      '   customActions: action1, action2, action3\n'
+      '   flags: []\n'
+      '   invisible\n'
+      '   isHidden: false\n'
+      // TODO(flutter_web): upstream.
+      '   isMultiline: false\n'
+      '   label: ""\n'
+      '   value: ""\n'
+      '   increasedValue: ""\n'
+      '   decreasedValue: ""\n'
+      '   hint: ""\n'
+      '   textDirection: null\n'
+      '   sortKey: null\n'
+      '   platformViewId: null\n'
+      '   scrollChildren: null\n'
+      '   scrollIndex: null\n'
+      '   scrollExtentMin: null\n'
+      '   scrollPosition: null\n'
+      '   scrollExtentMax: null\n'
+      '   elevation: 0.0\n'
+      '   thicknes: 0.0\n',
+    );
   });
 
   test('SemanticsConfiguration getter/setter', () {
@@ -543,16 +558,16 @@ void main() {
 }
 
 class TestRender extends RenderProxyBox {
-  TestRender(
-      {this.hasTapAction = false,
-      this.hasLongPressAction = false,
-      this.hasScrollLeftAction = false,
-      this.hasScrollRightAction = false,
-      this.hasScrollUpAction = false,
-      this.hasScrollDownAction = false,
-      this.isSemanticBoundary,
-      RenderObject child})
-      : super(child);
+  TestRender({
+    this.hasTapAction = false,
+    this.hasLongPressAction = false,
+    this.hasScrollLeftAction = false,
+    this.hasScrollRightAction = false,
+    this.hasScrollUpAction = false,
+    this.hasScrollDownAction = false,
+    this.isSemanticBoundary,
+    RenderObject child,
+  }) : super(child);
 
   bool hasTapAction;
   bool hasLongPressAction;

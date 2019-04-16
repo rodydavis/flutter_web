@@ -158,8 +158,10 @@ class RenderListWheelViewport extends RenderBox
         assert(itemExtent > 0),
         assert(clipToSize != null),
         assert(renderChildrenOutsideViewport != null),
-        assert(!renderChildrenOutsideViewport || !clipToSize,
-            clipToSizeAndRenderChildrenOutsideViewportConflict,),
+        assert(
+          !renderChildrenOutsideViewport || !clipToSize,
+          clipToSizeAndRenderChildrenOutsideViewportConflict,
+        ),
         _offset = offset,
         _diameterRatio = diameterRatio,
         _perspective = perspective,
@@ -250,7 +252,10 @@ class RenderListWheelViewport extends RenderBox
   double _diameterRatio;
   set diameterRatio(double value) {
     assert(value != null);
-    assert(value > 0, diameterRatioZeroMessage,);
+    assert(
+      value > 0,
+      diameterRatioZeroMessage,
+    );
     if (value == _diameterRatio) return;
     _diameterRatio = value;
     markNeedsPaint();
@@ -276,7 +281,10 @@ class RenderListWheelViewport extends RenderBox
   set perspective(double value) {
     assert(value != null);
     assert(value > 0);
-    assert(value <= 0.01, perspectiveTooHighMessage,);
+    assert(
+      value <= 0.01,
+      perspectiveTooHighMessage,
+    );
     if (value == _perspective) return;
     _perspective = value;
     markNeedsPaint();
@@ -377,8 +385,10 @@ class RenderListWheelViewport extends RenderBox
   bool _clipToSize;
   set clipToSize(bool value) {
     assert(value != null);
-    assert(!renderChildrenOutsideViewport || !clipToSize,
-        clipToSizeAndRenderChildrenOutsideViewportConflict,);
+    assert(
+      !renderChildrenOutsideViewport || !clipToSize,
+      clipToSizeAndRenderChildrenOutsideViewportConflict,
+    );
     if (value == _clipToSize) return;
     _clipToSize = value;
     markNeedsPaint();
@@ -399,8 +409,10 @@ class RenderListWheelViewport extends RenderBox
   bool _renderChildrenOutsideViewport;
   set renderChildrenOutsideViewport(bool value) {
     assert(value != null);
-    assert(!renderChildrenOutsideViewport || !clipToSize,
-        clipToSizeAndRenderChildrenOutsideViewportConflict,);
+    assert(
+      !renderChildrenOutsideViewport || !clipToSize,
+      clipToSizeAndRenderChildrenOutsideViewportConflict,
+    );
     if (value == _renderChildrenOutsideViewport) return;
     _renderChildrenOutsideViewport = value;
     markNeedsLayout();

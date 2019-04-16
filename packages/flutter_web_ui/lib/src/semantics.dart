@@ -673,6 +673,7 @@ class SemanticsUpdateBuilder {
     @Deprecated('use additionalActions instead')
         Int32List customAcccessibilityActions,
     Int32List additionalActions,
+    int platformViewId,
   }) {
     if (transform.length != 16)
       throw new ArgumentError('transform argument must have 16 entries.');
@@ -700,6 +701,7 @@ class SemanticsUpdateBuilder {
       childrenInTraversalOrder: childrenInTraversalOrder,
       childrenInHitTestOrder: childrenInHitTestOrder,
       additionalActions: additionalActions ?? customAcccessibilityActions,
+      platformViewId: platformViewId,
     ));
   }
 

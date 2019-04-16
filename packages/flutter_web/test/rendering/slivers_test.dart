@@ -35,13 +35,13 @@ void main() {
       root.toStringDeep(minLevel: DiagnosticLevel.info),
       equalsIgnoringHashCodes(
         'RenderViewport#00000 NEEDS-LAYOUT NEEDS-PAINT\n'
-            '   parentData: <none>\n'
-            '   constraints: BoxConstraints(w=800.0, h=600.0)\n'
-            '   size: Size(800.0, 600.0)\n'
-            '   axisDirection: down\n'
-            '   crossAxisDirection: right\n'
-            '   offset: _FixedViewportOffset#00000(offset: 900.0)\n'
-            '   anchor: 0.0\n',
+        '   parentData: <none>\n'
+        '   constraints: BoxConstraints(w=800.0, h=600.0)\n'
+        '   size: Size(800.0, 600.0)\n'
+        '   axisDirection: down\n'
+        '   crossAxisDirection: right\n'
+        '   offset: _FixedViewportOffset#00000(offset: 900.0)\n'
+        '   anchor: 0.0\n',
       ),
     );
 

@@ -44,6 +44,7 @@ class RenderParagraph extends RenderBox {
     double textScaleFactor = 1.0,
     int maxLines,
     Locale locale,
+    StrutStyle strutStyle,
   })  : assert(text != null),
         assert(text.debugAssertIsValid()),
         assert(textAlign != null),
@@ -62,6 +63,7 @@ class RenderParagraph extends RenderBox {
           maxLines: maxLines,
           ellipsis: overflow == TextOverflow.ellipsis ? _kEllipsis : null,
           locale: locale,
+          strutStyle: strutStyle,
         );
 
   final TextPainter _textPainter;

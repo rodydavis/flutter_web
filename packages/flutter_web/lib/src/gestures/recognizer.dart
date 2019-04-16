@@ -359,10 +359,14 @@ abstract class PrimaryPointerGestureRecognizer
     this.postAcceptSlopTolerance = kTouchSlop,
     Object debugOwner,
     PointerDeviceKind kind,
-  })  : assert(preAcceptSlopTolerance == null || preAcceptSlopTolerance >= 0,
-            'The preAcceptSlopTolerance must be positive or null',),
-        assert(postAcceptSlopTolerance == null || postAcceptSlopTolerance >= 0,
-            'The postAcceptSlopTolerance must be positive or null',),
+  })  : assert(
+          preAcceptSlopTolerance == null || preAcceptSlopTolerance >= 0,
+          'The preAcceptSlopTolerance must be positive or null',
+        ),
+        assert(
+          postAcceptSlopTolerance == null || postAcceptSlopTolerance >= 0,
+          'The postAcceptSlopTolerance must be positive or null',
+        ),
         super(debugOwner: debugOwner, kind: kind);
 
   /// If non-null, the recognizer will call [didExceedDeadline] after this

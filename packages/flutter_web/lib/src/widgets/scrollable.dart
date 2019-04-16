@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter_web_ui/ui.dart';
 
 import 'package:flutter_web/gestures.dart';
@@ -82,7 +84,7 @@ class Scrollable extends StatefulWidget {
     @required this.viewportBuilder,
     this.excludeFromSemantics = false,
     this.semanticChildCount,
-    this.dragStartBehavior = DragStartBehavior.down,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : assert(axisDirection != null),
         assert(dragStartBehavior != null),
         assert(viewportBuilder != null),
@@ -195,7 +197,7 @@ class Scrollable extends StatefulWidget {
   /// animation smoother and setting it to [DragStartBehavior.down] will make
   /// drag behavior feel slightly more reactive.
   ///
-  /// By default, the drag start behavior is [DragStartBehavior.down].
+  /// By default, the drag start behavior is [DragStartBehavior.start].
   ///
   /// See also:
   ///
@@ -263,12 +265,12 @@ class Scrollable extends StatefulWidget {
 // Enable Scrollable.of() to work as if ScrollableState was an inherited widget.
 // ScrollableState.build() always rebuilds its _ScrollableScope.
 class _ScrollableScope extends InheritedWidget {
-  const _ScrollableScope(
-      {Key key,
-      @required this.scrollable,
-      @required this.position,
-      @required Widget child})
-      : assert(scrollable != null),
+  const _ScrollableScope({
+    Key key,
+    @required this.scrollable,
+    @required this.position,
+    @required Widget child,
+  })  : assert(scrollable != null),
         assert(child != null),
         super(key: key, child: child);
 
@@ -524,6 +526,39 @@ class ScrollableState extends State<Scrollable>
     _drag = null;
   }
 
+  // SCROLL WHEEL
+
+  // Returns the offset that should result from applying [event] to the current
+  // position, taking min/max scroll extent into account.
+  double _targetScrollOffsetForPointerScroll(PointerScrollEvent event) {
+    final double delta = widget.axis == Axis.horizontal
+        ? event.scrollDelta.dx
+        : event.scrollDelta.dy;
+    return math.min(math.max(position.pixels + delta, position.minScrollExtent),
+        position.maxScrollExtent);
+  }
+
+  void _receivedPointerSignal(PointerSignalEvent event) {
+    if (event is PointerScrollEvent && position != null) {
+      final double targetScrollOffset =
+          _targetScrollOffsetForPointerScroll(event);
+      // Only express interest in the event if it would actually result in a scroll.
+      if (targetScrollOffset != position.pixels) {
+        GestureBinding.instance.pointerSignalResolver
+            .register(event, _handlePointerScroll);
+      }
+    }
+  }
+
+  void _handlePointerScroll(PointerEvent event) {
+    assert(event is PointerScrollEvent);
+    final double targetScrollOffset =
+        _targetScrollOffsetForPointerScroll(event);
+    if (targetScrollOffset != position.pixels) {
+      position.jumpTo(targetScrollOffset);
+    }
+  }
+
   // DESCRIPTION
 
   @override
@@ -541,18 +576,21 @@ class ScrollableState extends State<Scrollable>
       scrollable: this,
       position: position,
       // TODO(ianh): Having all these global keys is sad.
-      child: RawGestureDetector(
-        key: _gestureDetectorKey,
-        gestures: _gestureRecognizers,
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: widget.excludeFromSemantics,
-        child: Semantics(
-          explicitChildNodes: !widget.excludeFromSemantics,
-          child: IgnorePointer(
-            key: _ignorePointerKey,
-            ignoring: _shouldIgnorePointer,
-            ignoringSemantics: false,
-            child: widget.viewportBuilder(context, position),
+      child: Listener(
+        onPointerSignal: _receivedPointerSignal,
+        child: RawGestureDetector(
+          key: _gestureDetectorKey,
+          gestures: _gestureRecognizers,
+          behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: widget.excludeFromSemantics,
+          child: Semantics(
+            explicitChildNodes: !widget.excludeFromSemantics,
+            child: IgnorePointer(
+              key: _ignorePointerKey,
+              ignoring: _shouldIgnorePointer,
+              ignoringSemantics: false,
+              child: widget.viewportBuilder(context, position),
+            ),
           ),
         ),
       ),
@@ -595,13 +633,13 @@ class ScrollableState extends State<Scrollable>
 /// node, which is annotated with the scrolling actions, will house the
 /// scrollable children.
 class _ScrollSemantics extends SingleChildRenderObjectWidget {
-  const _ScrollSemantics(
-      {Key key,
-      @required this.position,
-      @required this.allowImplicitScrolling,
-      @required this.semanticChildCount,
-      Widget child})
-      : assert(position != null),
+  const _ScrollSemantics({
+    Key key,
+    @required this.position,
+    @required this.allowImplicitScrolling,
+    @required this.semanticChildCount,
+    Widget child,
+  })  : assert(position != null),
         super(key: key, child: child);
 
   final ScrollPosition position;
@@ -705,9 +743,9 @@ class _RenderScrollSemantics extends RenderProxyBox {
     final List<SemanticsNode> included = <SemanticsNode>[];
     for (SemanticsNode child in children) {
       assert(child.isTagged(RenderViewport.useTwoPaneSemantics));
-      if (child.isTagged(RenderViewport.excludeFromScrolling))
+      if (child.isTagged(RenderViewport.excludeFromScrolling)) {
         excluded.add(child);
-      else {
+      } else {
         if (!child.hasFlag(SemanticsFlag.isHidden))
           firstVisibleIndex ??= child.indexInParent;
         included.add(child);

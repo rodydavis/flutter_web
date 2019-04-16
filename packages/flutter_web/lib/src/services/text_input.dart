@@ -826,11 +826,15 @@ class TextInput {
       TextInputAction inputAction) {
     assert(() {
       if (Platform.isIOS) {
-        assert(_iOSSupportedInputActions.contains(inputAction),
-            'The requested TextInputAction "$inputAction" is not supported on iOS.',);
+        assert(
+          _iOSSupportedInputActions.contains(inputAction),
+          'The requested TextInputAction "$inputAction" is not supported on iOS.',
+        );
       } else if (Platform.isAndroid) {
-        assert(_androidSupportedInputActions.contains(inputAction),
-            'The requested TextInputAction "$inputAction" is not supported on Android.',);
+        assert(
+          _androidSupportedInputActions.contains(inputAction),
+          'The requested TextInputAction "$inputAction" is not supported on Android.',
+        );
       }
       return true;
     }());

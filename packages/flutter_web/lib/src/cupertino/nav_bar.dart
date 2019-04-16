@@ -1163,8 +1163,10 @@ class _NavigationBarStaticComponents {
           currentRoute: route,
         );
 
-    assert(largeTitleContent != null,
-        'largeTitle was not provided and there was no title from the route.',);
+    assert(
+      largeTitleContent != null,
+      'largeTitle was not provided and there was no title from the route.',
+    );
 
     return KeyedSubtree(
       key: largeTitleKey,
@@ -1220,8 +1222,10 @@ class CupertinoNavigationBarBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ModalRoute<dynamic> currentRoute = ModalRoute.of(context);
-    assert(currentRoute.canPop,
-        'CupertinoNavigationBarBackButton should only be used in routes that can be popped',);
+    assert(
+      currentRoute.canPop,
+      'CupertinoNavigationBarBackButton should only be used in routes that can be popped',
+    );
 
     return CupertinoButton(
       child: Semantics(
@@ -1390,10 +1394,11 @@ class _TransitionableNavigationBar extends StatelessWidget {
     final RenderBox box =
         componentsKeys.navBarBoxKey.currentContext.findRenderObject();
     assert(
-        box.attached,
-        '_TransitionableNavigationBar.renderBox should be called when building '
-        'hero flight shuttles when the from and the to nav bar boxes are already '
-        'laid out and painted.',);
+      box.attached,
+      '_TransitionableNavigationBar.renderBox should be called when building '
+      'hero flight shuttles when the from and the to nav bar boxes are already '
+      'laid out and painted.',
+    );
     return box;
   }
 
@@ -1404,11 +1409,12 @@ class _TransitionableNavigationBar extends StatelessWidget {
       context.visitAncestorElements((Element ancestor) {
         if (ancestor is ComponentElement) {
           assert(
-              ancestor.widget.runtimeType != _NavigationBarTransition,
-              '_TransitionableNavigationBar should never re-appear inside '
-              '_NavigationBarTransition. Keyed _TransitionableNavigationBar should '
-              'only serve as anchor points in routes rather than appearing inside '
-              'Hero flights themselves.',);
+            ancestor.widget.runtimeType != _NavigationBarTransition,
+            '_TransitionableNavigationBar should never re-appear inside '
+            '_NavigationBarTransition. Keyed _TransitionableNavigationBar should '
+            'only serve as anchor points in routes rather than appearing inside '
+            'Hero flights themselves.',
+          );
           if (ancestor.widget.runtimeType == Hero) {
             inHero = true;
           }
@@ -1417,9 +1423,10 @@ class _TransitionableNavigationBar extends StatelessWidget {
         return true;
       });
       assert(
-          inHero == true,
-          '_TransitionableNavigationBar should only be added as the immediate '
-          'child of Hero widgets.',);
+        inHero == true,
+        '_TransitionableNavigationBar should only be added as the immediate '
+        'child of Hero widgets.',
+      );
       return true;
     }());
     return child;
@@ -2205,10 +2212,14 @@ final HeroFlightShuttleBuilder _navBarHeroFlightShuttleBuilder = (
   assert(fromNavBar.componentsKeys != null);
   assert(toNavBar.componentsKeys != null);
 
-  assert(fromNavBar.componentsKeys.navBarBoxKey.currentContext.owner != null,
-      'The from nav bar to Hero must have been mounted in the previous frame',);
-  assert(toNavBar.componentsKeys.navBarBoxKey.currentContext.owner != null,
-      'The to nav bar to Hero must have been mounted in the previous frame',);
+  assert(
+    fromNavBar.componentsKeys.navBarBoxKey.currentContext.owner != null,
+    'The from nav bar to Hero must have been mounted in the previous frame',
+  );
+  assert(
+    toNavBar.componentsKeys.navBarBoxKey.currentContext.owner != null,
+    'The to nav bar to Hero must have been mounted in the previous frame',
+  );
 
   switch (flightDirection) {
     case HeroFlightDirection.push:

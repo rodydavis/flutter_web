@@ -493,9 +493,10 @@ void main() {
       namesRoute: true,
       image: true,
       liveRegion: true,
-      multiline: true,
     ));
-    final List<SemanticsFlag> flags = SemanticsFlag.values.values.toList();
+    final List<SemanticsFlag> flags = SemanticsFlag.values.values.toList()
+      // TODO(flutter_web): upstream.
+      ..remove(SemanticsFlag.isMultiline);
     flags
       ..remove(SemanticsFlag.hasToggledState)
       ..remove(SemanticsFlag.isToggled)

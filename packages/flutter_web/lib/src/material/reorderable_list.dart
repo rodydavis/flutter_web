@@ -62,8 +62,10 @@ class ReorderableListView extends StatefulWidget {
   })  : assert(scrollDirection != null),
         assert(onReorder != null),
         assert(children != null),
-        assert(children.every((Widget w) => w.key != null),
-            'All children of this widget must have a key.',);
+        assert(
+          children.every((Widget w) => w.key != null),
+          'All children of this widget must have a key.',
+        );
 
   /// A non-reorderable header widget to show before the list.
   ///

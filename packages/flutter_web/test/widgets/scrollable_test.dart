@@ -5,6 +5,7 @@
 import 'package:flutter_web_test/flutter_web_test.dart';
 import 'package:flutter_web/material.dart';
 import 'package:flutter_web/rendering.dart';
+import 'package:flutter_web_ui/ui.dart' as ui;
 
 Future<void> pumpTest(WidgetTester tester, TargetPlatform platform) async {
   await tester.pumpWidget(MaterialApp(
@@ -268,5 +269,22 @@ void main() {
     await gesture.moveBy(const Offset(0.0, -1.0),
         timeStamp: const Duration(milliseconds: 180));
     expect(getScrollOffset(tester), 32.5);
+  });
+
+  testWidgets('Scroll pointer signals are handled',
+      (WidgetTester tester) async {
+    await pumpTest(tester, TargetPlatform.fuchsia);
+    final Offset scrollEventLocation = tester.getCenter(find.byType(Viewport));
+    final TestPointer testPointer = TestPointer(1, ui.PointerDeviceKind.mouse);
+    // Create a hover event so that |testPointer| has a location when generating the scroll.
+    testPointer.hover(scrollEventLocation);
+    final HitTestResult result = tester.hitTestOnBinding(scrollEventLocation);
+    await tester.sendEventToBinding(
+        testPointer.scroll(const Offset(0.0, 20.0)), result);
+    expect(getScrollOffset(tester), 20.0);
+    // Pointer signals should not cause overscroll.
+    await tester.sendEventToBinding(
+        testPointer.scroll(const Offset(0.0, -30.0)), result);
+    expect(getScrollOffset(tester), 0.0);
   });
 }

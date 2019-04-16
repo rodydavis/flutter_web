@@ -52,8 +52,8 @@ void main() {
         },
       ).toString(),
       'Error caught by LIBRARY, thrown CONTEXTING.\n'
-          'MESSAGE\n'
-          'INFO',
+      'MESSAGE\n'
+      'INFO',
     );
     expect(
       FlutterErrorDetails(
@@ -64,8 +64,8 @@ void main() {
         },
       ).toString(),
       'Error caught by LIBRARY, thrown CONTEXTING.\n'
-          '  null\n'
-          'INFO',
+      '  null\n'
+      'INFO',
     );
     expect(
       FlutterErrorDetails(
@@ -76,8 +76,8 @@ void main() {
         },
       ).toString(),
       'Error caught by Flutter framework, thrown CONTEXTING.\n'
-          'MESSAGE\n'
-          'INFO',
+      'MESSAGE\n'
+      'INFO',
     );
     expect(
         const FlutterErrorDetails(

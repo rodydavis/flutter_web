@@ -36,10 +36,10 @@ void main() {
       simple.toString(parentConfiguration: sparseTextConfiguration),
       equals(
         'transform:\n'
-            '  [0] 2.0,0.0,0.0,0.0\n'
-            '  [1] 0.0,2.0,0.0,0.0\n'
-            '  [2] 0.0,0.0,2.0,0.0\n'
-            '  [3] 0.0,0.0,0.0,1.0',
+        '  [0] 2.0,0.0,0.0,0.0\n'
+        '  [1] 0.0,2.0,0.0,0.0\n'
+        '  [2] 0.0,0.0,2.0,0.0\n'
+        '  [3] 0.0,0.0,0.0,1.0',
       ),
     );
     expect(

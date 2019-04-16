@@ -651,21 +651,21 @@ void main() {
       tree.toDiagnosticsNode().toStringDeep(),
       equalsIgnoringHashCodes(
         'TestTree#00000\n'
-            ' │ stringProperty1: "value1"\n'
-            ' ╞═╦══ child node transition ═══\n'
-            ' │ ║ TestTree#00000:\n'
-            ' │ ║   p1: "v1"\n'
-            ' │ ║   tree property: TestTree#00000:\n'
-            ' │ ║     survived: true\n'
-            ' │ ║   ├child dense child: TestTree#00000\n'
-            ' │ ║   ├child dense: TestTree#00000(property1: "value1")\n'
-            ' │ ║   └child node B3: TestTree#00000(<leaf node>, foo: 42)\n'
-            ' │ ╚═══════════\n'
-            ' └─child node C: TestTree#00000\n'
-            '     foo:\n'
-            '       multi\n'
-            '       line\n'
-            '       value!\n',
+        ' │ stringProperty1: "value1"\n'
+        ' ╞═╦══ child node transition ═══\n'
+        ' │ ║ TestTree#00000:\n'
+        ' │ ║   p1: "v1"\n'
+        ' │ ║   tree property: TestTree#00000:\n'
+        ' │ ║     survived: true\n'
+        ' │ ║   ├child dense child: TestTree#00000\n'
+        ' │ ║   ├child dense: TestTree#00000(property1: "value1")\n'
+        ' │ ║   └child node B3: TestTree#00000(<leaf node>, foo: 42)\n'
+        ' │ ╚═══════════\n'
+        ' └─child node C: TestTree#00000\n'
+        '     foo:\n'
+        '       multi\n'
+        '       line\n'
+        '       value!\n',
       ),
     );
   });
@@ -1502,16 +1502,16 @@ void main() {
       multiLineProperty.toString(),
       equals(
         'objects:\n'
-            'Rect.fromLTRB(0.0, 0.0, 20.0, 20.0)\n'
-            'Color(0xffffffff)',
+        'Rect.fromLTRB(0.0, 0.0, 20.0, 20.0)\n'
+        'Color(0xffffffff)',
       ),
     );
     expect(
       multiLineProperty.toStringDeep(),
       equals(
         'objects:\n'
-            '  Rect.fromLTRB(0.0, 0.0, 20.0, 20.0)\n'
-            '  Color(0xffffffff)\n',
+        '  Rect.fromLTRB(0.0, 0.0, 20.0, 20.0)\n'
+        '  Color(0xffffffff)\n',
       ),
     );
     validateIterablePropertyJsonSerialization(multiLineProperty);
@@ -1522,9 +1522,9 @@ void main() {
       ).toStringDeep(),
       equalsIgnoringHashCodes(
         'TestTree#00000\n'
-            '   objects:\n'
-            '     Rect.fromLTRB(0.0, 0.0, 20.0, 20.0)\n'
-            '     Color(0xffffffff)\n',
+        '   objects:\n'
+        '     Rect.fromLTRB(0.0, 0.0, 20.0, 20.0)\n'
+        '     Color(0xffffffff)\n',
       ),
     );
 
@@ -1567,7 +1567,7 @@ void main() {
       ).toStringDeep(),
       equalsIgnoringHashCodes(
         'TestTree#00000\n'
-            '   object: Color(0xffffffff)\n',
+        '   object: Color(0xffffffff)\n',
       ),
     );
   });

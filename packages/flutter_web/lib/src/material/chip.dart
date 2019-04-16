@@ -1074,9 +1074,10 @@ class ActionChip extends StatelessWidget
     this.materialTapTargetSize,
   })  : assert(label != null),
         assert(
-            onPressed != null,
-            'Rather than disabling an ActionChip by setting onPressed to null, '
-            'remove it from the interface entirely.',),
+          onPressed != null,
+          'Rather than disabling an ActionChip by setting onPressed to null, '
+          'remove it from the interface entirely.',
+        ),
         super(key: key);
 
   @override

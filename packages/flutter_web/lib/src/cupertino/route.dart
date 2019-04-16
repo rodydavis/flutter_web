@@ -128,8 +128,10 @@ class CupertinoPageRoute<T> extends PageRoute<T> {
   ///  * [ValueListenableBuilder], which can be used to listen and rebuild
   ///    widgets based on a ValueListenable.
   ValueListenable<String> get previousTitle {
-    assert(_previousTitle != null,
-        'Cannot read the previousTitle for a route that has not yet been installed',);
+    assert(
+      _previousTitle != null,
+      'Cannot read the previousTitle for a route that has not yet been installed',
+    );
     return _previousTitle;
   }
 

@@ -84,9 +84,9 @@ class DomRenderer {
         if (before.parent != parent) {
           throw Exception(
             'attachBeforeElement was called with `before` element that\'s '
-                'not a child of the `parent` element:\n'
-                '  before: $before\n'
-                '  parent: $parent',
+            'not a child of the `parent` element:\n'
+            '  before: $before\n'
+            '  parent: $parent',
           );
         }
         return true;
@@ -252,8 +252,8 @@ flt-semantics [contentEditable="true"] {
       if (assertionsEnabled) {
         print(
           'WARNING: found an existing <meta name="viewport"> tag. Flutter Web '
-              'uses its own viewport configuration for better compatibility '
-              'with Flutter. This tag will be replaced.',
+          'uses its own viewport configuration for better compatibility '
+          'with Flutter. This tag will be replaced.',
         );
       }
       viewportMeta.remove();

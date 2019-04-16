@@ -13,6 +13,7 @@ import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:html' as html;
+import 'dart:js' as js;
 import 'dart:js_util' as js_util;
 
 import 'src/engine.dart' as engine;

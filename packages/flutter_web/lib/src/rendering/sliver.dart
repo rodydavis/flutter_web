@@ -497,18 +497,18 @@ class SliverConstraints extends Constraints {
   @override
   String toString() {
     return 'SliverConstraints('
-        '$axisDirection, '
-        '$growthDirection, '
-        '$userScrollDirection, '
-        'scrollOffset: ${scrollOffset.toStringAsFixed(1)}, '
-        'remainingPaintExtent: ${remainingPaintExtent.toStringAsFixed(1)}, ' +
+            '$axisDirection, '
+            '$growthDirection, '
+            '$userScrollDirection, '
+            'scrollOffset: ${scrollOffset.toStringAsFixed(1)}, '
+            'remainingPaintExtent: ${remainingPaintExtent.toStringAsFixed(1)}, ' +
         (overlap != 0.0 ? 'overlap: ${overlap.toStringAsFixed(1)}, ' : '') +
         'crossAxisExtent: ${crossAxisExtent.toStringAsFixed(1)}, '
-        'crossAxisDirection: $crossAxisDirection, '
-        'viewportMainAxisExtent: ${viewportMainAxisExtent.toStringAsFixed(1)}, '
-        'remainingCacheExtent: ${remainingCacheExtent.toStringAsFixed(1)} '
-        'cacheOrigin: ${cacheOrigin.toStringAsFixed(1)} '
-        ')';
+            'crossAxisDirection: $crossAxisDirection, '
+            'viewportMainAxisExtent: ${viewportMainAxisExtent.toStringAsFixed(1)}, '
+            'remainingCacheExtent: ${remainingCacheExtent.toStringAsFixed(1)} '
+            'cacheOrigin: ${cacheOrigin.toStringAsFixed(1)} '
+            ')';
   }
 }
 
@@ -1133,15 +1133,15 @@ abstract class RenderSliver extends RenderObject {
       if (geometry.paintExtent > constraints.remainingPaintExtent) {
         throw FlutterError(
             'SliverGeometry has a paintOffset that exceeds the remainingPaintExtent from the constraints.\n'
-                'The render object whose geometry violates the constraints is the following:\n'
-                '  ${toStringShallow(joiner: '\n  ')}\n' +
+                    'The render object whose geometry violates the constraints is the following:\n'
+                    '  ${toStringShallow(joiner: '\n  ')}\n' +
                 _debugCompareFloats(
                     'remainingPaintExtent',
                     constraints.remainingPaintExtent,
                     'paintExtent',
                     geometry.paintExtent) +
                 'The paintExtent must cause the child sliver to paint within the viewport, and so '
-                'cannot exceed the remainingPaintExtent.');
+                    'cannot exceed the remainingPaintExtent.');
       }
       return true;
     }());

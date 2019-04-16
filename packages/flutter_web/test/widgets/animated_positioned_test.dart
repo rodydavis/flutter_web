@@ -91,18 +91,18 @@ void main() {
       box.toStringDeep(minLevel: DiagnosticLevel.info),
       equalsIgnoringHashCodes(
         'RenderLimitedBox#00000\n'
-            ' │ parentData: top=31.0; left=37.0; width=59.0; height=71.0;\n'
-            ' │   offset=Offset(37.0, 31.0) (can use size)\n'
-            ' │ constraints: BoxConstraints(w=59.0, h=71.0)\n'
-            ' │ size: Size(59.0, 71.0)\n'
-            ' │ maxWidth: 0.0\n'
-            ' │ maxHeight: 0.0\n'
-            ' │\n'
-            ' └─child: RenderConstrainedBox#00000\n'
-            '     parentData: <none> (can use size)\n'
-            '     constraints: BoxConstraints(w=59.0, h=71.0)\n'
-            '     size: Size(59.0, 71.0)\n'
-            '     additionalConstraints: BoxConstraints(biggest)\n',
+        ' │ parentData: top=31.0; left=37.0; width=59.0; height=71.0;\n'
+        ' │   offset=Offset(37.0, 31.0) (can use size)\n'
+        ' │ constraints: BoxConstraints(w=59.0, h=71.0)\n'
+        ' │ size: Size(59.0, 71.0)\n'
+        ' │ maxWidth: 0.0\n'
+        ' │ maxHeight: 0.0\n'
+        ' │\n'
+        ' └─child: RenderConstrainedBox#00000\n'
+        '     parentData: <none> (can use size)\n'
+        '     constraints: BoxConstraints(w=59.0, h=71.0)\n'
+        '     size: Size(59.0, 71.0)\n'
+        '     additionalConstraints: BoxConstraints(biggest)\n',
       ),
     );
   });
@@ -181,18 +181,18 @@ void main() {
       box.toStringDeep(minLevel: DiagnosticLevel.info),
       equalsIgnoringHashCodes(
         'RenderLimitedBox#00000\n'
-            ' │ parentData: top=31.0; left=37.0; width=59.0; height=71.0;\n'
-            ' │   offset=Offset(37.0, 31.0) (can use size)\n'
-            ' │ constraints: BoxConstraints(w=59.0, h=71.0)\n'
-            ' │ size: Size(59.0, 71.0)\n'
-            ' │ maxWidth: 0.0\n'
-            ' │ maxHeight: 0.0\n'
-            ' │\n'
-            ' └─child: RenderConstrainedBox#00000\n'
-            '     parentData: <none> (can use size)\n'
-            '     constraints: BoxConstraints(w=59.0, h=71.0)\n'
-            '     size: Size(59.0, 71.0)\n'
-            '     additionalConstraints: BoxConstraints(biggest)\n',
+        ' │ parentData: top=31.0; left=37.0; width=59.0; height=71.0;\n'
+        ' │   offset=Offset(37.0, 31.0) (can use size)\n'
+        ' │ constraints: BoxConstraints(w=59.0, h=71.0)\n'
+        ' │ size: Size(59.0, 71.0)\n'
+        ' │ maxWidth: 0.0\n'
+        ' │ maxHeight: 0.0\n'
+        ' │\n'
+        ' └─child: RenderConstrainedBox#00000\n'
+        '     parentData: <none> (can use size)\n'
+        '     constraints: BoxConstraints(w=59.0, h=71.0)\n'
+        '     size: Size(59.0, 71.0)\n'
+        '     additionalConstraints: BoxConstraints(biggest)\n',
       ),
     );
   });

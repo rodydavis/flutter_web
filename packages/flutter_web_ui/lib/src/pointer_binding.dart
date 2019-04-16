@@ -90,8 +90,6 @@ class PointerSupportDetector {
 
 /// Common functionality that's shared among adapters.
 abstract class BaseAdapter {
-  // Unique device id for each pointer type.
-  static final Map<String, int> _devices = {};
   static final Map<String, html.EventListener> _listeners =
       <String, html.EventListener>{};
 
@@ -126,24 +124,6 @@ abstract class BaseAdapter {
     _listeners[eventName] = loggedHandler;
     html.window.addEventListener(eventName, loggedHandler);
   }
-
-  /// Convert a floating number timestamp (in milliseconds) to a [Duration] by
-  /// splitting it into two integer components: milliseconds + microseconds.
-  Duration _eventTimeStampToDuration(num milliseconds) {
-    int ms = milliseconds.toInt();
-    int micro =
-        ((milliseconds - ms) * Duration.microsecondsPerMillisecond).toInt();
-    return new Duration(milliseconds: ms, microseconds: micro);
-  }
-
-  int _uniqueDeviceIdFromType(String type) {
-    var id = _devices[type];
-    if (id == null) {
-      id = _devices.length;
-      _devices[type] = id;
-    }
-    return id;
-  }
 }
 
 /// Adapter class to be used with browsers that support native pointer events.
@@ -173,6 +153,14 @@ class PointerAdapter extends BaseAdapter {
     // be able to generate events (example: device is deactivated)
     _addEventListener('pointercancel', (html.Event event) {
       _callback(_convertEventToPointerData(PointerChange.cancel, event));
+    });
+
+    _addWheelEventListener((html.WheelEvent event) {
+      if (_debugLogPointerEvents) print(event.type);
+      _callback(_convertWheelEventToPointerData(event));
+      // Prevent default so mouse wheel event doesn't get converted to
+      // a scroll event that semantic nodes would process.
+      event.preventDefault();
     });
   }
 
@@ -303,9 +291,10 @@ class MouseAdapter extends BaseAdapter {
       _callback(_convertEventToPointerData(PointerChange.up, event));
     });
 
-    _addEventListener('wheel', (html.Event event) {
-      html.WheelEvent wheelEvent = event as html.WheelEvent;
-      _callback(_convertWheelEventToPointerData(wheelEvent));
+    _addWheelEventListener((html.WheelEvent event) {
+      if (_debugLogPointerEvents) print(event.type);
+      _callback(_convertWheelEventToPointerData(event));
+      event.preventDefault();
     });
   }
 
@@ -329,62 +318,90 @@ class MouseAdapter extends BaseAdapter {
       )
     ];
   }
+}
 
-  List<PointerData> _convertWheelEventToPointerData(
-    html.WheelEvent event,
-  ) {
-    const int domDeltaPixel = 0x00;
-    const int domDeltaLine = 0x01;
-    const int domDeltaPage = 0x02;
+/// Convert a floating number timestamp (in milliseconds) to a [Duration] by
+/// splitting it into two integer components: milliseconds + microseconds.
+Duration _eventTimeStampToDuration(num milliseconds) {
+  int ms = milliseconds.toInt();
+  int micro =
+      ((milliseconds - ms) * Duration.microsecondsPerMillisecond).toInt();
+  return new Duration(milliseconds: ms, microseconds: micro);
+}
 
-    // Flutter only supports pixel scroll delta. Convert deltaMode values
-    // to pixels.
-    double deltaX = event.deltaX;
-    double deltaY = event.deltaY;
-    switch (event.deltaMode) {
-      case domDeltaLine:
-        deltaX *= 32.0;
-        deltaY *= 32.0;
-        break;
-      case domDeltaPage:
-        deltaX *= window.physicalSize.width;
-        deltaY *= window.physicalSize.height;
-        break;
-      case domDeltaPixel:
-      default:
-        break;
-    }
-    return [
-      PointerData(
-        change: PointerChange.add,
-        timeStamp: _eventTimeStampToDuration(event.timeStamp),
-        kind: PointerDeviceKind.mouse,
-        signalKind: PointerSignalKind.scroll,
-        device: _uniqueDeviceIdFromType('mouse'),
-        physicalX: event.client.x,
-        physicalY: event.client.y,
-        buttons: event.buttons,
-        pressure: 1.0,
-        pressureMin: 0.0,
-        pressureMax: 1.0,
-        scrollDeltaX: deltaX,
-        scrollDeltaY: deltaY,
-      ),
-      PointerData(
-        change: PointerChange.hover,
-        timeStamp: _eventTimeStampToDuration(event.timeStamp),
-        kind: PointerDeviceKind.mouse,
-        signalKind: PointerSignalKind.scroll,
-        device: _uniqueDeviceIdFromType('mouse'),
-        physicalX: event.client.x,
-        physicalY: event.client.y,
-        buttons: event.buttons,
-        pressure: 1.0,
-        pressureMin: 0.0,
-        pressureMax: 1.0,
-        scrollDeltaX: deltaX,
-        scrollDeltaY: deltaY,
-      )
-    ];
+List<PointerData> _convertWheelEventToPointerData(
+  html.WheelEvent event,
+) {
+  const int domDeltaPixel = 0x00;
+  const int domDeltaLine = 0x01;
+  const int domDeltaPage = 0x02;
+
+  // Flutter only supports pixel scroll delta. Convert deltaMode values
+  // to pixels.
+  double deltaX = event.deltaX;
+  double deltaY = event.deltaY;
+  switch (event.deltaMode) {
+    case domDeltaLine:
+      deltaX *= 32.0;
+      deltaY *= 32.0;
+      break;
+    case domDeltaPage:
+      deltaX *= window.physicalSize.width;
+      deltaY *= window.physicalSize.height;
+      break;
+    case domDeltaPixel:
+    default:
+      break;
   }
+  return [
+    PointerData(
+      change: PointerChange.add,
+      timeStamp: _eventTimeStampToDuration(event.timeStamp),
+      kind: PointerDeviceKind.mouse,
+      signalKind: PointerSignalKind.scroll,
+      device: _uniqueDeviceIdFromType('mouse'),
+      physicalX: event.client.x,
+      physicalY: event.client.y,
+      buttons: event.buttons,
+      pressure: 1.0,
+      pressureMin: 0.0,
+      pressureMax: 1.0,
+      scrollDeltaX: deltaX,
+      scrollDeltaY: deltaY,
+    ),
+    PointerData(
+      change: PointerChange.hover,
+      timeStamp: _eventTimeStampToDuration(event.timeStamp),
+      kind: PointerDeviceKind.mouse,
+      signalKind: PointerSignalKind.scroll,
+      device: _uniqueDeviceIdFromType('mouse'),
+      physicalX: event.client.x,
+      physicalY: event.client.y,
+      buttons: event.buttons,
+      pressure: 1.0,
+      pressureMin: 0.0,
+      pressureMax: 1.0,
+      scrollDeltaX: deltaX,
+      scrollDeltaY: deltaY,
+    )
+  ];
+}
+
+void _addWheelEventListener(void listener(html.WheelEvent e)) {
+  var eventOptions = js_util.newObject();
+  js_util.setProperty(eventOptions, 'passive', false);
+  js_util.callMethod(html.window.document, 'addEventListener',
+      ['wheel', js.allowInterop((event) => listener(event)), eventOptions]);
+}
+
+// Unique device id for each pointer type.
+// TODO(flutter_web): Stabilize/Prepopulate device ids.
+final Map<String, int> _devices = {};
+int _uniqueDeviceIdFromType(String type) {
+  var id = _devices[type];
+  if (id == null) {
+    id = _devices.length;
+    _devices[type] = id;
+  }
+  return id;
 }
