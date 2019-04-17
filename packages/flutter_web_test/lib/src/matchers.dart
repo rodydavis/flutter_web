@@ -1656,59 +1656,6 @@ class _MatchesReferenceImage extends AsyncMatcher {
   }
 }
 
-class _MatchesGoldenFile extends AsyncMatcher {
-  const _MatchesGoldenFile(this.key);
-
-  _MatchesGoldenFile.forStringPath(String path) : key = Uri.parse(path);
-
-  final Uri key;
-
-  @override
-  Future<String> matchAsync(dynamic item) async {
-    Future<ui.Image> imageFuture;
-    if (item is Future<ui.Image>) {
-      imageFuture = item;
-    } else if (item is ui.Image) {
-      imageFuture = Future<ui.Image>.value(item);
-    } else {
-      final Finder finder = item;
-      final Iterable<Element> elements = finder.evaluate();
-      if (elements.isEmpty) {
-        return 'could not be rendered because no widget was found';
-      } else if (elements.length > 1) {
-        return 'matched too many widgets';
-      }
-      imageFuture = _captureImage(elements.single);
-    }
-
-    final TestWidgetsFlutterBinding binding =
-        TestWidgetsFlutterBinding.ensureInitialized();
-    return binding.runAsync<String>(() async {
-      final ui.Image image = await imageFuture;
-      final ByteData bytes = await image
-          .toByteData(format: ui.ImageByteFormat.png)
-          .timeout(const Duration(seconds: 10), onTimeout: () => null);
-      if (bytes == null)
-        return 'Failed to generate screenshot from engine within the 10,000ms timeout.';
-      // TODO(flutter_web): Implement {
-      // if (autoUpdateGoldenFiles) throw new UnimplementedError();
-      //        await goldenFileComparator.update(key, bytes.buffer.asUint8List());
-      //        return null;
-      //      }
-      //      try {
-      //        final bool success = await goldenFileComparator.compare(bytes.buffer.asUint8List(), key);
-      //        return success ? null : 'does not match';
-      //      } on TestFailure catch (ex) {
-      //        return ex.message;
-      //      }
-    }, additionalTime: const Duration(seconds: 11));
-  }
-
-  @override
-  Description describe(Description description) => description
-      .add('one widget whose rasterized image matches golden image "$key"');
-}
-
 class _MatchesSemanticsData extends Matcher {
   _MatchesSemanticsData({
     this.label,
