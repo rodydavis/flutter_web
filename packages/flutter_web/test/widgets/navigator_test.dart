@@ -53,15 +53,16 @@ class ThirdWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-        key: targetKey,
-        onTap: () {
-          try {
-            Navigator.of(context);
-          } catch (e) {
-            onException(e);
-          }
-        },
-        behavior: HitTestBehavior.opaque);
+      key: targetKey,
+      onTap: () {
+        try {
+          Navigator.of(context);
+        } catch (e) {
+          onException(e);
+        }
+      },
+      behavior: HitTestBehavior.opaque,
+    );
   }
 }
 
@@ -185,10 +186,11 @@ void main() {
     const Key targetKey = Key('foo');
     dynamic exception;
     final Widget widget = ThirdWidget(
-        targetKey: targetKey,
-        onException: (dynamic e) {
-          exception = e;
-        });
+      targetKey: targetKey,
+      onException: (dynamic e) {
+        exception = e;
+      },
+    );
     await tester.pumpWidget(widget);
     await tester.tap(find.byKey(targetKey));
     expect(exception, isInstanceOf<FlutterError>());
@@ -269,19 +271,23 @@ void main() {
     final List<String> log = <String>[];
     final Map<String, WidgetBuilder> routes = <String, WidgetBuilder>{
       '/': (BuildContext context) {
-        return Row(children: <Widget>[
-          GestureDetector(
+        return Row(
+          children: <Widget>[
+            GestureDetector(
               onTap: () {
                 log.add('left');
                 Navigator.pushNamed(context, '/second');
               },
-              child: const Text('left')),
-          GestureDetector(
+              child: const Text('left'),
+            ),
+            GestureDetector(
               onTap: () {
                 log.add('right');
               },
-              child: const Text('right')),
-        ]);
+              child: const Text('right'),
+            ),
+          ],
+        );
       },
       '/second': (BuildContext context) => Container(),
     };
@@ -613,17 +619,18 @@ void main() {
       };
 
     await tester.pumpWidget(MaterialApp(
-        navigatorObservers: <NavigatorObserver>[observer],
-        onGenerateRoute: (RouteSettings settings) {
-          routes[settings.name] = PageRouteBuilder<String>(
-            settings: settings,
-            pageBuilder: (BuildContext context, Animation<double> _,
-                Animation<double> __) {
-              return pageBuilders[settings.name](context);
-            },
-          );
-          return routes[settings.name];
-        }));
+      navigatorObservers: <NavigatorObserver>[observer],
+      onGenerateRoute: (RouteSettings settings) {
+        routes[settings.name] = PageRouteBuilder<String>(
+          settings: settings,
+          pageBuilder: (BuildContext context, Animation<double> _,
+              Animation<double> __) {
+            return pageBuilders[settings.name](context);
+          },
+        );
+        return routes[settings.name];
+      },
+    ));
 
     expect(find.text('/'), findsOneWidget);
     expect(find.text('A'), findsNothing);
@@ -990,5 +997,217 @@ void main() {
         ));
 
     semantics.dispose();
+  });
+
+  testWidgets('arguments for named routes on Navigator',
+      (WidgetTester tester) async {
+    GlobalKey currentRouteKey;
+    final List<Object> arguments = <Object>[];
+
+    await tester.pumpWidget(MaterialApp(
+      onGenerateRoute: (RouteSettings settings) {
+        arguments.add(settings.arguments);
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (BuildContext context) => Center(
+              key: currentRouteKey = GlobalKey(), child: Text(settings.name)),
+        );
+      },
+    ));
+
+    expect(find.text('/'), findsOneWidget);
+    expect(arguments.single, isNull);
+    arguments.clear();
+
+    Navigator.pushNamed(
+      currentRouteKey.currentContext,
+      '/A',
+      arguments: 'pushNamed',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('/'), findsNothing);
+    expect(find.text('/A'), findsOneWidget);
+    expect(arguments.single, 'pushNamed');
+    arguments.clear();
+
+    Navigator.popAndPushNamed(
+      currentRouteKey.currentContext,
+      '/B',
+      arguments: 'popAndPushNamed',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('/'), findsNothing);
+    expect(find.text('/A'), findsNothing);
+    expect(find.text('/B'), findsOneWidget);
+    expect(arguments.single, 'popAndPushNamed');
+    arguments.clear();
+
+    Navigator.pushNamedAndRemoveUntil(
+      currentRouteKey.currentContext,
+      '/C',
+      (Route<dynamic> route) => route.isFirst,
+      arguments: 'pushNamedAndRemoveUntil',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('/'), findsNothing);
+    expect(find.text('/A'), findsNothing);
+    expect(find.text('/B'), findsNothing);
+    expect(find.text('/C'), findsOneWidget);
+    expect(arguments.single, 'pushNamedAndRemoveUntil');
+    arguments.clear();
+
+    Navigator.pushReplacementNamed(
+      currentRouteKey.currentContext,
+      '/D',
+      arguments: 'pushReplacementNamed',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('/'), findsNothing);
+    expect(find.text('/A'), findsNothing);
+    expect(find.text('/B'), findsNothing);
+    expect(find.text('/C'), findsNothing);
+    expect(find.text('/D'), findsOneWidget);
+    expect(arguments.single, 'pushReplacementNamed');
+    arguments.clear();
+  });
+
+  testWidgets('arguments for named routes on NavigatorState',
+      (WidgetTester tester) async {
+    final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+    final List<Object> arguments = <Object>[];
+
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: navigatorKey,
+      onGenerateRoute: (RouteSettings settings) {
+        arguments.add(settings.arguments);
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (BuildContext context) => Center(child: Text(settings.name)),
+        );
+      },
+    ));
+
+    expect(find.text('/'), findsOneWidget);
+    expect(arguments.single, isNull);
+    arguments.clear();
+
+    navigatorKey.currentState.pushNamed(
+      '/A',
+      arguments: 'pushNamed',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('/'), findsNothing);
+    expect(find.text('/A'), findsOneWidget);
+    expect(arguments.single, 'pushNamed');
+    arguments.clear();
+
+    navigatorKey.currentState.popAndPushNamed(
+      '/B',
+      arguments: 'popAndPushNamed',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('/'), findsNothing);
+    expect(find.text('/A'), findsNothing);
+    expect(find.text('/B'), findsOneWidget);
+    expect(arguments.single, 'popAndPushNamed');
+    arguments.clear();
+
+    navigatorKey.currentState.pushNamedAndRemoveUntil(
+      '/C',
+      (Route<dynamic> route) => route.isFirst,
+      arguments: 'pushNamedAndRemoveUntil',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('/'), findsNothing);
+    expect(find.text('/A'), findsNothing);
+    expect(find.text('/B'), findsNothing);
+    expect(find.text('/C'), findsOneWidget);
+    expect(arguments.single, 'pushNamedAndRemoveUntil');
+    arguments.clear();
+
+    navigatorKey.currentState.pushReplacementNamed(
+      '/D',
+      arguments: 'pushReplacementNamed',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('/'), findsNothing);
+    expect(find.text('/A'), findsNothing);
+    expect(find.text('/B'), findsNothing);
+    expect(find.text('/C'), findsNothing);
+    expect(find.text('/D'), findsOneWidget);
+    expect(arguments.single, 'pushReplacementNamed');
+    arguments.clear();
+  });
+
+  // TODO(flutter_web): Upstream.
+  testWidgets('Initial route can have gaps', (WidgetTester tester) async {
+    final GlobalKey<NavigatorState> keyNav = GlobalKey<NavigatorState>();
+    const keyRoot = Key('Root');
+    const keyA = Key('A');
+    const keyABC = Key('ABC');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: keyNav,
+        initialRoute: '/A/B/C',
+        routes: <String, WidgetBuilder>{
+          '/': (BuildContext context) => Container(key: keyRoot),
+          '/A': (BuildContext context) => Container(key: keyA),
+          // The route /A/B is intentionally left out.
+          '/A/B/C': (BuildContext context) => Container(key: keyABC),
+        },
+      ),
+    );
+
+    // The initial route /A/B/C should've been pushed successfully.
+    expect(find.byKey(keyRoot), findsOneWidget);
+    expect(find.byKey(keyA), findsOneWidget);
+    expect(find.byKey(keyABC), findsOneWidget);
+
+    keyNav.currentState.pop();
+    await tester.pumpAndSettle();
+    expect(find.byKey(keyRoot), findsOneWidget);
+    expect(find.byKey(keyA), findsOneWidget);
+    expect(find.byKey(keyABC), findsNothing);
+  });
+
+  // TODO(flutter_web): Upstream.
+  testWidgets('The full initial route has to be matched',
+      (WidgetTester tester) async {
+    final GlobalKey<NavigatorState> keyNav = GlobalKey<NavigatorState>();
+    const keyRoot = Key('Root');
+    const keyA = Key('A');
+    const keyAB = Key('AB');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: keyNav,
+        initialRoute: '/A/B/C',
+        routes: <String, WidgetBuilder>{
+          '/': (BuildContext context) => Container(key: keyRoot),
+          '/A': (BuildContext context) => Container(key: keyA),
+          '/A/B': (BuildContext context) => Container(key: keyAB),
+          // The route /A/B/C is intentionally left out.
+        },
+      ),
+    );
+
+    final dynamic exception = tester.takeException();
+    expect(exception is String, isTrue);
+    expect(
+        exception.startsWith('Could not navigate to initial route.'), isTrue);
+
+    // Only the root route should've been pushed.
+    expect(find.byKey(keyRoot), findsOneWidget);
+    expect(find.byKey(keyA), findsNothing);
+    expect(find.byKey(keyAB), findsNothing);
   });
 }

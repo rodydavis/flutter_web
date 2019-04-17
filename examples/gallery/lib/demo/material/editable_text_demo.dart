@@ -5,7 +5,7 @@
 import 'package:flutter_web/material.dart';
 
 class EditableTextDemo extends StatefulWidget {
-  static String routeName = '/editable_text';
+  static String routeName = '/material/editable_text';
 
   @override
   State<StatefulWidget> createState() => EditableTextDemoState();
