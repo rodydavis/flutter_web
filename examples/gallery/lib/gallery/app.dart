@@ -116,7 +116,6 @@ class _GalleryAppState extends State<GalleryApp> {
     );
 
     return MaterialApp(
-      navigatorObservers: [WebOnlyNavigatorObserver()],
       theme: _options.theme.data.copyWith(platform: _options.platform),
       title: 'Flutter Web Gallery',
       color: Colors.grey,

@@ -5,6 +5,7 @@
 import 'package:flutter_web/cupertino.dart';
 import 'package:flutter_web/rendering.dart';
 import 'package:flutter_web/widgets.dart';
+import 'package:flutter_web_ui/ui.dart' show isWeb;
 
 import 'arc.dart';
 import 'colors.dart';
@@ -376,6 +377,12 @@ class _MaterialAppState extends State<MaterialApp> {
       _navigatorObservers =
           List<NavigatorObserver>.from(widget.navigatorObservers)
             ..add(_heroController);
+      // TODO(flutter_web): Upstream.
+      if (isWeb) {
+        /// In order to activate browser history integration, an instance of
+        /// [WebOnlyNavigatorObserver] needs to be added as an observer.
+        _navigatorObservers.add(WebOnlyNavigatorObserver());
+      }
     } else {
       _navigatorObservers = null;
     }
