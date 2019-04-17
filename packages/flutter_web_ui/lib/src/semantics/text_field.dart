@@ -44,8 +44,17 @@ class TextField extends RoleManager {
 
     _textFieldElement.style
       ..position = 'absolute'
-      ..top = '${semanticsObject.rect.top}px'
-      ..left = '${semanticsObject.rect.left}px'
+      // `top` and `left` are intentionally set to zero here.
+      //
+      // The text field would live inside a `<flt-semantics>` which should
+      // already be positioned using semantics.rect.
+      //
+      // See also:
+      //
+      // * [SemanticsObject.recomputePositionAndSize], which sets the position
+      //   and size of the parent `<flt-semantics>` element.
+      ..top = '0'
+      ..left = '0'
       ..width = '${semanticsObject.rect.width}px'
       ..height = '${semanticsObject.rect.height}px';
     semanticsObject.element.append(_textFieldElement);
@@ -63,7 +72,7 @@ class TextField extends RoleManager {
 
   /// Chrome on Android reports text field activation as a "click" event.
   ///
-  /// When in browser gesture mode, the click is forwarded to the framework as
+  /// When in browser gesture mode, the focus is forwarded to the framework as
   /// a tap to initialize editing.
   void _initializeForBlink() {
     _textFieldElement.addEventListener('focus', (html.Event event) {

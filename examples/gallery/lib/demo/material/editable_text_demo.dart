@@ -15,6 +15,8 @@ class EditableTextDemoState extends State<EditableTextDemo> {
   final cyanController = TextEditingController(text: 'Cyan');
   final orangeController = TextEditingController(text: 'Orange');
   final thickController = TextEditingController(text: 'Thick Rounded Cursor');
+  final multiController =
+      TextEditingController(text: 'First line\nSecond line');
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +47,16 @@ class EditableTextDemoState extends State<EditableTextDemo> {
             cursor: Colors.red.shade900,
             radius: const Radius.circular(2),
             cursorWidth: 8,
+          ),
+          Banner(
+            child: TextField(
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              controller: multiController,
+              maxLines: 3,
+            ),
+            message: 'W.I.P',
+            textDirection: TextDirection.ltr,
+            location: BannerLocation.bottomEnd,
           ),
         ],
       ),

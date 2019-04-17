@@ -37,6 +37,13 @@ html.InputElement _createInputElement() {
   return input;
 }
 
+html.TextAreaElement _createTextAreaElement() {
+  final html.TextAreaElement textarea = html.TextAreaElement();
+  _styleEditingElement(textarea);
+  return textarea;
+}
+
+/// The current text and selection state of a text field.
 class EditingState {
   EditingState({this.text, this.baseOffset = 0, this.extentOffset = 0});
 
@@ -44,6 +51,7 @@ class EditingState {
   /// coming from Flutter.
   ///
   /// The `editingState` Map has the following structure:
+  /// ```json
   /// {
   ///   "text": "The text here",
   ///   "selectionBase": 0,
@@ -53,12 +61,13 @@ class EditingState {
   ///   "composingBase": -1,
   ///   "composingExtent": -1
   /// }
+  /// ```
   EditingState.fromFlutter(Map<String, dynamic> flutterEditingState)
       : text = flutterEditingState['text'],
         baseOffset = flutterEditingState['selectionBase'],
         extentOffset = flutterEditingState['selectionExtent'];
 
-  /// The counter-part of [EditingState.fromFlutter]. It generates a Map that
+  /// The counterpart of [EditingState.fromFlutter]. It generates a Map that
   /// can be sent to Flutter.
   // TODO(mdebbar): Should we get `selectionAffinity` and other properties from flutter's editing state?
   Map<String, dynamic> toFlutter() => <String, dynamic>{
@@ -67,10 +76,16 @@ class EditingState {
         'selectionExtent': extentOffset,
       };
 
+  /// The current text being edited.
   final String text;
+
+  /// The offset at which the text selection originates.
   final int baseOffset;
+
+  /// The offset at which the text selection terminates.
   final int extentOffset;
 
+  /// Whether the current editing state is valid or not.
   bool get isValid => baseOffset >= 0 && extentOffset >= 0;
 
   @override
@@ -85,20 +100,71 @@ class EditingState {
 
   @override
   String toString() {
-    return 'EditingState("$text", base:$baseOffset, extent:$extentOffset)';
+    return assertionsEnabled
+        ? 'EditingState("$text", base:$baseOffset, extent:$extentOffset)'
+        : super.toString();
   }
+}
+
+/// Various types of inputs used in text fields.
+///
+/// These types are coming from Flutter's [TextInputType]. Currently, we don't
+/// support all the types. We fallback to [InputType.text] when Flutter sends
+/// a type that isn't supported.
+// TODO(flutter_web): Support more types.
+enum InputType {
+  /// Single-line plain text.
+  text,
+
+  /// Multi-line text.
+  multiline,
+}
+
+InputType _getInputTypeFromString(String inputType) {
+  switch (inputType) {
+    case 'TextInputType.multiline':
+      return InputType.multiline;
+
+    case 'TextInputType.text':
+    default:
+      return InputType.text;
+  }
+}
+
+/// Controls the appearance of the input control being edited.
+///
+/// For example, [inputType] determines whether we should use `<input>` or
+/// `<textarea>` as a backing DOM element.
+///
+/// This corresponds to Flutter's [TextInputConfiguration].
+class InputConfiguration {
+  InputConfiguration({
+    this.inputType,
+    this.obscureText = false,
+  });
+
+  InputConfiguration.fromFlutter(Map<String, dynamic> flutterInputConfiguration)
+      : inputType = _getInputTypeFromString(
+            flutterInputConfiguration['inputType']['name']),
+        obscureText = flutterInputConfiguration['obscureText'];
+
+  /// The type of information being edited in the input control.
+  final InputType inputType;
+
+  /// Whether to hide the text being edited.
+  final bool obscureText;
 }
 
 typedef _OnChangeCallback = void Function(EditingState editingState);
 
 enum ElementType {
-  /// The backing element is an <input>
+  /// The backing element is an `<input>`.
   input,
 
-  /// The backing element is a <textarea>
+  /// The backing element is a `<textarea>`.
   textarea,
 
-  /// The backing element is a <span contenteditable="true">
+  /// The backing element is a `<span contenteditable="true">`.
   contentEditable,
 }
 
@@ -118,12 +184,13 @@ ElementType _getTypeFromElement(html.HtmlElement domElement) {
   return null;
 }
 
-/// Wrapper around the DOM element used to provide text editing capabilities.
+/// Wraps the DOM element used to provide text editing capabilities.
 ///
 /// The backing DOM element could be one of:
-/// 1. <input>
-/// 2. <textarea>
-/// 3. <span contenteditable="true">
+///
+/// 1. `<input>`.
+/// 2. `<textarea>`.
+/// 3. `<span contenteditable="true">`.
 class TextEditingElement {
   /// Creates a non-persistent [TextEditingElement].
   ///
@@ -152,10 +219,13 @@ class TextEditingElement {
   /// Changes could be:
   /// - Text changes, or
   /// - Selection changes.
-  void enable({@required _OnChangeCallback onChange}) {
+  void enable(
+    InputConfiguration inputConfig, {
+    @required _OnChangeCallback onChange,
+  }) {
     assert(!_enabled);
 
-    _initDomElement();
+    _initDomElement(inputConfig);
     _enabled = true;
     _onChange = onChange;
 
@@ -204,8 +274,20 @@ class TextEditingElement {
     _removeDomElement();
   }
 
-  void _initDomElement() {
-    domElement = _createInputElement();
+  void _initDomElement(InputConfiguration inputConfig) {
+    switch (inputConfig.inputType) {
+      case InputType.text:
+        domElement = _createInputElement();
+        break;
+
+      case InputType.multiline:
+        domElement = _createTextAreaElement();
+        break;
+
+      default:
+        throw UnsupportedError(
+            'Unsupported input type: ${inputConfig.inputType}');
+    }
     html.document.body.append(domElement);
   }
 
@@ -257,6 +339,16 @@ class TextEditingElement {
     domElement.focus();
   }
 
+  /// Swap out the current DOM element and replace it with a new one of type
+  /// [newElementType].
+  ///
+  /// Ideally, swapping the underlying DOM element should be seamless to the
+  /// user of this class.
+  ///
+  /// See also:
+  ///
+  /// * [PersistentTextEditingElement._swapDomElement], which notifies its users
+  ///   that the element has been swapped.
   void _swapDomElement(ElementType newElementType) {
     // TODO(mdebbar): Create the appropriate dom element and initialize it.
   }
@@ -365,7 +457,7 @@ class PersistentTextEditingElement extends TextEditingElement {
   final html.VoidCallback _onDomElementSwap;
 
   @override
-  void _initDomElement() {
+  void _initDomElement(InputConfiguration inputConfig) {
     // In persistent mode, the user of this class is supposed to insert the
     // [domElement] on their own. Let's make sure they did.
     assert(domElement != null);
@@ -394,6 +486,9 @@ class PersistentTextEditingElement extends TextEditingElement {
   @override
   void _swapDomElement(ElementType newElementType) {
     super._swapDomElement(newElementType);
+
+    // Unfortunately, in persistent mode, the user of this class has to be
+    // notified that the element is being swapped.
     // TODO(mdebbar): do we need to call `old.replaceWith(new)` here?
     _onDomElementSwap();
   }
@@ -447,7 +542,7 @@ class HybridTextEditing {
 
   int _clientId;
   bool _isEditing = false;
-  Map<String, dynamic> _lastEditingState;
+  Map<String, dynamic> _configuration;
 
   final List<StreamSubscription> _subscriptions = [];
 
@@ -457,6 +552,7 @@ class HybridTextEditing {
     switch (call.method) {
       case 'TextInput.setClient':
         _clientId = call.arguments[0];
+        _configuration = call.arguments[1];
         break;
 
       case 'TextInput.setEditingState':
@@ -466,7 +562,7 @@ class HybridTextEditing {
 
       case 'TextInput.show':
         if (!_isEditing) {
-          _startEditing(_lastEditingState);
+          _startEditing();
         }
         break;
 
@@ -479,10 +575,13 @@ class HybridTextEditing {
     }
   }
 
-  void _startEditing(Map<String, dynamic> editingState) {
+  void _startEditing() {
     assert(!_isEditing);
     _isEditing = true;
-    editingElement.enable(onChange: _syncEditingStateToFlutter);
+    editingElement.enable(
+      InputConfiguration.fromFlutter(_configuration),
+      onChange: _syncEditingStateToFlutter,
+    );
   }
 
   void _stopEditing() {

@@ -6,21 +6,31 @@ import 'dart:html';
 import 'dart:typed_data';
 
 import 'package:flutter_web_ui/ui.dart' as ui;
-import 'package:flutter_web_ui/src/engine.dart'
-    show
-        MethodCall,
-        MethodCodec,
-        JSONMethodCodec,
-        TextEditingElement,
-        EditingState,
-        PersistentTextEditingElement,
-        HybridTextEditing;
+import 'package:flutter_web_ui/src/engine.dart';
 import 'package:flutter_web_test/flutter_web_test.dart';
 
 final MethodCodec codec = JSONMethodCodec();
 
 TextEditingElement editingElement;
 EditingState lastEditingState;
+
+final InputConfiguration singlelineConfig =
+    InputConfiguration(inputType: InputType.text);
+final Map<String, dynamic> flutterSinglelineConfig = {
+  'inputType': {
+    'name': 'TextInputType.text',
+  },
+  'obscureText': false,
+};
+
+final InputConfiguration multilineConfig =
+    InputConfiguration(inputType: InputType.multiline);
+final Map<String, dynamic> flutterMultilineConfig = {
+  'inputType': {
+    'name': 'TextInputType.multiline',
+  },
+  'obscureText': false,
+};
 
 void trackEditingState(EditingState editingState) {
   lastEditingState = editingState;
@@ -52,16 +62,15 @@ void main() {
       // The focus initially is on the body.
       expect(document.activeElement, document.body);
 
-      editingElement.enable(onChange: trackEditingState);
+      editingElement.enable(singlelineConfig, onChange: trackEditingState);
       expect(
         document.getElementsByTagName('input'),
         hasLength(1),
       );
+      final InputElement input = document.getElementsByTagName('input')[0];
       // Now the editing element should have focus.
-      expect(
-        document.activeElement,
-        document.getElementsByTagName('input')[0],
-      );
+      expect(document.activeElement, input);
+      expect(editingElement.domElement, input);
 
       editingElement.disable();
       expect(
@@ -73,7 +82,7 @@ void main() {
     });
 
     test('Can read editing state correctly', () {
-      editingElement.enable(onChange: trackEditingState);
+      editingElement.enable(singlelineConfig, onChange: trackEditingState);
 
       final InputElement input = editingElement.domElement;
       input.value = 'foo bar';
@@ -92,20 +101,84 @@ void main() {
     });
 
     test('Can set editing state correctly', () {
-      editingElement.enable(onChange: trackEditingState);
+      editingElement.enable(singlelineConfig, onChange: trackEditingState);
       editingElement.setEditingState(
           EditingState(text: 'foo bar baz', baseOffset: 2, extentOffset: 7));
 
-      checkEditingState(editingElement.domElement, 'foo bar baz', 2, 7);
+      checkInputEditingState(editingElement.domElement, 'foo bar baz', 2, 7);
     });
 
     test('Re-acquires focus', () async {
-      editingElement.enable(onChange: trackEditingState);
+      editingElement.enable(singlelineConfig, onChange: trackEditingState);
       expect(document.activeElement, editingElement.domElement);
 
       editingElement.domElement.blur();
       // The focus remains on [editingElement.domElement].
       expect(document.activeElement, editingElement.domElement);
+    });
+
+    test('Multi-line mode also works', () {
+      // The textarea element is created lazily.
+      expect(document.getElementsByTagName('textarea'), hasLength(0));
+      editingElement.enable(multilineConfig, onChange: trackEditingState);
+      expect(document.getElementsByTagName('textarea'), hasLength(1));
+
+      final TextAreaElement textarea =
+          document.getElementsByTagName('textarea')[0];
+      // Now the textarea should have focus.
+      expect(document.activeElement, textarea);
+      expect(editingElement.domElement, textarea);
+
+      textarea.value = 'foo\nbar';
+      textarea.dispatchEvent(Event.eventType('Event', 'input'));
+      textarea.setSelectionRange(4, 6);
+      textarea.dispatchEvent(Event.eventType('Event', 'selectionchange'));
+      // Can read textarea state correctly (and preserves new lines).
+      expect(
+        lastEditingState,
+        EditingState(text: 'foo\nbar', baseOffset: 4, extentOffset: 6),
+      );
+
+      // Can set textarea state correctly (and preserves new lines).
+      editingElement.setEditingState(
+          EditingState(text: 'bar\nbaz', baseOffset: 2, extentOffset: 7));
+      checkTextAreaEditingState(textarea, 'bar\nbaz', 2, 7);
+
+      // Re-acquires focus.
+      textarea.blur();
+      expect(document.activeElement, textarea);
+
+      editingElement.disable();
+      // The textarea should be cleaned up.
+      expect(document.getElementsByTagName('textarea'), hasLength(0));
+      // The focus is back to the body.
+      expect(document.activeElement, document.body);
+    });
+
+    test('Same instance can be re-enabled with different config', () {
+      // Make sure there's nothing in the DOM yet.
+      expect(document.getElementsByTagName('input'), hasLength(0));
+      expect(document.getElementsByTagName('textarea'), hasLength(0));
+
+      // Use single-line config and expect an `<input>` to be created.
+      editingElement.enable(singlelineConfig, onChange: trackEditingState);
+      expect(document.getElementsByTagName('input'), hasLength(1));
+      expect(document.getElementsByTagName('textarea'), hasLength(0));
+
+      // Disable and check that all DOM elements were removed.
+      editingElement.disable();
+      expect(document.getElementsByTagName('input'), hasLength(0));
+      expect(document.getElementsByTagName('textarea'), hasLength(0));
+
+      // Use multi-line config and expect an `<textarea>` to be created.
+      editingElement.enable(multilineConfig, onChange: trackEditingState);
+      expect(document.getElementsByTagName('input'), hasLength(0));
+      expect(document.getElementsByTagName('textarea'), hasLength(1));
+
+      // Disable again and check that all DOM elements were removed.
+      editingElement.disable();
+      expect(document.getElementsByTagName('input'), hasLength(0));
+      expect(document.getElementsByTagName('textarea'), hasLength(0));
     });
 
     test('Can swap backing elements on the fly', () {
@@ -131,7 +204,8 @@ void main() {
         expect(document.activeElement, document.body);
 
         document.body.append(input);
-        persistentEditingElement.enable(onChange: trackEditingState);
+        persistentEditingElement.enable(singlelineConfig,
+            onChange: trackEditingState);
         expect(document.activeElement, input);
 
         // The input should lose focus now.
@@ -153,12 +227,14 @@ void main() {
 
         // Can't enable before the input element is inserted into the DOM.
         expect(
-          () => persistentEditingElement.enable(onChange: trackEditingState),
+          () => persistentEditingElement.enable(singlelineConfig,
+              onChange: trackEditingState),
           throwsAssertionError,
         );
 
         document.body.append(input);
-        persistentEditingElement.enable(onChange: trackEditingState);
+        persistentEditingElement.enable(singlelineConfig,
+            onChange: trackEditingState);
         expect(document.activeElement, persistentEditingElement.domElement);
         // It doesn't create a new DOM element.
         expect(persistentEditingElement.domElement, input);
@@ -178,7 +254,8 @@ void main() {
             PersistentTextEditingElement(input, onDomElementSwap: () {});
 
         document.body.append(input);
-        persistentEditingElement.enable(onChange: trackEditingState);
+        persistentEditingElement.enable(singlelineConfig,
+            onChange: trackEditingState);
         expect(document.activeElement, input);
 
         persistentEditingElement.domElement.blur();
@@ -191,32 +268,41 @@ void main() {
         persistentEditingElement.disable();
       });
 
-      test('Calls setupDomElement and insertDomElement', () {
-        final InputElement input = InputElement();
+      test('Works in multi-line mode', () {
+        final TextAreaElement textarea = TextAreaElement();
         final PersistentTextEditingElement persistentEditingElement =
-            PersistentTextEditingElement(input, onDomElementSwap: () {});
+            PersistentTextEditingElement(textarea, onDomElementSwap: () {});
 
-        // The DOM element should've been eagerly created.
-        expect(input, isNotNull);
-        // But doesn't have focus.
+        expect(persistentEditingElement.domElement, textarea);
         expect(document.activeElement, document.body);
 
+        // Can't enable before the textarea is inserted into the DOM.
         expect(
-          () => persistentEditingElement.enable(onChange: trackEditingState),
+          () => persistentEditingElement.enable(singlelineConfig,
+              onChange: trackEditingState),
           throwsAssertionError,
         );
-        document.body.append(persistentEditingElement.domElement);
-        persistentEditingElement.enable(onChange: trackEditingState);
-        expect(document.activeElement, persistentEditingElement.domElement);
-        // It doesn't create a new DOM element.
-        expect(persistentEditingElement.domElement, input);
+
+        document.body.append(textarea);
+        persistentEditingElement.enable(multilineConfig,
+            onChange: trackEditingState);
+        // Focuses the textarea.
+        expect(document.activeElement, textarea);
+
+        // Doesn't re-acquire focus.
+        textarea.blur();
+        expect(document.activeElement, document.body);
+
+        // Re-focuses when setting editing state
+        persistentEditingElement.setEditingState(EditingState(text: 'foo'));
+        expect(document.activeElement, textarea);
 
         persistentEditingElement.disable();
-        // It doesn't remove the DOM element.
-        expect(persistentEditingElement.domElement, input);
+        // It doesn't remove the textarea from the DOM.
+        expect(persistentEditingElement.domElement, textarea);
         expect(document.body.contains(persistentEditingElement.domElement),
             isTrue);
-        // But the DOM element loses focus.
+        // But the textarea loses focus.
         expect(document.activeElement, document.body);
       });
     });
@@ -236,7 +322,8 @@ void main() {
     });
 
     test('setClient, show, setEditingState, hide', () {
-      MethodCall setClient = MethodCall('TextInput.setClient', [123]);
+      MethodCall setClient =
+          MethodCall('TextInput.setClient', [123, flutterSinglelineConfig]);
       textEditing.handleTextInput(codec.encodeMethodCall(setClient));
 
       // Editing shouldn't have started yet.
@@ -245,7 +332,7 @@ void main() {
       MethodCall show = MethodCall('TextInput.show');
       textEditing.handleTextInput(codec.encodeMethodCall(show));
 
-      checkEditingState(textEditing.editingElement.domElement, '', 0, 0);
+      checkInputEditingState(textEditing.editingElement.domElement, '', 0, 0);
 
       MethodCall setEditingState = MethodCall('TextInput.setEditingState', {
         'text': 'abcd',
@@ -254,7 +341,8 @@ void main() {
       });
       textEditing.handleTextInput(codec.encodeMethodCall(setEditingState));
 
-      checkEditingState(textEditing.editingElement.domElement, 'abcd', 2, 3);
+      checkInputEditingState(
+          textEditing.editingElement.domElement, 'abcd', 2, 3);
 
       MethodCall hide = MethodCall('TextInput.hide');
       textEditing.handleTextInput(codec.encodeMethodCall(hide));
@@ -267,7 +355,8 @@ void main() {
     });
 
     test('setClient, setEditingState, show, clearClient', () {
-      MethodCall setClient = MethodCall('TextInput.setClient', [123]);
+      MethodCall setClient =
+          MethodCall('TextInput.setClient', [123, flutterSinglelineConfig]);
       textEditing.handleTextInput(codec.encodeMethodCall(setClient));
 
       MethodCall setEditingState = MethodCall('TextInput.setEditingState', {
@@ -283,7 +372,8 @@ void main() {
       MethodCall show = MethodCall('TextInput.show');
       textEditing.handleTextInput(codec.encodeMethodCall(show));
 
-      checkEditingState(textEditing.editingElement.domElement, 'abcd', 2, 3);
+      checkInputEditingState(
+          textEditing.editingElement.domElement, 'abcd', 2, 3);
 
       MethodCall clearClient = MethodCall('TextInput.clearClient');
       textEditing.handleTextInput(codec.encodeMethodCall(clearClient));
@@ -295,7 +385,8 @@ void main() {
     });
 
     test('setClient, setEditingState, show, setEditingState, clearClient', () {
-      MethodCall setClient = MethodCall('TextInput.setClient', [123]);
+      MethodCall setClient =
+          MethodCall('TextInput.setClient', [123, flutterSinglelineConfig]);
       textEditing.handleTextInput(codec.encodeMethodCall(setClient));
 
       MethodCall setEditingState1 = MethodCall('TextInput.setEditingState', {
@@ -316,7 +407,8 @@ void main() {
       textEditing.handleTextInput(codec.encodeMethodCall(setEditingState2));
 
       // The second [setEditingState] should override the first one.
-      checkEditingState(textEditing.editingElement.domElement, 'xyz', 0, 2);
+      checkInputEditingState(
+          textEditing.editingElement.domElement, 'xyz', 0, 2);
 
       MethodCall clearClient = MethodCall('TextInput.clearClient');
       textEditing.handleTextInput(codec.encodeMethodCall(clearClient));
@@ -326,7 +418,8 @@ void main() {
     });
 
     test('Syncs the editing state back to Flutter', () {
-      MethodCall setClient = MethodCall('TextInput.setClient', [123]);
+      MethodCall setClient =
+          MethodCall('TextInput.setClient', [123, flutterSinglelineConfig]);
       textEditing.handleTextInput(codec.encodeMethodCall(setClient));
 
       MethodCall setEditingState = MethodCall('TextInput.setEditingState', {
@@ -374,14 +467,80 @@ void main() {
       MethodCall clearClient = MethodCall('TextInput.clearClient');
       textEditing.handleTextInput(codec.encodeMethodCall(clearClient));
     });
+
+    test('Multi-line mode also works', () {
+      MethodCall setClient =
+          MethodCall('TextInput.setClient', [123, flutterMultilineConfig]);
+      textEditing.handleTextInput(codec.encodeMethodCall(setClient));
+
+      // Editing shouldn't have started yet.
+      expect(document.activeElement, document.body);
+
+      MethodCall show = MethodCall('TextInput.show');
+      textEditing.handleTextInput(codec.encodeMethodCall(show));
+
+      final TextAreaElement textarea = textEditing.editingElement.domElement;
+      checkTextAreaEditingState(textarea, '', 0, 0);
+
+      // Can set editing state and preserve new lines.
+      MethodCall setEditingState = MethodCall('TextInput.setEditingState', {
+        'text': 'foo\nbar',
+        'selectionBase': 2,
+        'selectionExtent': 3,
+      });
+      textEditing.handleTextInput(codec.encodeMethodCall(setEditingState));
+      checkTextAreaEditingState(textarea, 'foo\nbar', 2, 3);
+
+      // Sends the changes back to Flutter.
+      textarea.value = 'something\nelse';
+      textarea.dispatchEvent(Event.eventType('Event', 'input'));
+      textarea.setSelectionRange(2, 5);
+      document.dispatchEvent(Event.eventType('Event', 'selectionchange'));
+
+      // Two messages should've been sent. One for the 'input' event and one for
+      // the 'selectionchange' event.
+      expect(spy.messages, hasLength(2));
+      MethodCall call = spy.messages.last;
+      spy.messages.clear();
+      expect(call.method, 'TextInputClient.updateEditingState');
+      expect(
+        call.arguments,
+        [
+          123, // Client ID
+          {'text': 'something\nelse', 'selectionBase': 2, 'selectionExtent': 5}
+        ],
+      );
+
+      MethodCall hide = MethodCall('TextInput.hide');
+      textEditing.handleTextInput(codec.encodeMethodCall(hide));
+
+      // Text editing should've stopped.
+      expect(document.activeElement, document.body);
+
+      // Confirm that [HybridTextEditing] didn't send any more messages.
+      expect(spy.messages, isEmpty);
+    });
   });
 }
 
-void checkEditingState(InputElement input, String text, int start, int end) {
+void checkInputEditingState(
+    InputElement input, String text, int start, int end) {
   expect(document.activeElement, input);
   expect(input.value, text);
   expect(input.selectionStart, start);
   expect(input.selectionEnd, end);
+}
+
+void checkTextAreaEditingState(
+  TextAreaElement textarea,
+  String text,
+  int start,
+  int end,
+) {
+  expect(document.activeElement, textarea);
+  expect(textarea.value, text);
+  expect(textarea.selectionStart, start);
+  expect(textarea.selectionEnd, end);
 }
 
 class PlatformMessagesSpy {
