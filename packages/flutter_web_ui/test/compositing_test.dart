@@ -279,4 +279,7 @@ class MockPersistedPicture extends PersistedPicture {
     super.update(oldSurface);
     updateCount++;
   }
+
+  @override
+  int get bitmapPixelCount => 0;
 }

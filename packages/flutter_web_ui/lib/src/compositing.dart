@@ -4,9 +4,11 @@
 
 part of ui;
 
-/// When `true` prints detailed explanations why particular DOM nodes were or
-/// were not reused.
-const _debugExplainDomReuse = false;
+/// When `true` prints statistics about what happened to the surface tree when
+/// it was composited.
+///
+/// Also paints an on-screen overlay with the numbers visualized as a timeline.
+const _debugExplainSurfaceStats = false;
 
 /// When `true` renders the outlines of clip layers on the screen instead of
 /// clipping the contents.
@@ -507,8 +509,9 @@ class SceneBuilder {
             PersistedSurfaceReuseStrategy.match;
       }
     }
-    if (engine.assertionsEnabled && _debugExplainDomReuse) {
-      _debugPrintReuseStats(_persistedScene, _debugFrameNumber);
+    if (_debugExplainSurfaceStats) {
+      _debugPrintSurfaceStats(_persistedScene, _debugFrameNumber);
+      _debugRepaintSurfaceStatsOverlay(_persistedScene);
     }
     assert(() {
       final validationErrors = <String>[];
@@ -520,7 +523,7 @@ class SceneBuilder {
       return true;
     }());
     _lastFrameScene = _persistedScene;
-    if (engine.assertionsEnabled) {
+    if (_debugExplainSurfaceStats) {
       _surfaceStats = <PersistedSurface, _DebugSurfaceStats>{};
     }
     return new Scene._(_persistedScene.rootElement);
@@ -531,47 +534,202 @@ class SceneBuilder {
 /// efficiency of constructing the frame.
 ///
 /// This information is only available in debug mode.
+///
+/// For stats pertaining to a single surface the numeric counter fields are
+/// typically either 0 or 1. For aggregated stats, the numbers can be >1.
 class _DebugSurfaceStats {
-  /// Whether this surface was retained from a previously rendered frame.
-  bool didRetainSurface = false;
+  _DebugSurfaceStats(this.surface);
 
-  /// Whether this surface reused an HTML element from a previously rendered
+  /// The surface these stats are for, or `null` if these are aggregated stats.
+  final PersistedSurface surface;
+
+  /// How many times a surface was retained from a previously rendered frame.
+  int retainSurfaceCount = 0;
+
+  /// How many times a surface reused an HTML element from a previously rendered
   /// surface.
-  bool didReuseElement = false;
+  int reuseElementCount = 0;
 
-  /// If this surface is a [PersistedPicture], whether it painted.
-  bool didPaint = false;
+  /// If a surface is a [PersistedPicture], how many times it painted.
+  int paintCount = 0;
 
-  /// If this surface is a [PersistedPicture], whether it reused a previously
-  /// allocated `<canvas>` element when it painted.
-  bool didReuseCanvas = false;
+  /// If a surface is a [PersistedPicture], how many pixels it painted.
+  int paintPixelCount = 0;
 
-  /// If this surface is a [PersistedPicture], whether it allocated a new
+  /// If a surface is a [PersistedPicture], how many times it reused a
+  /// previously allocated `<canvas>` element when it painted.
+  int reuseCanvasCount = 0;
+
+  /// If a surface is a [PersistedPicture], how many times it allocated a new
   /// bitmap canvas.
-  bool didAllocateBitmapCanvas = false;
+  int allocateBitmapCanvasCount = 0;
 
-  /// If this surface is a [PersistedPicture], how many pixels it allocated for
+  /// If a surface is a [PersistedPicture], how many pixels it allocated for
   /// the bitmap.
+  ///
+  /// For aggregated stats, this is the total sum of all pixels across all
+  /// canvases.
   int allocatedBitmapSizeInPixels = 0;
 
-  /// The number of HTML DOM nodes this surface allocated.
+  /// The number of HTML DOM nodes a surface allocated.
+  ///
+  /// For aggregated stats, this is the total sum of all DOM nodes across all
+  /// surfaces.
   int allocatedDomNodeCount = 0;
+
+  /// Adds all counters of [oneSurfaceStats] into this object.
+  void aggregate(_DebugSurfaceStats oneSurfaceStats) {
+    retainSurfaceCount += oneSurfaceStats.retainSurfaceCount;
+    reuseElementCount += oneSurfaceStats.reuseElementCount;
+    paintCount += oneSurfaceStats.paintCount;
+    paintPixelCount += oneSurfaceStats.paintPixelCount;
+    reuseCanvasCount += oneSurfaceStats.reuseCanvasCount;
+    allocateBitmapCanvasCount += oneSurfaceStats.allocateBitmapCanvasCount;
+    allocatedBitmapSizeInPixels += oneSurfaceStats.allocatedBitmapSizeInPixels;
+    allocatedDomNodeCount += oneSurfaceStats.allocatedDomNodeCount;
+  }
 }
 
 /// Maps every surface currently active on the screen to debug statistics.
 Map<PersistedSurface, _DebugSurfaceStats> _surfaceStats =
     <PersistedSurface, _DebugSurfaceStats>{};
 
+List<Map<PersistedSurface, _DebugSurfaceStats>> _surfaceStatsTimeline =
+    <Map<PersistedSurface, _DebugSurfaceStats>>[];
+
 /// Returns debug statistics for the given [surface].
 _DebugSurfaceStats _surfaceStatsFor(PersistedSurface surface) {
-  if (!engine.assertionsEnabled) {
-    throw new Exception('_surfaceStatsFor is only available in debug mode.');
+  if (!_debugExplainSurfaceStats) {
+    throw new Exception(
+        '_surfaceStatsFor is only available when _debugExplainSurfaceStats is set to true.');
   }
-  return _surfaceStats.putIfAbsent(surface, () => _DebugSurfaceStats());
+  return _surfaceStats.putIfAbsent(surface, () => _DebugSurfaceStats(surface));
+}
+
+html.CanvasRenderingContext2D _debugSurfaceStatsOverlayCtx;
+
+void _debugRepaintSurfaceStatsOverlay(PersistedScene scene) {
+  final int overlayWidth = html.window.innerWidth;
+  final rowHeight = 30;
+  final rowCount = 4;
+  final int overlayHeight = rowHeight * rowCount;
+  final int strokeWidth = 2;
+
+  _surfaceStatsTimeline.add(_surfaceStats);
+
+  while (_surfaceStatsTimeline.length > (overlayWidth / strokeWidth)) {
+    _surfaceStatsTimeline.removeAt(0);
+  }
+
+  if (_debugSurfaceStatsOverlayCtx == null) {
+    final html.CanvasElement _debugSurfaceStatsOverlay = html.CanvasElement(
+      width: overlayWidth,
+      height: overlayHeight,
+    );
+    _debugSurfaceStatsOverlay.style
+      ..position = 'fixed'
+      ..left = '0'
+      ..top = '0'
+      ..zIndex = '1000'
+      ..opacity = '0.8';
+    _debugSurfaceStatsOverlayCtx = _debugSurfaceStatsOverlay.context2D;
+    html.document.body.append(_debugSurfaceStatsOverlay);
+  }
+
+  _debugSurfaceStatsOverlayCtx
+    ..fillStyle = 'black'
+    ..beginPath()
+    ..rect(0, 0, overlayWidth, overlayHeight)
+    ..fill();
+
+  final double physicalScreenWidth =
+      html.window.innerWidth * html.window.devicePixelRatio;
+  final double physicalScreenHeight =
+      html.window.innerHeight * html.window.devicePixelRatio;
+  final double physicsScreenPixelCount =
+      physicalScreenWidth * physicalScreenHeight;
+
+  final int totalDomNodeCount = scene.rootElement.querySelectorAll('*').length;
+
+  for (int i = 0; i < _surfaceStatsTimeline.length; i++) {
+    final _DebugSurfaceStats totals = _DebugSurfaceStats(null);
+    int pixelCount = 0;
+    _surfaceStatsTimeline[i]
+        .values
+        .forEach((_DebugSurfaceStats oneSurfaceStats) {
+      totals.aggregate(oneSurfaceStats);
+      if (oneSurfaceStats.surface is PersistedPicture) {
+        final PersistedPicture picture = oneSurfaceStats.surface;
+        pixelCount += picture.bitmapPixelCount;
+      }
+    });
+
+    final double repaintRate = totals.paintPixelCount / pixelCount;
+    final double domAllocationRate =
+        totals.allocatedDomNodeCount / totalDomNodeCount;
+    final double bitmapAllocationRate =
+        totals.allocatedBitmapSizeInPixels / physicsScreenPixelCount;
+    final double surfaceRetainRate =
+        totals.retainSurfaceCount / _surfaceStatsTimeline[i].length;
+
+    // Repaints
+    _debugSurfaceStatsOverlayCtx
+      ..lineWidth = strokeWidth
+      ..strokeStyle = 'red'
+      ..beginPath()
+      ..moveTo(strokeWidth * i, rowHeight)
+      ..lineTo(strokeWidth * i, rowHeight * (1 - repaintRate))
+      ..stroke();
+
+    // DOM allocations
+    _debugSurfaceStatsOverlayCtx
+      ..lineWidth = strokeWidth
+      ..strokeStyle = 'red'
+      ..beginPath()
+      ..moveTo(strokeWidth * i, 2 * rowHeight)
+      ..lineTo(strokeWidth * i, rowHeight * (2 - domAllocationRate))
+      ..stroke();
+
+    // Bitmap allocations
+    _debugSurfaceStatsOverlayCtx
+      ..lineWidth = strokeWidth
+      ..strokeStyle = 'red'
+      ..beginPath()
+      ..moveTo(strokeWidth * i, 3 * rowHeight)
+      ..lineTo(strokeWidth * i, rowHeight * (3 - bitmapAllocationRate))
+      ..stroke();
+
+    // Surface retentions
+    _debugSurfaceStatsOverlayCtx
+      ..lineWidth = strokeWidth
+      ..strokeStyle = 'green'
+      ..beginPath()
+      ..moveTo(strokeWidth * i, 4 * rowHeight)
+      ..lineTo(strokeWidth * i, rowHeight * (4 - surfaceRetainRate))
+      ..stroke();
+  }
+
+  _debugSurfaceStatsOverlayCtx
+    ..font = 'normal normal 14px sans-serif'
+    ..fillStyle = 'white'
+    ..fillText('Repaint rate', 5, rowHeight - 5)
+    ..fillText('DOM alloc rate', 5, 2 * rowHeight - 5)
+    ..fillText('Bitmap alloc rate', 5, 3 * rowHeight - 5)
+    ..fillText('Retain rate', 5, 4 * rowHeight - 5);
+
+  for (int i = 1; i <= rowCount; i++) {
+    _debugSurfaceStatsOverlayCtx
+      ..lineWidth = 1
+      ..strokeStyle = 'blue'
+      ..beginPath()
+      ..moveTo(0, overlayHeight - rowHeight * i)
+      ..lineTo(overlayWidth, overlayHeight - rowHeight * i)
+      ..stroke();
+  }
 }
 
 /// Prints debug statistics for the current frame to the console.
-void _debugPrintReuseStats(PersistedScene scene, int frameNumber) {
+void _debugPrintSurfaceStats(PersistedScene scene, int frameNumber) {
   int pictureCount = 0;
   int paintCount = 0;
 
@@ -593,27 +751,26 @@ void _debugPrintReuseStats(PersistedScene scene, int frameNumber) {
     _DebugSurfaceStats stats = _surfaceStatsFor(surface);
     assert(stats != null);
 
-    surfaceRetainCount += stats.didRetainSurface ? 1 : 0;
-    elementReuseCount += stats.didReuseElement ? 1 : 0;
+    surfaceRetainCount += stats.retainSurfaceCount;
+    elementReuseCount += stats.reuseElementCount;
     totalAllocatedDomNodeCount += stats.allocatedDomNodeCount;
 
     if (surface is PersistedStandardPicture) {
       pictureCount += 1;
-      final int paintCountIncrement = stats.didPaint ? 1 : 0;
-      paintCount += paintCountIncrement;
+      paintCount += stats.paintCount;
 
       if (surface._canvas is engine.DomCanvas) {
         domCanvasCount++;
-        domPaintCount += paintCountIncrement;
+        domPaintCount += stats.paintCount;
       }
 
       if (surface._canvas is engine.BitmapCanvas) {
         bitmapCanvasCount++;
-        bitmapPaintCount += paintCountIncrement;
+        bitmapPaintCount += stats.paintCount;
       }
 
-      bitmapReuseCount += stats.didReuseCanvas ? 1 : 0;
-      bitmapAllocationCount += stats.didAllocateBitmapCanvas ? 1 : 0;
+      bitmapReuseCount += stats.reuseCanvasCount;
+      bitmapAllocationCount += stats.allocateBitmapCanvasCount;
       bitmapPixelsAllocated += stats.allocatedBitmapSizeInPixels;
     }
 
@@ -677,9 +834,7 @@ void _debugPrintReuseStats(PersistedScene scene, int frameNumber) {
       print(
           'WARNING: pixel/screen ratio too high (${screenPixelRatio.toStringAsFixed(2)}x)');
     }
-    if (screenPixelRatioTooHigh || _debugExplainDomReuse) {
-      print(buf);
-    }
+    print(buf);
   });
 }
 
@@ -787,7 +942,7 @@ abstract class PersistedSurface implements EngineLayer {
     assert(reuseStrategy != PersistedSurfaceReuseStrategy.retain);
     recomputeTransformAndClip();
     rootElement = createElement();
-    if (engine.assertionsEnabled) {
+    if (_debugExplainSurfaceStats) {
       _surfaceStatsFor(this).allocatedDomNodeCount++;
     }
     apply();
@@ -804,8 +959,8 @@ abstract class PersistedSurface implements EngineLayer {
   void adoptElements(covariant PersistedSurface oldSurface) {
     assert(oldSurface.rootElement != null);
     rootElement = oldSurface.rootElement;
-    if (engine.assertionsEnabled) {
-      _surfaceStatsFor(this).didReuseElement = true;
+    if (_debugExplainSurfaceStats) {
+      _surfaceStatsFor(this).reuseElementCount++;
     }
   }
 
@@ -842,8 +997,8 @@ abstract class PersistedSurface implements EngineLayer {
   void retain() {
     assert(rootElement != null);
     recomputeTransformAndClip();
-    if (engine.assertionsEnabled) {
-      _surfaceStatsFor(this).didRetainSurface = true;
+    if (_debugExplainSurfaceStats) {
+      _surfaceStatsFor(this).retainSurfaceCount++;
     }
   }
 
@@ -1418,7 +1573,7 @@ mixin _DomClip on PersistedContainerSurface {
       element.style.boxShadow = 'inset 0 0 10px green';
     }
     _childContainer = html.Element.tag('flt-clip-interior');
-    if (engine.assertionsEnabled) {
+    if (_debugExplainSurfaceStats) {
       // This creates an additional interior element. Count it too.
       _surfaceStatsFor(this).allocatedDomNodeCount++;
     }
@@ -1732,6 +1887,10 @@ class PersistedHoudiniPicture extends PersistedPicture {
     );
   }
 
+  /// Houdini does not paint to bitmap.
+  @override
+  int get bitmapPixelCount => 0;
+
   @override
   void applyPaint(engine.EngineCanvas oldCanvas) {
     _recycleCanvas(oldCanvas);
@@ -1748,6 +1907,16 @@ class PersistedStandardPicture extends PersistedPicture {
   PersistedStandardPicture(
       Object paintedBy, double dx, double dy, Picture picture, int hints)
       : super(paintedBy, dx, dy, picture, hints);
+
+  @override
+  int get bitmapPixelCount {
+    if (_canvas is! engine.BitmapCanvas) {
+      return 0;
+    }
+
+    final engine.BitmapCanvas bitmapCanvas = _canvas;
+    return bitmapCanvas.bitmapPixelCount;
+  }
 
   @override
   void applyPaint(engine.EngineCanvas oldCanvas) {
@@ -1780,6 +1949,10 @@ class PersistedStandardPicture extends PersistedPicture {
       // tree then reuse canvases that were freed up.
       _paintQueue.add(() {
         _canvas = _findOrCreateCanvas(_localCullRect);
+        if (_debugExplainSurfaceStats) {
+          _surfaceStatsFor(this).paintPixelCount +=
+              (_canvas as engine.BitmapCanvas).bitmapPixelCount;
+        }
         engine.domRenderer.clearDom(rootElement);
         rootElement.append(_canvas.rootElement);
         _canvas.clear();
@@ -1824,8 +1997,8 @@ class PersistedStandardPicture extends PersistedPicture {
     }
 
     if (bestRecycledCanvas != null) {
-      if (engine.assertionsEnabled) {
-        _surfaceStatsFor(this).didReuseCanvas = true;
+      if (_debugExplainSurfaceStats) {
+        _surfaceStatsFor(this).reuseCanvasCount++;
       }
       _recycledCanvases.remove(bestRecycledCanvas);
       bestRecycledCanvas.bounds = bounds;
@@ -1833,9 +2006,9 @@ class PersistedStandardPicture extends PersistedPicture {
     }
 
     final engine.BitmapCanvas canvas = engine.BitmapCanvas(bounds);
-    if (engine.assertionsEnabled) {
+    if (_debugExplainSurfaceStats) {
       _surfaceStatsFor(this)
-        ..didAllocateBitmapCanvas = true
+        ..allocateBitmapCanvasCount += 1
         ..allocatedBitmapSizeInPixels =
             canvas.widthInBitmapPixels * canvas.heightInBitmapPixels;
     }
@@ -1926,11 +2099,21 @@ abstract class PersistedPicture extends PersistedLeafSurface {
     return _localCullRect != previousLocalCullRect;
   }
 
+  /// Number of bitmap pixel painted by this picture.
+  ///
+  /// If the implementation does not paint onto a bitmap canvas, it should
+  /// return zero.
+  int get bitmapPixelCount;
+
   void _applyPaint(engine.EngineCanvas oldCanvas) {
     if (!picture.recordingCanvas.didDraw) {
       _recycleCanvas(oldCanvas);
       engine.domRenderer.clearDom(rootElement);
       return;
+    }
+
+    if (_debugExplainSurfaceStats) {
+      _surfaceStatsFor(this).paintCount++;
     }
 
     applyPaint(oldCanvas);
@@ -1966,9 +2149,6 @@ abstract class PersistedPicture extends PersistedLeafSurface {
       _applyPaint(oldSurface._canvas);
     } else {
       // The picture was not repainted, just adopt its canvas and do nothing.
-      if (engine.assertionsEnabled) {
-        _surfaceStatsFor(this).didPaint = true;
-      }
       _canvas = oldSurface._canvas;
     }
   }

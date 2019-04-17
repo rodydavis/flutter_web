@@ -41,6 +41,12 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   int get heightInBitmapPixels => _heightInBitmapPixels;
   int _heightInBitmapPixels;
 
+  /// The number of pixels in the bitmap that the canvas element renders into.
+  ///
+  /// These pixels are different from the logical CSS pixels. Here a pixel
+  /// literally means 1 point with a RGBA color.
+  int get bitmapPixelCount => widthInBitmapPixels * heightInBitmapPixels;
+
   int _saveCount = 0;
 
   /// Allocates a canvas with enough memory to paint a picture within the given
