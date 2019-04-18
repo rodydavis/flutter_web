@@ -37,8 +37,14 @@ class AssetManager {
 
       return (request.response as ByteBuffer).asByteData();
     } on html.ProgressEvent catch (e) {
-      if (e.target is html.HttpRequest) {
-        throw AssetManagerException(url, (e.target as html.HttpRequest).status);
+      final target = e.target;
+      if (target is html.HttpRequest) {
+        if (target.status == 404 && asset == 'AssetManifest.json') {
+          html.window.console
+              .warn('Asset manifest does not exist at `$url` – ignoring.');
+          return Uint8List.fromList(utf8.encode('{}')).buffer.asByteData();
+        }
+        throw AssetManagerException(url, target.status);
       }
 
       rethrow;
