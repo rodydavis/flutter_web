@@ -49,6 +49,10 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   int _saveCount = 0;
 
+  /// Keeps track of what device pixel ratio was used when this [BitmapCanvas]
+  /// was created.
+  final double _devicePixelRatio = html.window.devicePixelRatio;
+
   /// Allocates a canvas with enough memory to paint a picture within the given
   /// [bounds].
   ///
@@ -108,6 +112,18 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
       _canvas.style.transformOrigin = '';
       _canvas.style.transform = '';
     }
+  }
+
+  /// Checks whether this [BitmapCanvas] can still be recycled and reused.
+  ///
+  /// See also:
+  ///
+  /// * [PersistedStandardPicture._applyBitmapPaint] which uses this method to
+  ///   decide whether to reuse this canvas or not.
+  /// * [PersistedStandardPicture._recycleCanvas] which also uses this method
+  ///   for the same reason.
+  bool isReusable() {
+    return _devicePixelRatio == html.window.devicePixelRatio;
   }
 
   /// Configures the canvas such that its coordinate system follows the scene's

@@ -1828,7 +1828,7 @@ void _retainSurface(PersistedSurface surface) {
 }
 
 void _recycleCanvas(engine.EngineCanvas canvas) {
-  if (canvas is engine.BitmapCanvas) {
+  if (canvas is engine.BitmapCanvas && canvas.isReusable()) {
     _recycledCanvases.add(canvas);
     if (_recycledCanvases.length > _kCanvasCacheSize) {
       _recycledCanvases.removeAt(0);
@@ -1936,10 +1936,13 @@ class PersistedStandardPicture extends PersistedPicture {
   }
 
   void _applyBitmapPaint(engine.EngineCanvas oldCanvas) {
-    if (oldCanvas == null ||
-        oldCanvas is engine.DomCanvas ||
-        oldCanvas is engine.BitmapCanvas &&
-            _localCullRect != oldCanvas.bounds) {
+    if (oldCanvas is engine.BitmapCanvas &&
+        _localCullRect == oldCanvas.bounds &&
+        oldCanvas.isReusable()) {
+      _canvas = oldCanvas;
+      _canvas.clear();
+      picture.recordingCanvas.apply(_canvas);
+    } else {
       // We can't use the old canvas because the size has changed, so we put
       // it in a cache for later reuse.
       _recycleCanvas(oldCanvas);
@@ -1958,10 +1961,6 @@ class PersistedStandardPicture extends PersistedPicture {
         _canvas.clear();
         picture.recordingCanvas.apply(_canvas);
       });
-    } else {
-      _canvas = oldCanvas;
-      _canvas.clear();
-      picture.recordingCanvas.apply(_canvas);
     }
   }
 
@@ -1980,15 +1979,20 @@ class PersistedStandardPicture extends PersistedPicture {
     Size canvasSize = bounds.size;
     engine.BitmapCanvas bestRecycledCanvas;
     double lastPixelCount = double.infinity;
+
     for (int i = 0; i < _recycledCanvases.length; i++) {
       engine.BitmapCanvas candidate = _recycledCanvases[i];
+      if (!candidate.isReusable()) {
+        continue;
+      }
+
       Size candidateSize = candidate.size;
       double pixelCount = canvasSize.width * canvasSize.height;
       double candidatePixelCount = candidateSize.width * candidateSize.height;
 
-      bool fits = candidateSize.width >= canvasSize.width &&
+      final bool fits = candidateSize.width >= canvasSize.width &&
           candidateSize.height >= canvasSize.height;
-      bool tooBig = candidatePixelCount > lastPixelCount ||
+      final bool tooBig = candidatePixelCount > lastPixelCount ||
           (candidatePixelCount / pixelCount) > 2.0;
       if (fits && !tooBig) {
         bestRecycledCanvas = candidate;
@@ -2083,8 +2087,8 @@ abstract class PersistedPicture extends PersistedLeafSurface {
       final engine.Matrix4 invertedTransform =
           engine.Matrix4.fromFloat64List(Float64List(16));
 
-      // TODO(yjbanov): When we move to our own vecto math librari, rewrite this
-      //                to check for the case of simple transform before
+      // TODO(yjbanov): When we move to our own vector math library, rewrite
+      //                this to check for the case of simple transform before
       //                inverting. Inversion of simple transforms can be made
       //                much cheaper.
       final double det = invertedTransform.copyInverse(transform);
