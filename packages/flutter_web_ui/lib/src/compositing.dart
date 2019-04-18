@@ -24,6 +24,12 @@ bool debugShowClipLayers = false;
 /// reasonable.
 const _kScreenPixelRatioWarningThreshold = 6.0;
 
+/// Whether we've already warned the user about the lack of the performance
+/// overlay or not.
+///
+/// We use this to avoid spamming the console with redundant warning messages.
+bool _webOnlyDidWarnAboutPerformanceOverlay = false;
+
 /// An opaque object representing a composited scene.
 ///
 /// To create a Scene object, use a [SceneBuilder].
@@ -319,7 +325,11 @@ class SceneBuilder {
 
   void _addPerformanceOverlay(int enabledOptions, double left, double right,
       double top, double bottom, Object webOnlyPaintedBy) {
-    throw new UnimplementedError();
+    if (!_webOnlyDidWarnAboutPerformanceOverlay) {
+      _webOnlyDidWarnAboutPerformanceOverlay = true;
+      html.window.console
+          .warn('The performance overlay isn\'t supported on the web');
+    }
   }
 
   /// Adds a [Picture] to the scene.
