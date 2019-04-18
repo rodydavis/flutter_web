@@ -970,6 +970,11 @@ class Window {
         String url = utf8.decode(data.buffer.asUint8List());
         webOnlyAssetManager.load(url).then((assetData) {
           _replyToPlatformMessage(callback, assetData);
+        }, onError: (e) {
+          if (engine.assertionsEnabled) {
+            html.window.console.log('Error while trying to load an asset: $e');
+          }
+          _replyToPlatformMessage(callback, null);
         });
         return;
 
