@@ -550,7 +550,41 @@ class Window {
   ///
   ///  * [WidgetsBindingObserver], for a mechanism at the widgets layer to
   ///    observe when this value changes.
-  Size physicalSize = Size.zero;
+  Size get physicalSize {
+    bool override = false;
+
+    assert(() {
+      if (webOnlyDebugPhysicalSizeOverride != null) {
+        _physicalSize = webOnlyDebugPhysicalSizeOverride;
+        override = true;
+      }
+      return true;
+    }());
+
+    if (!override) {
+      final int windowInnerWidth = html.window.innerWidth;
+      final int windowInnerHeight = html.window.innerHeight;
+      if (windowInnerWidth != _lastKnownWindowInnerWidth ||
+          windowInnerHeight != _lastKnownWindowInnerHeight) {
+        _lastKnownWindowInnerWidth = windowInnerWidth;
+        _lastKnownWindowInnerHeight = windowInnerHeight;
+        _physicalSize = Size(
+          windowInnerWidth.toDouble(),
+          windowInnerHeight.toDouble(),
+        );
+      }
+    }
+
+    return _physicalSize;
+  }
+
+  Size _physicalSize = Size.zero;
+  int _lastKnownWindowInnerWidth = -1;
+  int _lastKnownWindowInnerHeight = -1;
+
+  /// Overrides the value of [physicalSize] in tests.
+  // TODO(flutter_web): Move this into a Web-specific implementation of Window.
+  Size webOnlyDebugPhysicalSizeOverride;
 
   /// The number of physical pixels on each side of the display rectangle into
   /// which the application can render, but over which the operating system

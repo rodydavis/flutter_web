@@ -94,7 +94,8 @@ void webOnlyInitializeTestDomRenderer({double devicePixelRatio = 3.0}) {
     // we don't have an embedder yet this is the lowest-most layer we can put
     // this stuff in.
     window.devicePixelRatio = devicePixelRatio;
-    window.physicalSize = Size(800 * devicePixelRatio, 600 * devicePixelRatio);
+    window.webOnlyDebugPhysicalSizeOverride =
+        Size(800 * devicePixelRatio, 600 * devicePixelRatio);
     window.webOnlyScheduleFrameCallback = () {};
     engine.domRenderer.debugIsInWidgetTest = true;
     // Only load the Ahem font once and await the same future in all tests.

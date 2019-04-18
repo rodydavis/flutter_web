@@ -40,7 +40,8 @@ void _initialize() {
     ..color = 'white'
     ..fontSize = '8px'
     ..whiteSpace = 'pre-wrap'
-    ..overflow = 'hidden';
+    ..overflow = 'hidden'
+    ..zIndex = '1000';
 
   _logContainer = html.Element.tag('flt-log-container');
   _logContainer.style

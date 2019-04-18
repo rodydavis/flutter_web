@@ -96,9 +96,14 @@ class TestWindow implements Window {
 
   @override
   Size get physicalSize => _physicalSizeTestValue ?? _window.physicalSize;
+
   @override
-  set physicalSize(Size physicalSize) {
-    _window.physicalSize = physicalSize;
+  Size get webOnlyDebugPhysicalSizeOverride =>
+      _window.webOnlyDebugPhysicalSizeOverride;
+
+  @override
+  set webOnlyDebugPhysicalSizeOverride(Size value) {
+    _window.webOnlyDebugPhysicalSizeOverride = value;
   }
 
   Size _physicalSizeTestValue;

@@ -61,7 +61,8 @@ class DomRenderer {
     _debugIsInWidgetTest = value;
     if (_debugIsInWidgetTest) {
       var logicalSize = ui.Size(800.0, 600.0);
-      ui.window.physicalSize = logicalSize * ui.window.devicePixelRatio;
+      ui.window.webOnlyDebugPhysicalSizeOverride =
+          logicalSize * ui.window.devicePixelRatio;
     }
   }
 
@@ -271,23 +272,36 @@ flt-semantics [contentEditable="true"] {
     // is 1.0.
     ui.window.devicePixelRatio = 1.0;
 
-    var logicalSize = new ui.Size(
-      html.window.innerWidth.toDouble(),
-      html.window.innerHeight.toDouble(),
-    );
-    ui.window.physicalSize = logicalSize * ui.window.devicePixelRatio;
+    if (browserEngine == BrowserEngine.webkit) {
+      // Safari sometimes gives us bogus innerWidth/innerHeight values when the
+      // page loads. When it changes the values to correct ones it does not
+      // notify of the change via `onResize`. As a workaround, we setup a
+      // temporary periodic timer that polls innerWidth and triggers the
+      // resizeListener so that the framework can react to the change.
+      final int initialInnerWidth = html.window.innerWidth;
+      // Counts how many times we checked screen size. We check up to 5 times.
+      int checkCount = 0;
+      Timer.periodic(const Duration(milliseconds: 100), (t) {
+        checkCount += 1;
+        if (initialInnerWidth != html.window.innerWidth) {
+          // Window size changed. Notify.
+          t.cancel();
+          _metricsDidChange(null);
+        } else if (checkCount > 5) {
+          // Checked enough times. Stop.
+          t.cancel();
+        }
+      });
+    }
 
-    // TODO: handle removing listener once we have app destroy lifecycle.
-    _resizeSubscription = html.window.onResize.listen((_) {
-      var logicalSize = new ui.Size(
-        html.window.innerWidth.toDouble(),
-        html.window.innerHeight.toDouble(),
-      );
-      ui.window.physicalSize = logicalSize * ui.window.devicePixelRatio;
-      if (ui.window.onMetricsChanged != null) {
-        ui.window.onMetricsChanged();
-      }
-    });
+    _resizeSubscription = html.window.onResize.listen(_metricsDidChange);
+  }
+
+  /// Called immediately after browser window metrics change.
+  void _metricsDidChange(html.Event event) {
+    if (ui.window.onMetricsChanged != null) {
+      ui.window.onMetricsChanged();
+    }
   }
 
   void focus(html.Element element) {
