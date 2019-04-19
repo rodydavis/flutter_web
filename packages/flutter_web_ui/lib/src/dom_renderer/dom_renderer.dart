@@ -14,12 +14,7 @@ class DomRenderer {
 
     TextMeasurementService.initialize(rulerCacheCapacity: 10);
 
-    registerHotRestartListener(() {
-      _resizeSubscription?.cancel();
-      _sceneElement?.remove();
-      _styleElement?.remove();
-      _viewportMeta?.remove();
-    });
+    _setupHotRestart();
   }
 
   static const int vibrateLongPress = 50;
@@ -42,6 +37,38 @@ class DomRenderer {
   html.Element get sceneElement => _sceneElement;
   html.Element _sceneElement;
 
+  /// This is state persistant across hot restarts that indicates what
+  /// to clear.  We delay removal of old visible state to make the
+  /// transition appear smooth.
+  static const String _staleHotRestartStore = '__flutter_state';
+  List<html.Element> _staleHotRestartState;
+
+  void _setupHotRestart() {
+    // This persists across hot restarts to clear stale DOM.
+    _staleHotRestartState =
+        js_util.getProperty(html.window, _staleHotRestartStore);
+    if (_staleHotRestartState == null) {
+      _staleHotRestartState = [];
+      js_util.setProperty(
+          html.window, _staleHotRestartStore, _staleHotRestartState);
+    }
+
+    registerHotRestartListener(() {
+      _resizeSubscription?.cancel();
+      _staleHotRestartState
+          .addAll([_sceneElement, _styleElement, _viewportMeta]);
+    });
+  }
+
+  void _clearOnHotRestart() {
+    if (_staleHotRestartState.isNotEmpty) {
+      for (var element in _staleHotRestartState) {
+        element?.remove();
+      }
+      _staleHotRestartState.clear();
+    }
+  }
+
   /// Attaches the element corresponding to the scene to the Web page.
   ///
   /// We don't want to unnecessarily move DOM nodes around. If a DOM node is
@@ -54,6 +81,7 @@ class DomRenderer {
       _sceneElement = sceneElement;
       append(rootElement, sceneElement);
     }
+    _clearOnHotRestart();
   }
 
   bool get debugIsInWidgetTest => _debugIsInWidgetTest;
