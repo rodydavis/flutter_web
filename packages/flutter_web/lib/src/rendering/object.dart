@@ -2752,6 +2752,7 @@ abstract class RenderObject extends AbstractNode
   @protected
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
     properties.add(DiagnosticsProperty<dynamic>('creator', debugCreator,
         defaultValue: null, level: DiagnosticLevel.debug));
     properties.add(DiagnosticsProperty<ParentData>('parentData', parentData,

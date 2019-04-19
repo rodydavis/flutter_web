@@ -148,6 +148,7 @@ class ProblemWidgetState extends State<ProblemWidget>
     with AutomaticKeepAliveClientMixin<ProblemWidget> {
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     Widget child = Semantics(
       container: true,
       child: Text(widget.text),
