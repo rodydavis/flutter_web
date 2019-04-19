@@ -33,6 +33,17 @@ class DomRenderer {
   /// Configures the screen, such as scaling.
   html.MetaElement _viewportMeta;
 
+  /// The element that contains the [sceneElement].
+  ///
+  /// This element is created and inserted in the HTML DOM once. It is never
+  /// removed or moved. However the [sceneElement] may be replaced inside it.
+  ///
+  /// This element precedes the [glassPaneElement] so that it never receives
+  /// input events. All input events are processed by [glassPaneElement] and the
+  /// semantics tree.
+  html.Element get sceneHostElement => _sceneHostElement;
+  html.Element _sceneHostElement;
+
   /// The last scene element rendered by the [render] method.
   html.Element get sceneElement => _sceneElement;
   html.Element _sceneElement;
@@ -55,8 +66,12 @@ class DomRenderer {
 
     registerHotRestartListener(() {
       _resizeSubscription?.cancel();
-      _staleHotRestartState
-          .addAll([_sceneElement, _styleElement, _viewportMeta]);
+      _staleHotRestartState.addAll([
+        _sceneHostElement,
+        _glassPaneElement,
+        _styleElement,
+        _viewportMeta,
+      ]);
     });
   }
 
@@ -69,8 +84,6 @@ class DomRenderer {
     }
   }
 
-  /// Attaches the element corresponding to the scene to the Web page.
-  ///
   /// We don't want to unnecessarily move DOM nodes around. If a DOM node is
   /// already in the right place, skip DOM mutation. This is both faster and
   /// more correct, because moving DOM nodes loses internal state, such as
@@ -79,10 +92,19 @@ class DomRenderer {
     if (sceneElement != _sceneElement) {
       _sceneElement?.remove();
       _sceneElement = sceneElement;
-      append(rootElement, sceneElement);
+      append(_sceneHostElement, sceneElement);
     }
     _clearOnHotRestart();
   }
+
+  /// The element that captures input events, such as pointer events.
+  ///
+  /// If semantics is enabled this element also contains the semantics DOM tree,
+  /// which captures semantics input events. The semantics DOM tree must be a
+  /// child of the glass pane element so that events bubble up to the glass pane
+  /// if they are not handled by semantics.
+  html.Element get glassPaneElement => _glassPaneElement;
+  html.Element _glassPaneElement;
 
   bool get debugIsInWidgetTest => _debugIsInWidgetTest;
   set debugIsInWidgetTest(bool value) {
@@ -226,11 +248,13 @@ flt-semantics input[type=range] {
   left: 0;
 }''', sheet.cssRules.length);
 
-    sheet.insertRule('''
+    if (browserEngine == BrowserEngine.webkit) {
+      sheet.insertRule('''
 flt-semantics input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
 }
 ''', sheet.cssRules.length);
+    }
 
     // On iOS, the invisible semantic text field has a visible cursor and
     // selection highlight. The following 2 CSS rules force everything to be
@@ -248,6 +272,16 @@ flt-semantics [contentEditable="true"] {
   caret-color: transparent;
 }
 ''', sheet.cssRules.length);
+
+    // By default on iOS, Safari would highlight the element that's being tapped
+    // on using gray background. This CSS rule disables that.
+    if (browserEngine == BrowserEngine.webkit) {
+      sheet.insertRule('''
+flt-glass-pane * {
+  -webkit-tap-highlight-color: transparent;
+}
+''', sheet.cssRules.length);
+    }
 
     final bodyElement = html.document.body;
     setElementStyle(bodyElement, 'position', 'fixed');
@@ -293,6 +327,25 @@ flt-semantics [contentEditable="true"] {
       ..content = 'width=device-width, initial-scale=1.0, '
           'maximum-scale=1.0, user-scalable=no';
     html.document.head.append(_viewportMeta);
+
+    _sceneHostElement = createElement('flt-scene-host');
+    bodyElement.append(_sceneHostElement);
+
+    // IMPORTANT: the glass pane element must come after the scene element in the DOM node list so
+    //            it can intercept input events.
+    _glassPaneElement = createElement('flt-glass-pane');
+    _glassPaneElement.style
+      ..position = 'absolute'
+      ..top = '0'
+      ..right = '0'
+      ..bottom = '0'
+      ..left = '0';
+    bodyElement.append(_glassPaneElement);
+
+    // Hide the DOM nodes used to render the scene from accessibility, because
+    // the accessibility tree is built from the SemanticsNode tree as a parallel
+    // DOM tree.
+    setElementAttribute(_sceneHostElement, 'aria-hidden', 'true');
 
     // We treat browser pixels as device pixels because pointer events,
     // position, and sizes all use browser pixel as the unit (i.e. "px" in CSS).

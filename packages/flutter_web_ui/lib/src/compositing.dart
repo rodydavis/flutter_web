@@ -1453,13 +1453,7 @@ class PersistedScene extends PersistedContainerSurface {
 
   @override
   html.Element createElement() {
-    final html.Element element = defaultCreateElement('flt-scene');
-
-    // Hide the DOM nodes used to render the scene from accessibility, because
-    // the accessibility tree is built from the SemanticsNode tree as a parallel
-    // DOM tree.
-    engine.domRenderer.setElementAttribute(element, 'aria-hidden', 'true');
-    return element;
+    return defaultCreateElement('flt-scene');
   }
 
   @override

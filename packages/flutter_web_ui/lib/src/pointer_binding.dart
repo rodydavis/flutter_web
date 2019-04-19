@@ -106,9 +106,9 @@ abstract class BaseAdapter {
 
   /// Remove all active event listeners.
   void clearListeners() {
-    var window = html.window;
-    _listeners.forEach((String eventName, html.EventListener f) {
-      window.removeEventListener(eventName, f);
+    final html.Element glassPane = engine.domRenderer.glassPaneElement;
+    _listeners.forEach((String eventName, html.EventListener listener) {
+      glassPane.removeEventListener(eventName, listener);
     });
     _listeners.clear();
   }
@@ -122,7 +122,8 @@ abstract class BaseAdapter {
       engine.EngineSemanticsOwner.instance.receiveGlobalEvent(event);
     };
     _listeners[eventName] = loggedHandler;
-    html.window.addEventListener(eventName, loggedHandler);
+    engine.domRenderer.glassPaneElement
+        .addEventListener(eventName, loggedHandler, true);
   }
 }
 
@@ -390,7 +391,7 @@ List<PointerData> _convertWheelEventToPointerData(
 void _addWheelEventListener(void listener(html.WheelEvent e)) {
   var eventOptions = js_util.newObject();
   js_util.setProperty(eventOptions, 'passive', false);
-  js_util.callMethod(html.window.document, 'addEventListener',
+  js_util.callMethod(engine.domRenderer.glassPaneElement, 'addEventListener',
       ['wheel', js.allowInterop((event) => listener(event)), eventOptions]);
 }
 

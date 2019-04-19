@@ -78,7 +78,7 @@ void _testEngineSemanticsOwner() {
     expect(tree[0].element.tagName.toLowerCase(), 'flt-semantics');
 
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem aria-label="Hello">
       <sem-v>Hello</sem-v>
@@ -92,7 +92,7 @@ void _testEngineSemanticsOwner() {
     );
 
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem aria-label="World">
       <sem-v>World</sem-v>
@@ -106,7 +106,7 @@ void _testEngineSemanticsOwner() {
     );
 
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -217,7 +217,7 @@ void _testContainer() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -254,7 +254,7 @@ void _testContainer() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -290,7 +290,7 @@ void _testVerticalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
 </sem>''');
 
     semantics().semanticsEnabled = false;
@@ -315,7 +315,7 @@ void _testVerticalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -380,7 +380,7 @@ void _testVerticalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0); touch-action: none; overflow-y: scroll">
   <sem-c>
     <sem></sem>
     <sem></sem>
@@ -430,7 +430,7 @@ void _testHorizontalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
 </sem>''');
 
     semantics().semanticsEnabled = false;
@@ -455,7 +455,7 @@ void _testHorizontalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
   <sem-c>
     <sem></sem>
   </sem-c>
@@ -502,7 +502,7 @@ void _testHorizontalScrolling() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0); touch-action: none; overflow-x: scroll">
   <sem-c>
     <sem></sem>
     <sem></sem>
@@ -554,7 +554,7 @@ void _testIncrementables() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="1" aria-valuemin="1">
 </sem>''');
 
@@ -580,7 +580,7 @@ void _testIncrementables() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="2" aria-valuemin="1">
 </sem>''');
 
@@ -613,7 +613,7 @@ void _testIncrementables() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="1" aria-valuemin="0">
 </sem>''');
 
@@ -648,7 +648,7 @@ void _testIncrementables() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <input aria-valuenow="1" aria-valuetext="d" aria-valuemax="2" aria-valuemin="0">
 </sem>''');
 
@@ -674,7 +674,7 @@ void _testTextField() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem style="opacity: 0; color: rgba(0, 0, 0, 0)">
+<sem style="filter: opacity(0%); color: rgba(0, 0, 0, 0)">
   <input value="hello" />
 </sem>''');
 
@@ -737,7 +737,7 @@ void _testCheckboxesAndRadioButtons() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem role="checkbox" aria-checked="true" style="opacity: 0; color: rgba(0, 0, 0, 0)"></sem>
+<sem role="checkbox" aria-checked="true" style="filter: opacity(0%); color: rgba(0, 0, 0, 0)"></sem>
 ''');
 
     semantics().semanticsEnabled = false;
@@ -759,7 +759,7 @@ void _testCheckboxesAndRadioButtons() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem role="checkbox" aria-checked="false" style="opacity: 0; color: rgba(0, 0, 0, 0)"></sem>
+<sem role="checkbox" aria-checked="false" style="filter: opacity(0%); color: rgba(0, 0, 0, 0)"></sem>
 ''');
 
     semantics().semanticsEnabled = false;
@@ -784,7 +784,7 @@ void _testCheckboxesAndRadioButtons() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem role="radio" aria-checked="true" style="opacity: 0; color: rgba(0, 0, 0, 0)"></sem>
+<sem role="radio" aria-checked="true" style="filter: opacity(0%); color: rgba(0, 0, 0, 0)"></sem>
 ''');
 
     semantics().semanticsEnabled = false;
@@ -808,7 +808,7 @@ void _testCheckboxesAndRadioButtons() {
 
     semantics().updateSemantics(builder.build());
     expectSemanticsTree('''
-<sem role="radio" aria-checked="false" style="opacity: 0; color: rgba(0, 0, 0, 0)"></sem>
+<sem role="radio" aria-checked="false" style="filter: opacity(0%); color: rgba(0, 0, 0, 0)"></sem>
 ''');
 
     semantics().semanticsEnabled = false;

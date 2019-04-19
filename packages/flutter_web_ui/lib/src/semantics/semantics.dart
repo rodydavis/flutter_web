@@ -217,8 +217,10 @@ class SemanticsObject {
 
     // The root node has some properties that other nodes do not.
     if (id == 0) {
-      // Make all semantics transparent
-      element.style.opacity = '0';
+      // Make all semantics transparent. We use `filter` instead of `opacity`
+      // attribute because `filter` is stronger. `opacity` does not apply to
+      // some elements, particularly on iOS, such as the slider thumb and track.
+      element.style.filter = 'opacity(0%)';
 
       // Make text explicitly transparent to signal to the browser that no
       // rasterization needs to be done.
@@ -227,7 +229,7 @@ class SemanticsObject {
 
     if (_debugShowSemanticsNodes) {
       element.style
-        ..opacity = '0.9'
+        ..filter = 'opacity(90%)'
         ..outline = '1px solid green'
         ..color = 'purple';
     }
@@ -1370,7 +1372,7 @@ class EngineSemanticsOwner {
     if (_rootSemanticsElement == null) {
       final SemanticsObject root = _semanticsTree[0];
       _rootSemanticsElement = root.element;
-      html.document.body.append(_rootSemanticsElement);
+      domRenderer.glassPaneElement.append(_rootSemanticsElement);
     }
 
     _finalizeTree();
