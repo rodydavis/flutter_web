@@ -116,20 +116,30 @@ class ElevationShadow {
   ///
   /// Computed from shadow elevation offset + spread, blur
   static ui.Rect computeShadowRect(ui.Rect r, double elevation) {
+    // We are computing this rect by computing the maximum "reach" of the shadow
+    // by summing the computed shadow offset and the blur for the given
+    // elevation.  We are assuming that a blur of '1' corresponds to 1 pixel,
+    // although the web spec says that this is not necessarily the case.
+    // However, it seems to be a good conservative estimate.
     if (elevation <= 0.0) {
       return r;
     } else if (elevation <= 1.0) {
-      return ui.Rect.fromLTRB(r.left, r.top, r.right + 3, r.bottom + 4);
+      return ui.Rect.fromLTRB(
+          r.left - 2.5, r.top - 1.5, r.right + 3, r.bottom + 4);
     } else if (elevation <= 2.0) {
-      return ui.Rect.fromLTRB(r.left, r.top, r.right + 6, r.bottom + 7);
+      return ui.Rect.fromLTRB(r.left - 5, r.top - 3, r.right + 6, r.bottom + 7);
     } else if (elevation <= 3.0) {
-      return ui.Rect.fromLTRB(r.left, r.top, r.right + 9, r.bottom + 11);
+      return ui.Rect.fromLTRB(
+          r.left - 9, r.top - 8, r.right + 9, r.bottom + 11);
     } else if (elevation <= 4.0) {
-      return ui.Rect.fromLTRB(r.left, r.top, r.right + 10, r.bottom + 14);
+      return ui.Rect.fromLTRB(
+          r.left - 10, r.top - 6, r.right + 10, r.bottom + 14);
     } else if (elevation <= 5.0) {
-      return ui.Rect.fromLTRB(r.left, r.top, r.right + 20, r.bottom + 30);
+      return ui.Rect.fromLTRB(
+          r.left - 15, r.top - 9, r.right + 20, r.bottom + 30);
     } else {
-      return ui.Rect.fromLTRB(r.left, r.top, r.right + 23, r.bottom + 45);
+      return ui.Rect.fromLTRB(
+          r.left - 23, r.top - 14, r.right + 23, r.bottom + 45);
     }
   }
 
