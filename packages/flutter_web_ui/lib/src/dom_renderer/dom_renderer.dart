@@ -249,22 +249,21 @@ flt-semantics input[type=range] {
 }''', sheet.cssRules.length);
 
     if (browserEngine == BrowserEngine.webkit) {
-      sheet.insertRule('''
-flt-semantics input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-}
-''', sheet.cssRules.length);
+      sheet.insertRule(
+          'flt-semantics input[type=range]::-webkit-slider-thumb {'
+          '  -webkit-appearance: none;'
+          '}',
+          sheet.cssRules.length);
+
+      // On iOS, the invisible semantic text field has a visible cursor and
+      // selection highlight. The following 2 CSS rules force everything to be
+      // transparent.
+      sheet.insertRule(
+          'flt-semantics ::selection {'
+          '  background-color: transparent;'
+          '}',
+          sheet.cssRules.length);
     }
-
-    // On iOS, the invisible semantic text field has a visible cursor and
-    // selection highlight. The following 2 CSS rules force everything to be
-    // transparent.
-    sheet.insertRule('''
-flt-semantics ::selection {
-  background-color: transparent;
-}
-''', sheet.cssRules.length);
-
     sheet.insertRule('''
 flt-semantics input,
 flt-semantics textarea,
