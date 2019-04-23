@@ -118,8 +118,13 @@ class _FontManager {
     Map<String, String> descriptors,
   ) {
     final fontFace = html.FontFace(family, asset, descriptors);
-    _fontLoadingFutures
-        .add(fontFace.load().then((_) => html.document.fonts.add(fontFace)));
+    _fontLoadingFutures.add(fontFace
+        .load()
+        .then((_) => html.document.fonts.add(fontFace), onError: (e) {
+      html.window.console
+          .warn('Error while trying to load font family "$family":\n$e');
+      return null;
+    }));
   }
 
   /// Returns a [Future] that completes when all fonts that have been

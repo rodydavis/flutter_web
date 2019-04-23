@@ -971,9 +971,7 @@ class Window {
         webOnlyAssetManager.load(url).then((assetData) {
           _replyToPlatformMessage(callback, assetData);
         }, onError: (e) {
-          if (engine.assertionsEnabled) {
-            html.window.console.log('Error while trying to load an asset: $e');
-          }
+          html.window.console.warn('Error while trying to load an asset: $e');
           _replyToPlatformMessage(callback, null);
         });
         return;
