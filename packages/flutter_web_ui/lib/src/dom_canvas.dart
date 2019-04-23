@@ -5,7 +5,7 @@
 part of engine;
 
 /// A canvas that renders to DOM elements and CSS properties.
-class DomCanvas extends EngineCanvas with SaveStackTracking {
+class DomCanvas extends EngineCanvas with SaveElementStackTracking {
   final html.Element rootElement = new html.Element.tag('flt-dom-canvas');
 
   DomCanvas() {

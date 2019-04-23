@@ -23,7 +23,8 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   /// hasn't changed.
   ParagraphGeometricStyle _cachedLastStyle;
 
-  final _paragraphs = new Set<html.Element>();
+  /// List of extra sibling elements created for paragraphs and clipping.
+  final _children = new List<html.Element>();
 
   /// The number of pixels along the width of the bitmap that the canvas element
   /// renders into.
@@ -98,8 +99,10 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   @override
   void clear() {
     super.clear();
-    _paragraphs.forEach((p) => p.remove());
-    _paragraphs.clear();
+    for (int i = 0, len = _children.length; i < len; i++) {
+      _children[i].remove();
+    }
+    _children.clear();
     _cachedLastStyle = null;
     // Restore to the state where we have only applied the scaling.
     if (_ctx != null) {
@@ -347,6 +350,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   @override
   void clipRect(ui.Rect rect) {
+    super.clipRect(rect);
     ctx.beginPath();
     ctx.rect(rect.left, rect.top, rect.width, rect.height);
     ctx.clip();
@@ -354,6 +358,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   @override
   void clipRRect(ui.RRect rrect) {
+    super.clipRRect(rrect);
     var path = new ui.Path()..addRRect(rrect);
     _runPath(path);
     ctx.clip();
@@ -361,6 +366,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
 
   @override
   void clipPath(ui.Path path) {
+    super.clipPath(path);
     _runPath(path);
     ctx.clip();
   }
@@ -747,17 +753,25 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     html.Element paragraphElement =
         paragraph.webOnlyGetParagraphElement().clone(true);
 
-    String cssTransform =
-        matrix4ToCssTransform(transformWithOffset(currentTransform, offset));
-
     paragraphElement.style
       ..position = 'absolute'
-      ..transform = cssTransform
       ..whiteSpace = 'pre-wrap'
       ..width = '${paragraph.width}px'
       ..height = '${paragraph.height}px';
-    currentElement.append(paragraphElement);
-    _paragraphs.add(paragraphElement);
+    if (isClipped) {
+      List<html.Element> clipElements =
+          _clipContent(_clipStack, paragraphElement, offset, currentTransform);
+      for (html.Element clipElement in clipElements) {
+        rootElement.append(clipElement);
+        _children.add(clipElement);
+      }
+    } else {
+      String cssTransform =
+          matrix4ToCssTransform(transformWithOffset(currentTransform, offset));
+      paragraphElement.style.transform = cssTransform;
+      rootElement.append(paragraphElement);
+    }
+    _children.add(paragraphElement);
   }
 
   /// Paints the [picture] into this canvas.
@@ -909,4 +923,116 @@ String _stringForStrokeJoin(ui.StrokeJoin strokeJoin) {
     default:
       return 'miter';
   }
+}
+
+/// Clips the content element against a stack of clip operations and returns
+/// root of a tree that contains content node.
+///
+/// The stack of clipping rectangles generate an element that either uses
+/// overflow:hidden with bounds to clip child or sets a clip-path to clip
+/// it's contents. The clipping rectangles are nested and returned together
+/// with a list of svg elements that provide clip-paths.
+List<html.Element> _clipContent(List<_SaveClipEntry> clipStack,
+    html.HtmlElement content, ui.Offset offset, Matrix4 currentTransform) {
+  html.Element root, curElement;
+  List<html.Element> clipDefs = [];
+  for (int clipIndex = 0, len = clipStack.length;
+      clipIndex < len;
+      clipIndex++) {
+    final _SaveClipEntry entry = clipStack[clipIndex];
+    html.HtmlElement newElement = new html.DivElement();
+    if (root == null) {
+      root = newElement;
+    } else {
+      domRenderer.append(curElement, newElement);
+    }
+    curElement = newElement;
+    ui.Rect rect = entry.rect;
+    var newClipTransform = entry.currentTransform;
+    if (rect != null) {
+      final clipOffsetX = rect.left;
+      final clipOffsetY = rect.top;
+      newClipTransform = newClipTransform.clone()
+        ..translate(clipOffsetX, clipOffsetY);
+      curElement.style
+        ..overflow = 'hidden'
+        ..transform = matrix4ToCssTransform(newClipTransform)
+        ..transformOrigin = '0 0 0'
+        ..width = '${rect.right - clipOffsetX}px'
+        ..height = '${rect.bottom - clipOffsetY}px';
+    } else if (entry.rrect != null) {
+      ui.RRect roundRect = entry.rrect;
+      final borderRadius = '${roundRect.tlRadiusX}px ${roundRect.trRadiusX}px '
+          '${roundRect.brRadiusX}px ${roundRect.blRadiusX}px';
+      final clipOffsetX = roundRect.left;
+      final clipOffsetY = roundRect.top;
+      newClipTransform = newClipTransform.clone()
+        ..translate(clipOffsetX, clipOffsetY);
+      curElement.style
+        ..borderRadius = borderRadius
+        ..overflow = 'hidden'
+        ..transform = matrix4ToCssTransform(newClipTransform)
+        ..transformOrigin = '0 0 0'
+        ..width = '${roundRect.right - clipOffsetX}px'
+        ..height = '${roundRect.bottom - clipOffsetY}px';
+    } else if (entry.path != null) {
+      curElement.style.transform = matrix4ToCssTransform(newClipTransform);
+      String svgClipPath = _pathToSvgClipPath(entry.path);
+      html.Element clipElement =
+          html.Element.html(svgClipPath, treeSanitizer: _NullTreeSanitizer());
+      domRenderer.setElementStyle(
+          curElement, 'clip-path', 'url(#svgClipText${_clipTextCounter})');
+      domRenderer.setElementStyle(curElement, '-webkit-clip-path',
+          'url(#svgClipText${_clipTextCounter})');
+      clipDefs.add(clipElement);
+    }
+    // Reverse the transform of the clipping element so children can use
+    // effective transform to render.
+    // TODO(flutter_web): When we have more than a single clip element,
+    // reduce number of div nodes by merging (multiplying transforms).
+    var reverseTransformDiv = new html.DivElement();
+    reverseTransformDiv.style
+      ..transform =
+          _cssTransformAtOffset(newClipTransform.clone()..invert(), 0, 0)
+      ..transformOrigin = '0 0 0';
+    curElement.append(reverseTransformDiv);
+    curElement = reverseTransformDiv;
+  }
+
+  root.style.position = 'absolute';
+  domRenderer.append(curElement, content);
+  content.style.transform =
+      _cssTransformAtOffset(currentTransform, offset.dx, offset.dy);
+  return <html.Element>[root]..addAll(clipDefs);
+}
+
+String _cssTransformAtOffset(
+    Matrix4 transform, double offsetX, double offsetY) {
+  return matrix4ToCssTransform(
+      transformWithOffset(transform, ui.Offset(offsetX, offsetY)));
+}
+
+class _NullTreeSanitizer implements html.NodeTreeSanitizer {
+  void sanitizeTree(html.Node node) {}
+}
+
+int _clipTextCounter = 0;
+
+/// Converts Path to svg element that contains a clip-path definition.
+/// TODO(flutter_web): unify with version used in compositing.dart.
+String _pathToSvgClipPath(ui.Path path,
+    {double offsetX = 0, double offsetY = 0}) {
+  ui.Rect bounds = path.getBounds();
+  StringBuffer sb = new StringBuffer();
+  sb.write('<svg width="${bounds.right}" height="${bounds.bottom}" '
+      'style="position:absolute">');
+  sb.write('<defs>');
+
+  String clipId = 'svgClipText${++_clipTextCounter}';
+  sb.write('<clipPath id=${clipId}>');
+
+  sb.write('<path fill="#FFFFFF" d="');
+  pathToSvg(path, sb, offsetX: offsetX, offsetY: offsetY);
+  sb.write('"></path></clipPath></defs></svg');
+  return sb.toString();
 }

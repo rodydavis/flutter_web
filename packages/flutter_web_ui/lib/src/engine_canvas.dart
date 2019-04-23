@@ -80,10 +80,30 @@ Matrix4 transformWithOffset(Matrix4 transform, ui.Offset offset) {
 }
 
 class _SaveStackEntry {
-  _SaveStackEntry({this.savedElement, this.transform});
+  _SaveStackEntry({
+    @required this.transform,
+    @required this.clipStack,
+  });
 
-  final html.Element savedElement;
   final Matrix4 transform;
+  final List<_SaveClipEntry> clipStack;
+}
+
+/// Tagged union of clipping parameters used for canvas.
+class _SaveClipEntry {
+  final ui.Rect rect;
+  final ui.RRect rrect;
+  final ui.Path path;
+  final Matrix4 currentTransform;
+  _SaveClipEntry.rect(this.rect, this.currentTransform)
+      : rrect = null,
+        path = null;
+  _SaveClipEntry.rrect(this.rrect, this.currentTransform)
+      : rect = null,
+        path = null;
+  _SaveClipEntry.path(this.path, this.currentTransform)
+      : rect = null,
+        rrect = null;
 }
 
 /// Provides save stack tracking functionality to implementations of
@@ -93,22 +113,12 @@ mixin SaveStackTracking on EngineCanvas {
 
   final List<_SaveStackEntry> _saveStack = <_SaveStackEntry>[];
 
-  /// The element at the top of the element stack, or [rootElement] if the stack
-  /// is empty.
-  html.Element get currentElement =>
-      _elementStack.isEmpty ? rootElement : _elementStack.last;
+  /// The stack that maintains clipping operations used when text is painted
+  /// onto bitmap canvas but is composited as separate element.
+  List<_SaveClipEntry> _clipStack;
 
-  /// The stack that maintains the DOM elements used to express certain paint
-  /// operations, such as clips.
-  final List<html.Element> _elementStack = <html.Element>[];
-
-  /// Pushes the [element] onto the element stack for the purposes of applying
-  /// a paint effect using a DOM element, e.g. for clipping.
-  ///
-  /// The [restore] method automatically pops the element off the stack.
-  void pushElement(html.Element element) {
-    _elementStack.add(element);
-  }
+  /// Returns whether there are active clipping regions on the canvas.
+  bool get isClipped => _clipStack != null;
 
   /// Empties the save stack and the element stack, and resets the transform
   /// and clip parameters.
@@ -116,7 +126,6 @@ mixin SaveStackTracking on EngineCanvas {
   /// Classes that override this method must call `super.clear()`.
   void clear() {
     _saveStack.clear();
-    _elementStack.clear();
     _currentTransform = Matrix4.identity();
   }
 
@@ -129,8 +138,8 @@ mixin SaveStackTracking on EngineCanvas {
   /// Classes that override this method must call `super.save()`.
   void save() {
     _saveStack.add(_SaveStackEntry(
-      savedElement: currentElement,
       transform: _currentTransform.clone(),
+      clipStack: _clipStack == null ? null : List.from(_clipStack),
     ));
   }
 
@@ -143,11 +152,7 @@ mixin SaveStackTracking on EngineCanvas {
     }
     final _SaveStackEntry entry = _saveStack.removeLast();
     _currentTransform = entry.transform;
-
-    // Pop out of any clips.
-    while (currentElement != entry.savedElement) {
-      _elementStack.removeLast();
-    }
+    _clipStack = entry.clipStack;
   }
 
   /// Multiplies the [currentTransform] matrix by a translation.
@@ -183,5 +188,32 @@ mixin SaveStackTracking on EngineCanvas {
   /// Classes that override this method must call `super.transform()`.
   void transform(Float64List matrix4) {
     _currentTransform.multiply(Matrix4.fromFloat64List(matrix4));
+  }
+
+  /// Adds a rectangle to clipping stack.
+  ///
+  /// Classes that override this method must call `super.clipRect()`.
+  @override
+  void clipRect(ui.Rect rect) {
+    _clipStack ??= [];
+    _clipStack.add(new _SaveClipEntry.rect(rect, _currentTransform.clone()));
+  }
+
+  /// Adds a round rectangle to clipping stack.
+  ///
+  /// Classes that override this method must call `super.clipRRect()`.
+  @override
+  void clipRRect(ui.RRect rrect) {
+    _clipStack ??= [];
+    _clipStack.add(new _SaveClipEntry.rrect(rrect, _currentTransform.clone()));
+  }
+
+  /// Adds a path to clipping stack.
+  ///
+  /// Classes that override this method must call `super.clipPath()`.
+  @override
+  void clipPath(ui.Path path) {
+    _clipStack ??= [];
+    _clipStack.add(new _SaveClipEntry.path(path, _currentTransform.clone()));
   }
 }

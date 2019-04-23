@@ -2259,7 +2259,7 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
     final RRect roundRect = path.webOnlyPathAsRoundedRect;
     if (roundRect != null) {
       final borderRadius = '${roundRect.tlRadiusX}px ${roundRect.trRadiusX}px '
-          '${roundRect.blRadiusX}px ${roundRect.brRadiusX}px';
+          '${roundRect.brRadiusX}px ${roundRect.blRadiusX}px';
       var style = rootElement.style;
       style
         ..transform = 'translate(${roundRect.left}px, ${roundRect.top}px)'

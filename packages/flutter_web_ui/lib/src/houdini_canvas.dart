@@ -13,7 +13,7 @@ part of engine;
 ///
 /// This canvas produces paint commands for houdini_painter.js to apply. This
 /// class must be kept in sync with houdini_painter.js.
-class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
+class HoudiniCanvas extends EngineCanvas with SaveElementStackTracking {
   final html.Element rootElement = new html.Element.tag('flt-houdini');
 
   /// The rectangle positioned relative to the parent layer's coordinate system
@@ -238,5 +238,115 @@ class HoudiniCanvas extends EngineCanvas with SaveStackTracking {
       ..width = '${paragraph.width}px'
       ..height = '${paragraph.height}px';
     currentElement.append(paragraphElement);
+  }
+}
+
+class _SaveElementStackEntry {
+  _SaveElementStackEntry({
+    @required this.savedElement,
+    @required this.transform,
+  });
+
+  final html.Element savedElement;
+  final Matrix4 transform;
+}
+
+/// Provides save stack tracking functionality to implementations of
+/// [EngineCanvas].
+mixin SaveElementStackTracking on EngineCanvas {
+  static final Vector3 _unitZ = Vector3(0.0, 0.0, 1.0);
+
+  final List<_SaveElementStackEntry> _saveStack = <_SaveElementStackEntry>[];
+
+  /// The element at the top of the element stack, or [rootElement] if the stack
+  /// is empty.
+  html.Element get currentElement =>
+      _elementStack.isEmpty ? rootElement : _elementStack.last;
+
+  /// The stack that maintains the DOM elements used to express certain paint
+  /// operations, such as clips.
+  final List<html.Element> _elementStack = <html.Element>[];
+
+  /// Pushes the [element] onto the element stack for the purposes of applying
+  /// a paint effect using a DOM element, e.g. for clipping.
+  ///
+  /// The [restore] method automatically pops the element off the stack.
+  void pushElement(html.Element element) {
+    _elementStack.add(element);
+  }
+
+  /// Empties the save stack and the element stack, and resets the transform
+  /// and clip parameters.
+  ///
+  /// Classes that override this method must call `super.clear()`.
+  void clear() {
+    _saveStack.clear();
+    _elementStack.clear();
+    _currentTransform = Matrix4.identity();
+  }
+
+  /// The current transformation matrix.
+  Matrix4 get currentTransform => _currentTransform;
+  Matrix4 _currentTransform = Matrix4.identity();
+
+  /// Saves current clip and transform on the save stack.
+  ///
+  /// Classes that override this method must call `super.save()`.
+  void save() {
+    _saveStack.add(_SaveElementStackEntry(
+      savedElement: currentElement,
+      transform: _currentTransform.clone(),
+    ));
+  }
+
+  /// Restores current clip and transform from the save stack.
+  ///
+  /// Classes that override this method must call `super.restore()`.
+  void restore() {
+    if (_saveStack.isEmpty) {
+      return;
+    }
+    final _SaveElementStackEntry entry = _saveStack.removeLast();
+    _currentTransform = entry.transform;
+
+    // Pop out of any clips.
+    while (currentElement != entry.savedElement) {
+      _elementStack.removeLast();
+    }
+  }
+
+  /// Multiplies the [currentTransform] matrix by a translation.
+  ///
+  /// Classes that override this method must call `super.translate()`.
+  void translate(double dx, double dy) {
+    _currentTransform.translate(dx, dy);
+  }
+
+  /// Scales the [currentTransform] matrix.
+  ///
+  /// Classes that override this method must call `super.scale()`.
+  void scale(double sx, double sy) {
+    _currentTransform.scale(sx, sy);
+  }
+
+  /// Rotates the [currentTransform] matrix.
+  ///
+  /// Classes that override this method must call `super.rotate()`.
+  void rotate(double radians) {
+    _currentTransform.rotate(_unitZ, radians);
+  }
+
+  /// Skews the [currentTransform] matrix.
+  ///
+  /// Classes that override this method must call `super.skew()`.
+  void skew(double sx, double sy) {
+    _currentTransform.multiply(Matrix4.skew(sx, sy));
+  }
+
+  /// Multiplies the [currentTransform] matrix by another matrix.
+  ///
+  /// Classes that override this method must call `super.transform()`.
+  void transform(Float64List matrix4) {
+    _currentTransform.multiply(Matrix4.fromFloat64List(matrix4));
   }
 }
