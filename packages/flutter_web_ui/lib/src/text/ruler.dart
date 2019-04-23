@@ -159,7 +159,7 @@ class TextDimensions {
   double get alphabeticBaseline => _probe.getBoundingClientRect().bottom;
 }
 
-/// Performs 3 types of measurements:
+/// Performs 4 types of measurements:
 ///
 /// 1. Single line: can be prepared by calling [measureAsSingleLine].
 ///    Measurement values will be available at [singleLineDimensions].
@@ -172,9 +172,15 @@ class TextDimensions {
 ///    passing the constraints. Measurement values will be available at
 ///    [constrainedDimensions].
 ///
+/// 4. Boxes: within a paragraph, it measures a list of text boxes that enclose
+///    a given range of text.
+///
 /// For performance reasons, it's advised to use [measureAll] and then reading
 /// whatever measurements are needed. This causes the browser to only reflow
 /// once instead of many times.
+///
+/// The [measureAll] method performs the first 3 stateful measurements but not
+/// the 4th one.
 ///
 /// This class is both reusable and stateful. Use it carefully. The correct
 /// usage is as follows:
@@ -188,6 +194,9 @@ class TextDimensions {
 ///
 /// It is safe to reuse this object as long as paragraphs passed to the
 /// [measure] method have the same style.
+///
+/// The only stateless method provided by this class is [measureBoxesForRange]
+/// that doesn't rely on [willMeasure] and [didMeasure] lifecycle methods.
 ///
 /// This class optimizes for plain text paragraphs, which should constitute the
 /// majority of paragraphs in typical apps.
@@ -465,11 +474,62 @@ class ParagraphRuler {
     // We do not do this for plain text, because replacing plain text is more
     // expensive than paying the cost of the DOM mutation to clean it.
     if (_paragraph.webOnlyGetPlainText() == null) {
-      domRenderer.clearDom(singleLineDimensions._element);
-      domRenderer.clearDom(minIntrinsicDimensions._element);
-      domRenderer.clearDom(constrainedDimensions._element);
+      domRenderer
+        ..clearDom(singleLineDimensions._element)
+        ..clearDom(minIntrinsicDimensions._element)
+        ..clearDom(constrainedDimensions._element);
     }
     _paragraph = null;
+  }
+
+  /// Performs stateless measurement of text boxes for a given range of text.
+  ///
+  /// This method doesn't depend on [willMeasure] and [didMeasure] lifecycle
+  /// methods.
+  List<ui.TextBox> measureBoxesForRange(
+    String plainText,
+    ui.ParagraphConstraints constraints, {
+    int start,
+    int end,
+    double alignOffset,
+    ui.TextDirection textDirection,
+  }) {
+    assert(!_debugIsDisposed);
+    assert(start >= 0 && start <= plainText.length);
+    assert(end >= 0 && end <= plainText.length);
+    assert(start <= end);
+
+    final String before = plainText.substring(0, start);
+    final String rangeText = plainText.substring(start, end);
+    final String after = plainText.substring(end);
+
+    final html.SpanElement rangeSpan = html.SpanElement()..text = rangeText;
+
+    // Setup the [ruler.constrainedDimensions] element to be used for measurement.
+    domRenderer.clearDom(constrainedDimensions._element);
+    constrainedDimensions._element
+      ..appendText(before)
+      ..append(rangeSpan)
+      ..appendText(after);
+    constrainedDimensions._element.style.width = '${constraints.width}px';
+
+    // Measure the rects of [rangeSpan].
+    final List<html.Rectangle<num>> clientRects = rangeSpan.getClientRects();
+    final List<ui.TextBox> boxes = [];
+
+    for (html.Rectangle<num> rect in clientRects) {
+      boxes.add(ui.TextBox.fromLTRBD(
+        rect.left + alignOffset,
+        rect.top,
+        rect.right + alignOffset,
+        rect.bottom,
+        textDirection,
+      ));
+    }
+
+    // Cleanup after measuring the boxes.
+    domRenderer.clearDom(constrainedDimensions._element);
+    return boxes;
   }
 
   /// Detaches this ruler from the DOM and makes it unusable for future

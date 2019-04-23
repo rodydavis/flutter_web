@@ -1346,39 +1346,20 @@ class Paragraph {
       return [];
     }
 
-    // Eliminate negative indices
-    start = start.clamp(0, _plainText.length);
-    end = end.clamp(0, _plainText.length);
-
-    final double boxLeftOffset = _getBoxLeftOffset(start);
-    end = math.min(end, _plainText.length);
-    final engine.TextDimensions box = end < _plainText.length
-        ? _measureBox(_plainText.substring(0, end))
-        : _measureBox(_plainText);
-
-    return <TextBox>[
-      TextBox.fromLTRBD(
-        webOnlyAlignOffset + boxLeftOffset,
-        0,
-        webOnlyAlignOffset + box.width,
-        box.height,
-        _textDirection,
-      ),
-    ];
-  }
-
-  engine.TextDimensions _measureBox(String plainText) {
-    final Paragraph clone = _cloneWithText(plainText);
-    return engine.TextMeasurementService.instance.measureSingleLineText(clone);
-  }
-
-  double _getBoxLeftOffset(int start) {
-    if (start == 0) {
-      return 0;
+    final int length = _plainText.length;
+    // Ranges that are out of bounds should return an empty list.
+    if (start < 0 || end < 0 || start > length || end > length) {
+      return [];
     }
 
-    return engine.TextMeasurementService.instance.measureSingleLineWidth(
-        _plainText.substring(0, start), _paragraphGeometricStyle);
+    return engine.TextMeasurementService.instance.measureBoxesForRange(
+      this,
+      _lastUsedConstraints,
+      start: start,
+      end: end,
+      alignOffset: webOnlyAlignOffset,
+      textDirection: _textDirection,
+    );
   }
 
   Paragraph _cloneWithText(String plainText) {

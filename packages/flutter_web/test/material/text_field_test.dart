@@ -2015,7 +2015,7 @@ void main() {
     final double lineHeight = findRenderEditable(tester).preferredLineHeight;
     scrollableState = tester.firstState(find.byType(Scrollable));
     expect(scrollableState.position.pixels, closeTo(lineHeight, 0.1));
-  }, skip: true);
+  });
 
   testWidgets('haptic feedback', (WidgetTester tester) async {
     final FeedbackTester feedback = FeedbackTester();
@@ -2851,9 +2851,7 @@ void main() {
 
     expect(c1.selection.extentOffset - c1.selection.baseOffset, 0);
     expect(c2.selection.extentOffset - c2.selection.baseOffset, 5);
-  }, skip: true);
-
-  /// REENABLE PLEASE!
+  });
 
   testWidgets('Caret works when maxLines is null', (WidgetTester tester) async {
     final TextEditingController controller = TextEditingController();
@@ -2935,8 +2933,6 @@ void main() {
         closeTo(rowBottomY - 2.0, 0.001));
     expect(tester.getBottomLeft(find.byKey(keyB)).dy, rowBottomY);
   }, skip: true);
-
-  /// REENABLE PLEASE!
 
   testWidgets('TextField baseline alignment', (WidgetTester tester) async {
     final TextEditingController controllerA = TextEditingController(text: 'A');
@@ -4991,9 +4987,7 @@ void main() {
     await gesture.up();
     await tester.pump();
     expect(find.byType(FlatButton), findsNothing);
-  }, skip: true);
-
-  /// REENABLE PLEASE!
+  });
 
   testWidgets('force press selects word (iOS)', (WidgetTester tester) async {
     final TextEditingController controller = TextEditingController(
@@ -5231,8 +5225,6 @@ void main() {
       );
     },
     skip: true,
-
-    /// REENABLE PLEASE!
   );
 
   testWidgets(
@@ -5257,9 +5249,6 @@ void main() {
         const Size(800, 120),
       );
     },
-    skip: true,
-
-    /// REENABLE PLEASE!
   );
 
   testWidgets(
@@ -5291,9 +5280,6 @@ void main() {
         const Size(800, 120),
       );
     },
-    skip: true,
-
-    /// REENABLE PLEASE!
   );
 
   testWidgets(
@@ -5324,8 +5310,6 @@ void main() {
     },
     // TODO(flutter_web): unskip when strut styles are fully implemented.
     skip: true,
-
-    /// REENABLE PLEASE!
   );
 
   testWidgets(
@@ -5427,9 +5411,7 @@ void main() {
       editable.getLocalRectForCaret(const TextPosition(offset: 1)).topLeft,
     );
     expect(topLeft.dx, equals(383));
-  }, skip: true);
-
-  /// REENABLE PLEASE!
+  });
 
   testWidgets('Caret indexes into trailing whitespace center align',
       (WidgetTester tester) async {

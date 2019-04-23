@@ -786,7 +786,6 @@ void main() {
     expect(find.byKey(buildCounterKey), findsOneWidget);
   });
 
-// TODO(mouad): Renable test after adding multiline edit support
   testWidgets('InputDecoration errorMaxLines', (WidgetTester tester) async {
     const String kError1 = 'e0';
     const String kError2 = 'e0\ne1';
@@ -864,7 +863,7 @@ void main() {
         tester.getSize(find.byType(InputDecorator)), const Size(800.0, 76.0));
     expect(tester.getTopLeft(find.text(kError1)), const Offset(12.0, 64.0));
     expect(tester.getBottomLeft(find.text(kError1)), const Offset(12.0, 76.0));
-  }, skip: true);
+  });
 
   testWidgets('InputDecorator prefix/suffix texts',
       (WidgetTester tester) async {

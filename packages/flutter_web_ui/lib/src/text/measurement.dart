@@ -167,6 +167,30 @@ class TextMeasurementService {
     return canvasContext.measureText(text).width;
   }
 
+  /// Delegates to a [ParagraphRuler] to measure a list of text boxes that
+  /// enclose the given range of text.
+  List<ui.TextBox> measureBoxesForRange(
+    ui.Paragraph paragraph,
+    ui.ParagraphConstraints constraints, {
+    int start,
+    int end,
+    double alignOffset,
+    ui.TextDirection textDirection,
+  }) {
+    final ParagraphGeometricStyle style =
+        paragraph.webOnlyGetParagraphGeometricStyle();
+    final ParagraphRuler ruler = _findOrCreateRuler(style);
+
+    return ruler.measureBoxesForRange(
+      paragraph.webOnlyGetPlainText(),
+      constraints,
+      start: start,
+      end: end,
+      alignOffset: alignOffset,
+      textDirection: textDirection,
+    );
+  }
+
   ParagraphRuler _findOrCreateRuler(ParagraphGeometricStyle style) {
     final ParagraphRuler ruler = _rulers[style];
     if (ruler != null) {
