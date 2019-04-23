@@ -4,18 +4,21 @@
 
 import 'dart:io';
 
-const _dirs = ['packages', 'examples'];
-
 const _ansiGreen = 32;
 const _ansiRed = 31;
 const _ansiMagenta = 35;
 
 void main() async {
-  var packageDirs = _listPackageDirs().toList()..sort();
-  print('Package dir count: ${packageDirs.length}');
-  var results = <bool>[];
-  for (var dir in packageDirs) {
-    _logWrapped(_ansiMagenta, dir);
+  final packageDirs = _listPackageDirs(Directory.current)
+      .map((path) => path.replaceFirst(Directory.current.path + '/', ''))
+      .toList();
+
+  print('Package dirs:\n${packageDirs.map((path) => '  $path').join('\n')}');
+
+  final results = <bool>[];
+  for (var i = 0; i < packageDirs.length; i++) {
+    final dir = packageDirs[i];
+    _logWrapped(_ansiMagenta, '\n$dir (${i + 1} of ${packageDirs.length})');
     results.add(await _run(dir, 'pub', ['upgrade', '--no-precompile']));
     results.add(await _run(
       dir,
@@ -52,7 +55,7 @@ Future<bool> _run(
   var proc = await Process.start(
     commandName,
     args,
-    workingDirectory: workingDir,
+    workingDirectory: Directory.current.path + '/' + workingDir,
     mode: ProcessStartMode.inheritStdio,
   );
 
@@ -68,14 +71,15 @@ Future<bool> _run(
   }
 }
 
-Iterable<String> _listPackageDirs() sync* {
-  for (var dir in _dirs) {
-    for (var subDir in Directory(dir)
-        .listSync(recursive: false, followLinks: false)
-        .whereType<Directory>()) {
-      if (File('${subDir.path}/pubspec.yaml').existsSync()) {
-        yield subDir.path;
-      }
+Iterable<String> _listPackageDirs(Directory dir) sync* {
+  if (File('${dir.path}/pubspec.yaml').existsSync()) {
+    yield dir.path;
+  } else {
+    for (var subDir in dir
+        .listSync(followLinks: false)
+        .whereType<Directory>()
+        .where((d) => !Uri.file(d.path).pathSegments.last.startsWith('.'))) {
+      yield* _listPackageDirs(subDir);
     }
   }
 }
