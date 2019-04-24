@@ -503,20 +503,23 @@ abstract class RenderViewportBase<
   @override
   Rect describeSemanticsClip(RenderSliver child) {
     assert(axis != null);
+    // TODO(flutter_web): upstream.
+    // Locally cache bounds since semanticBounds is a getter.
+    final bounds = semanticBounds;
     switch (axis) {
       case Axis.vertical:
         return Rect.fromLTRB(
-          semanticBounds.left,
-          semanticBounds.top - cacheExtent,
-          semanticBounds.right,
-          semanticBounds.bottom + cacheExtent,
+          bounds.left,
+          bounds.top - cacheExtent,
+          bounds.right,
+          bounds.bottom + cacheExtent,
         );
       case Axis.horizontal:
         return Rect.fromLTRB(
-          semanticBounds.left - cacheExtent,
-          semanticBounds.top,
-          semanticBounds.right + cacheExtent,
-          semanticBounds.bottom,
+          bounds.left - cacheExtent,
+          bounds.top,
+          bounds.right + cacheExtent,
+          bounds.bottom,
         );
     }
     return null;
