@@ -4,13 +4,15 @@
 
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 const _ansiGreen = 32;
 const _ansiRed = 31;
 const _ansiMagenta = 35;
 
 void main() async {
   final packageDirs = _listPackageDirs(Directory.current)
-      .map((path) => path.replaceFirst(Directory.current.path + '/', ''))
+      .map((path) => p.relative(path, from: Directory.current.path))
       .toList();
 
   print('Package dirs:\n${packageDirs.map((path) => '  $path').join('\n')}');

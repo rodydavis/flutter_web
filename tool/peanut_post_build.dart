@@ -7,22 +7,24 @@
 
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 void main(List<String> args) {
   final sourcePath = args.single;
 
   for (var htmlFile in Directory(sourcePath)
       .listSync(recursive: true)
       .whereType<File>()
-      .where((f) => f.path.endsWith('index.html'))) {
+      .where((f) => p.basename(f.path) == 'index.html')) {
     final content = htmlFile.readAsStringSync();
     final newContent = content.replaceFirst('<head>', '<head>\n$_analytics');
 
-    final filePath = htmlFile.path.replaceAll(sourcePath, '');
+    final filePath = p.relative(htmlFile.path, from: sourcePath);
 
     if (newContent == content) {
-      print('!!! Did not replace contents in "$filePath".');
+      print('!!! Did not replace contents in $filePath');
     } else {
-      print('Replaced contents in "$filePath".');
+      print('Replaced contents in $filePath');
       htmlFile.writeAsStringSync(newContent);
     }
   }
