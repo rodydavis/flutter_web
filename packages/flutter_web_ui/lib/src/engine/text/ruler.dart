@@ -144,19 +144,112 @@ class ParagraphGeometricStyle {
 /// The rationale behind this is to minimize browser reflows by batching dom
 /// writes first, then performing all the reads.
 class TextDimensions {
-  TextDimensions(this._element, [this._probe]);
+  TextDimensions(this._element) : _probe = null;
+  TextDimensions.withProbe(this._element) : _probe = html.DivElement();
 
   final html.HtmlElement _element;
   final html.HtmlElement _probe;
+  html.Rectangle<num> _cachedBoundingClientRect;
+  double _cachedAlphabeticBaseline = null;
+
+  /// Attempts to efficiently copy text from [from].
+  ///
+  /// The primary efficiency gain is from rare occurrence of rich text in
+  /// typical apps.
+  void updateText(ui.Paragraph from, ParagraphGeometricStyle style) {
+    assert(from != null);
+    assert(_element != null);
+    assert(from.webOnlyDebugHasSameRootStyle(style));
+    assert(() {
+      bool wasEmptyOrPlainText = _element.childNodes.isEmpty ||
+          (_element.childNodes.length == 1 &&
+              _element.childNodes.first is html.Text);
+      if (!wasEmptyOrPlainText) {
+        throw Exception(
+            'Failed to copy text into the paragraph measuring element. The '
+            'element already contains rich text "${_element.innerHtml}". It is '
+            'likely that a previous measurement did not clean up after '
+            'itself.');
+      }
+      return true;
+    }());
+
+    _invalidateBoundsCache();
+    String plainText = from.webOnlyGetPlainText();
+    if (plainText != null) {
+      // Plain text: just set the string. The paragraph's style is assumed to
+      // match the style set on the `element`. Setting text as plain string is
+      // faster because it doesn't change the DOM structure or CSS attributes,
+      // and therefore doesn't trigger style recalculations in the browser.
+      _element.text = plainText;
+    } else {
+      // Rich text: deeply copy contents. This is the slow case that should be
+      // avoided if fast layout performance is desired.
+      final html.Element copy = from.webOnlyGetParagraphElement().clone(true);
+      _element.nodes.addAll(copy.childNodes);
+    }
+  }
+
+  // Updated element style width.
+  void updateWidth(String cssWidth) {
+    _invalidateBoundsCache();
+    _element.style.width = cssWidth;
+  }
+
+  void _invalidateBoundsCache() {
+    _cachedBoundingClientRect = null;
+  }
+
+  /// Sets text of contents to a single space character to measure empty text.
+  void updateTextToSpace() {
+    _invalidateBoundsCache();
+    _element.text = ' ';
+  }
+
+  /// Applies geometric style properties to the [element].
+  void applyStyle(ParagraphGeometricStyle style) {
+    _element.style
+      ..fontSize = style.fontSize != null ? '${style.fontSize.floor()}px' : null
+      ..fontFamily = style.effectiveFontFamily
+      ..fontWeight = style.fontWeight != null
+          ? ui.webOnlyFontWeightToCss(style.fontWeight)
+          : null
+      ..fontStyle = style.fontStyle != null
+          ? style.fontStyle == ui.FontStyle.normal ? 'normal' : 'italic'
+          : null
+      ..letterSpacing =
+          style.letterSpacing != null ? '${style.letterSpacing}px' : null
+      ..wordSpacing =
+          style.wordSpacing != null ? '${style.wordSpacing}px' : null
+      ..textDecoration = style.decoration;
+    if (style.lineHeight != null) {
+      _element.style.lineHeight = style.lineHeight.toString();
+    }
+    _invalidateBoundsCache();
+  }
+
+  /// Appends element and probe to hostElement that is setup for a specific
+  /// TextStyle.
+  void appendToHost(html.HtmlElement hostElement) {
+    hostElement.append(_element);
+    if (_probe != null) hostElement.append(_probe);
+    _invalidateBoundsCache();
+  }
+
+  html.Rectangle<num> _readAndCacheMetrics() {
+    _cachedBoundingClientRect ??= _element.getBoundingClientRect();
+    return _cachedBoundingClientRect;
+  }
 
   /// The width of the paragraph being measured.
-  double get width => _element.getBoundingClientRect().width;
+  double get width => _readAndCacheMetrics().width;
 
   /// The height of the paragraph being measured.
-  double get height => _element.getBoundingClientRect().height;
+  double get height => _readAndCacheMetrics().height;
 
   /// The alphabetic baseline of the paragraph being measured.
-  double get alphabeticBaseline => _probe.getBoundingClientRect().bottom;
+  double get alphabeticBaseline =>
+      _cachedAlphabeticBaseline ??= _probe.getBoundingClientRect().bottom;
 }
 
 /// Performs 4 types of measurements:
@@ -213,7 +306,7 @@ class ParagraphRuler {
   // Elements used to measure single-line metrics.
   final html.DivElement _singleLineHost = html.DivElement();
   final TextDimensions singleLineDimensions =
-      TextDimensions(html.ParagraphElement(), html.DivElement());
+      TextDimensions.withProbe(html.ParagraphElement());
 
   // Elements used to measure minIntrinsicWidth.
   final html.DivElement _minIntrinsicHost = html.DivElement();
@@ -222,9 +315,8 @@ class ParagraphRuler {
 
   // Elements used to measure metrics under a width constraint.
   final html.DivElement _constrainedHost = html.DivElement();
-  // TODO(mdebbar): Can we remove the probe from this one?
   TextDimensions constrainedDimensions =
-      TextDimensions(html.ParagraphElement(), html.DivElement());
+      TextDimensions(html.ParagraphElement());
 
   /// The number of times this ruler was used this frame.
   ///
@@ -256,14 +348,12 @@ class ParagraphRuler {
       ..border = '0'
       ..padding = '0';
 
-    _applyStyle(singleLineDimensions._element);
+    singleLineDimensions.applyStyle(style);
 
     // Force single-line (even if wider than screen) and preserve whitespaces.
     singleLineDimensions._element.style.whiteSpace = 'pre';
 
-    _singleLineHost
-      ..append(singleLineDimensions._element)
-      ..append(singleLineDimensions._probe);
+    singleLineDimensions.appendToHost(_singleLineHost);
     TextMeasurementService.instance.addHostElement(_singleLineHost);
   }
 
@@ -280,7 +370,7 @@ class ParagraphRuler {
       ..border = '0'
       ..padding = '0';
 
-    _applyStyle(minIntrinsicDimensions._element);
+    minIntrinsicDimensions.applyStyle(style);
 
     // "flex: 0" causes the paragraph element to shrink horizontally, exposing
     // its minimum intrinsic width.
@@ -307,76 +397,14 @@ class ParagraphRuler {
       ..border = '0'
       ..padding = '0';
 
-    _applyStyle(constrainedDimensions._element);
+    constrainedDimensions.applyStyle(style);
     constrainedDimensions._element.style
       ..display = 'block'
       // Preserve whitespaces.
       ..whiteSpace = 'pre-wrap';
 
-    _constrainedHost
-      ..append(constrainedDimensions._element)
-      ..append(constrainedDimensions._probe);
+    constrainedDimensions.appendToHost(_constrainedHost);
     TextMeasurementService.instance.addHostElement(_constrainedHost);
-  }
-
-  /// Applies geometric style properties to the [element].
-  void _applyStyle(html.ParagraphElement element) {
-    element.style
-      ..fontSize = style.fontSize != null ? '${style.fontSize.floor()}px' : null
-      ..fontFamily = style.effectiveFontFamily
-      ..fontWeight = style.fontWeight != null
-          ? ui.webOnlyFontWeightToCss(style.fontWeight)
-          : null
-      ..fontStyle = style.fontStyle != null
-          ? style.fontStyle == ui.FontStyle.normal ? 'normal' : 'italic'
-          : null
-      ..letterSpacing =
-          style.letterSpacing != null ? '${style.letterSpacing}px' : null
-      ..wordSpacing =
-          style.wordSpacing != null ? '${style.wordSpacing}px' : null
-      ..textDecoration = style.decoration;
-    if (style.lineHeight != null) {
-      element.style.lineHeight = style.lineHeight.toString();
-    }
-  }
-
-  /// Attempts to efficiently copy text from [from] into [into].
-  ///
-  /// The primary efficiency gain is from rare occurrence of rich text in
-  /// typical apps.
-  void _copyText({
-    @required ui.Paragraph from,
-    @required html.ParagraphElement into,
-  }) {
-    assert(from != null);
-    assert(into != null);
-    assert(from.webOnlyDebugHasSameRootStyle(style));
-    assert(() {
-      bool wasEmptyOrPlainText = into.childNodes.isEmpty ||
-          (into.childNodes.length == 1 && into.childNodes.first is html.Text);
-      if (!wasEmptyOrPlainText) {
-        throw Exception(
-            'Failed to copy text into the paragraph measuring element. The '
-            'element already contains rich text "${into.innerHtml}". It is '
-            'likely that a previous measurement did not clean up after '
-            'itself.');
-      }
-      return true;
-    }());
-
-    String plainText = from.webOnlyGetPlainText();
-    if (plainText != null) {
-      // Plain text: just set the string. The paragraph's style is assumed to
-      // match the style set on the `element`. Setting text as plain string is
-      // faster because it doesn't change the DOM structure or CSS attributes,
-      // and therefore doesn't trigger style recalculations in the browser.
-      into.text = plainText;
-    } else {
-      // Rich text: deeply copy contents. This is the slow case that should be
-      // avoided if fast layout performance is desired.
-      final html.Element copy = from.webOnlyGetParagraphElement().clone(true);
-      into.nodes.addAll(copy.childNodes);
-    }
   }
 
   /// The paragraph being measured.
@@ -423,9 +451,9 @@ class ParagraphRuler {
     // correct fix would be to do line height and baseline measurements and
     // cache them separately.
     if (_paragraph.webOnlyGetPlainText() == '') {
-      singleLineDimensions._element.text = ' ';
+      singleLineDimensions.updateTextToSpace();
     } else {
-      _copyText(from: _paragraph, into: singleLineDimensions._element);
+      singleLineDimensions.updateText(_paragraph, style);
     }
   }
 
@@ -437,7 +465,7 @@ class ParagraphRuler {
     assert(!_debugIsDisposed);
     assert(_paragraph != null);
 
-    _copyText(from: _paragraph, into: minIntrinsicDimensions._element);
+    minIntrinsicDimensions.updateText(_paragraph, style);
   }
 
   /// Lays out the paragraph giving it a width constraint.
@@ -447,12 +475,12 @@ class ParagraphRuler {
     assert(!_debugIsDisposed);
     assert(_paragraph != null);
 
-    _copyText(from: _paragraph, into: constrainedDimensions._element);
+    constrainedDimensions.updateText(_paragraph, style);
 
     // The extra 0.5 is because sometimes the browser needs slightly more space
     // than the size it reports back. When that happens the text may be wrap
     // when we thought it didn't.
-    constrainedDimensions._element.style.width = '${constraints.width + 0.5}px';
+    constrainedDimensions.updateWidth('${constraints.width + 0.5}px');
   }
 
   /// Performs clean-up after a measurement is done, preparing this ruler for
@@ -511,7 +539,7 @@ class ParagraphRuler {
       ..appendText(before)
       ..append(rangeSpan)
       ..appendText(after);
-    constrainedDimensions._element.style.width = '${constraints.width}px';
+    constrainedDimensions.updateWidth('${constraints.width}px');
 
     // Measure the rects of [rangeSpan].
     final List<html.Rectangle<num>> clientRects = rangeSpan.getClientRects();
