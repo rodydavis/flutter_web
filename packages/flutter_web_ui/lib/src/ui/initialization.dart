@@ -5,8 +5,13 @@
 part of ui;
 
 /// Initializes the platform.
-Future<void> webOnlyInitializePlatform(
-    {engine.AssetManager assetManager}) async {
+Future<void> webOnlyInitializePlatform({
+  engine.AssetManager assetManager,
+}) async {
+  if (!engine.domRenderer.debugIsInWidgetTest) {
+    window.webOnlyLocationStrategy = const HashLocationStrategy();
+  }
+
   if (assetManager == null) {
     assetManager = new engine.AssetManager();
   }
