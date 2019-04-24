@@ -22,21 +22,21 @@ import 'package:meta/meta.dart';
 
 export 'src/engine.dart' show webOnlyInitializeEngine;
 
-part 'src/canvas.dart';
-part 'src/compositing.dart';
-part 'src/geometry.dart';
-part 'src/hash_codes.dart';
-part 'src/initialization.dart';
-part 'src/lerp.dart';
-part 'src/natives.dart';
-part 'src/painting.dart';
-part 'src/pointer.dart';
-part 'src/pointer_binding.dart';
-part 'src/semantics.dart';
-part 'src/browser_routing/strategies.dart';
-part 'src/text.dart';
-part 'src/tile_mode.dart';
-part 'src/window.dart';
+part 'src/ui/canvas.dart';
+part 'src/ui/compositing.dart';
+part 'src/ui/geometry.dart';
+part 'src/ui/hash_codes.dart';
+part 'src/ui/initialization.dart';
+part 'src/ui/lerp.dart';
+part 'src/ui/natives.dart';
+part 'src/ui/painting.dart';
+part 'src/ui/pointer.dart';
+part 'src/ui/pointer_binding.dart';
+part 'src/ui/semantics.dart';
+part 'src/ui/browser_location.dart';
+part 'src/ui/text.dart';
+part 'src/ui/tile_mode.dart';
+part 'src/ui/window.dart';
 
 /// Provides a compile time constant to customize flutter framework and other
 /// users of ui engine for web runtime.

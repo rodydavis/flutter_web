@@ -17,59 +17,51 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
-part 'assets/assets.dart';
-
-part 'browser_routing/history.dart';
-
-part 'compositor/engine_delegate.dart';
-part 'compositor/layer.dart';
-part 'compositor/layer_scene_builder.dart';
-part 'compositor/layer_tree.dart';
-part 'compositor/raster_cache.dart';
-part 'compositor/rasterizer.dart';
-part 'compositor/runtime_delegate.dart';
-part 'compositor/surface.dart';
-part 'compositor/viewport_metrics.dart';
-part 'compositor/platform_message.dart';
-
-part 'dom_renderer/dom_renderer.dart';
-
-part 'semantics/checkable.dart';
-part 'semantics/incrementable.dart';
-part 'semantics/label_and_value.dart';
-part 'semantics/scrollable.dart';
-part 'semantics/semantics.dart';
-part 'semantics/tappable.dart';
-part 'semantics/text_field.dart';
-
-part 'services/message_codec.dart';
-part 'services/message_codecs.dart';
-
-part 'text/font_collection.dart';
-part 'text/measurement.dart';
-part 'text/ruler.dart';
-part 'text/unicode_range.dart';
-part 'text/word_break_properties.dart';
-part 'text/word_breaker.dart';
-
-part 'alarm_clock.dart';
-part 'dom_renderer.dart';
-part 'keyboard.dart';
-part 'bitmap_canvas.dart';
-part 'util.dart';
-part 'validators.dart';
-part 'shadow.dart';
-part 'recording_canvas.dart';
-part 'onscreen_logging.dart';
-part 'text_editing.dart';
-part 'engine_canvas.dart';
-part 'html_image_codec.dart';
-part 'dom_canvas.dart';
-part 'conic.dart';
-part 'browser_detection.dart';
-part 'houdini_canvas.dart';
-part 'path_to_svg.dart';
-part 'vector_math.dart';
+part 'engine/alarm_clock.dart';
+part 'engine/assets.dart';
+part 'engine/bitmap_canvas.dart';
+part 'engine/browser_detection.dart';
+part 'engine/compositor/engine_delegate.dart';
+part 'engine/compositor/layer.dart';
+part 'engine/compositor/layer_scene_builder.dart';
+part 'engine/compositor/layer_tree.dart';
+part 'engine/compositor/raster_cache.dart';
+part 'engine/compositor/rasterizer.dart';
+part 'engine/compositor/runtime_delegate.dart';
+part 'engine/compositor/surface.dart';
+part 'engine/compositor/viewport_metrics.dart';
+part 'engine/compositor/platform_message.dart';
+part 'engine/conic.dart';
+part 'engine/dom_canvas.dart';
+part 'engine/dom_renderer.dart';
+part 'engine/engine_canvas.dart';
+part 'engine/history.dart';
+part 'engine/houdini_canvas.dart';
+part 'engine/html_image_codec.dart';
+part 'engine/keyboard.dart';
+part 'engine/onscreen_logging.dart';
+part 'engine/path_to_svg.dart';
+part 'engine/recording_canvas.dart';
+part 'engine/semantics/checkable.dart';
+part 'engine/semantics/incrementable.dart';
+part 'engine/semantics/label_and_value.dart';
+part 'engine/semantics/scrollable.dart';
+part 'engine/semantics/semantics.dart';
+part 'engine/semantics/tappable.dart';
+part 'engine/semantics/text_field.dart';
+part 'engine/services/message_codec.dart';
+part 'engine/services/message_codecs.dart';
+part 'engine/shadow.dart';
+part 'engine/text/font_collection.dart';
+part 'engine/text/measurement.dart';
+part 'engine/text/ruler.dart';
+part 'engine/text/unicode_range.dart';
+part 'engine/text/word_break_properties.dart';
+part 'engine/text/word_breaker.dart';
+part 'engine/text_editing.dart';
+part 'engine/util.dart';
+part 'engine/validators.dart';
+part 'engine/vector_math.dart';
 
 bool _engineInitialized = false;
 
