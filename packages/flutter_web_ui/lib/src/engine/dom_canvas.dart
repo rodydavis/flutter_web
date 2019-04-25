@@ -176,13 +176,22 @@ class DomCanvas extends EngineCanvas with SaveElementStackTracking {
     String cssTransform =
         matrix4ToCssTransform(transformWithOffset(currentTransform, offset));
 
-    paragraphElement.style
+    final html.CssStyleDeclaration paragraphStyle = paragraphElement.style;
+    paragraphStyle
       ..position = 'absolute'
       ..transformOrigin = '0 0 0'
       ..transform = cssTransform
       ..whiteSpace = 'pre-wrap'
-      ..width = '${paragraph.width}px'
-      ..height = '${paragraph.height}px';
+      ..width = '${paragraph.width}px';
+
+    if (paragraph.didExceedMaxLines) {
+      paragraphStyle
+        ..height = '${paragraph.webOnlyMaxLinesHeight}px'
+        ..overflowY = 'hidden';
+    } else {
+      paragraphStyle.height = '${paragraph.height}px';
+    }
+
     currentElement.append(paragraphElement);
   }
 }

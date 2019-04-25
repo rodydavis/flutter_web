@@ -12,6 +12,7 @@ class ParagraphGeometricStyle {
     this.fontFamily,
     this.fontSize,
     this.lineHeight,
+    this.maxLines,
     this.letterSpacing,
     this.wordSpacing,
     this.decoration,
@@ -22,6 +23,7 @@ class ParagraphGeometricStyle {
   final String fontFamily;
   final double fontSize;
   final double lineHeight;
+  final int maxLines;
   final double letterSpacing;
   final double wordSpacing;
   final String decoration;
@@ -150,7 +152,7 @@ class TextDimensions {
   final html.HtmlElement _element;
   final html.HtmlElement _probe;
   html.Rectangle<num> _cachedBoundingClientRect;
-  double _cachedAlphabeticBaseline = null;
+  double _cachedAlphabeticBaseline;
 
   /// Attempts to efficiently copy text from [from].
   ///
@@ -318,6 +320,20 @@ class ParagraphRuler {
   TextDimensions constrainedDimensions =
       TextDimensions(html.ParagraphElement());
 
+  // Elements used to measure the line-height metric.
+  html.DivElement _lineHeightHost;
+  TextDimensions _lineHeightDimensions;
+  TextDimensions get lineHeightDimensions {
+    // Lazily create the elements for line-height measurement since they are not
+    // always needed.
+    if (_lineHeightDimensions == null) {
+      _lineHeightHost = html.DivElement();
+      _lineHeightDimensions = TextDimensions(html.ParagraphElement());
+      _configureLineHeightHostElements();
+    }
+    return _lineHeightDimensions;
+  }
+
   /// The number of times this ruler was used this frame.
   ///
   /// This value is used to determine which rulers are rarely used and should be
@@ -405,6 +421,28 @@ class ParagraphRuler {
 
     constrainedDimensions.appendToHost(_constrainedHost);
     TextMeasurementService.instance.addHostElement(_constrainedHost);
+  }
+
+  void _configureLineHeightHostElements() {
+    _lineHeightHost.style
+      ..visibility = 'hidden'
+      ..position = 'absolute'
+      ..top = '0'
+      ..left = '0'
+      ..margin = '0'
+      ..border = '0'
+      ..padding = '0';
+
+    lineHeightDimensions.applyStyle(style);
+
+    // Force single-line (even if wider than screen) and preserve whitespaces.
+    lineHeightDimensions._element.style.whiteSpace = 'pre';
+
+    // To measure line-height, all we need is a whitespace.
+    lineHeightDimensions.updateTextToSpace();
+
+    lineHeightDimensions.appendToHost(_lineHeightHost);
+    TextMeasurementService.instance.addHostElement(_lineHeightHost);
   }
 
   /// The paragraph being measured.
@@ -575,6 +613,7 @@ class ParagraphRuler {
     _singleLineHost.remove();
     _minIntrinsicHost.remove();
     _constrainedHost.remove();
+    _lineHeightHost?.remove();
     assert(() {
       _debugIsDisposed = true;
       return true;

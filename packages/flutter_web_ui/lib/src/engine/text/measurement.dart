@@ -230,11 +230,12 @@ class TextMeasurementService {
   /// This method still needs to measure `minIntrinsicWidth`.
   void _measureSingleLineParagraph(ParagraphRuler ruler, ui.Paragraph paragraph,
       ui.ParagraphConstraints constraints) {
-    double width = constraints.width;
-    double minIntrinsicWidth = ruler.minIntrinsicDimensions.width;
+    final double width = constraints.width;
+    final double minIntrinsicWidth = ruler.minIntrinsicDimensions.width;
     double maxIntrinsicWidth = ruler.singleLineDimensions.width;
-    double alphabeticBaseline = ruler.singleLineDimensions.alphabeticBaseline;
-    double height = ruler.singleLineDimensions.height;
+    final double alphabeticBaseline =
+        ruler.singleLineDimensions.alphabeticBaseline;
+    final double height = ruler.singleLineDimensions.height;
 
     maxIntrinsicWidth =
         _applySubPixelRoundingHack(minIntrinsicWidth, maxIntrinsicWidth);
@@ -243,6 +244,7 @@ class TextMeasurementService {
       isSingleLine: true,
       width: width,
       height: height,
+      lineHeight: height,
       minIntrinsicWidth: minIntrinsicWidth,
       maxIntrinsicWidth: maxIntrinsicWidth,
       alphabeticBaseline: alphabeticBaseline,
@@ -261,11 +263,17 @@ class TextMeasurementService {
   void _measureMultiLineParagraph(ParagraphRuler ruler, ui.Paragraph paragraph,
       ui.ParagraphConstraints constraints) {
     // If constraint is infinite, we must use _measureSingleLineParagraph
-    double width = constraints.width;
-    double minIntrinsicWidth = ruler.minIntrinsicDimensions.width;
+    final double width = constraints.width;
+    final double minIntrinsicWidth = ruler.minIntrinsicDimensions.width;
     double maxIntrinsicWidth = ruler.singleLineDimensions.width;
-    double alphabeticBaseline = ruler.singleLineDimensions.alphabeticBaseline;
-    double height = ruler.constrainedDimensions.height;
+    final double alphabeticBaseline =
+        ruler.singleLineDimensions.alphabeticBaseline;
+    final double height = ruler.constrainedDimensions.height;
+
+    double lineHeight;
+    if (paragraph.webOnlyGetParagraphGeometricStyle().maxLines != null) {
+      lineHeight = ruler.lineHeightDimensions.height;
+    }
 
     maxIntrinsicWidth =
         _applySubPixelRoundingHack(minIntrinsicWidth, maxIntrinsicWidth);
@@ -274,6 +282,7 @@ class TextMeasurementService {
       isSingleLine: false,
       width: width,
       height: height,
+      lineHeight: lineHeight,
       minIntrinsicWidth: minIntrinsicWidth,
       maxIntrinsicWidth: maxIntrinsicWidth,
       alphabeticBaseline: alphabeticBaseline,

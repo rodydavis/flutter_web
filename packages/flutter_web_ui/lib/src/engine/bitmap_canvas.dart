@@ -753,11 +753,20 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     html.Element paragraphElement =
         paragraph.webOnlyGetParagraphElement().clone(true);
 
-    paragraphElement.style
+    final html.CssStyleDeclaration paragraphStyle = paragraphElement.style;
+    paragraphStyle
       ..position = 'absolute'
       ..whiteSpace = 'pre-wrap'
-      ..width = '${paragraph.width}px'
-      ..height = '${paragraph.height}px';
+      ..width = '${paragraph.width}px';
+
+    if (paragraph.didExceedMaxLines) {
+      paragraphStyle
+        ..height = '${paragraph.webOnlyMaxLinesHeight}px'
+        ..overflowY = 'hidden';
+    } else {
+      paragraphStyle.height = '${paragraph.height}px';
+    }
+
     if (isClipped) {
       List<html.Element> clipElements =
           _clipContent(_clipStack, paragraphElement, offset, currentTransform);
@@ -768,7 +777,7 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     } else {
       String cssTransform =
           matrix4ToCssTransform(transformWithOffset(currentTransform, offset));
-      paragraphElement.style.transform = cssTransform;
+      paragraphStyle.transform = cssTransform;
       rootElement.append(paragraphElement);
     }
     _children.add(paragraphElement);

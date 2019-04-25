@@ -1162,6 +1162,11 @@ class Paragraph {
   double get height => _height;
   double _height = 0.0;
 
+  /// The amount of vertical space one line of this paragraph occupies.
+  ///
+  /// Valid only after [layout] has been called.
+  double _lineHeight = 0.0;
+
   /// The minimum width that this paragraph could be without failing to paint
   /// its contents within itself.
   ///
@@ -1213,6 +1218,12 @@ class Paragraph {
     engine.TextMeasurementService.instance.measure(this, constraints);
     _lastUsedConstraints = constraints;
 
+    if (_paragraphGeometricStyle.maxLines != null) {
+      _didExceedMaxLines = webOnlyMaxLinesHeight < _height;
+    } else {
+      _didExceedMaxLines = false;
+    }
+
     if (_webOnlyIsSingleLine && constraints != null) {
       switch (_textAlign) {
         case TextAlign.center:
@@ -1254,6 +1265,19 @@ class Paragraph {
   /// [ParagraphBuilder] for more details on what is considered "rich".
   Paint webOnlyGetPaint() => _paint;
 
+  /// The expected height of the paragraph when it respects [maxLines].
+  ///
+  /// If [maxLines] is null, then [maxLinesHeight] will also be null indicating
+  /// that there's no expected height for this paragraph in order to respect
+  /// [maxLines].
+  double get webOnlyMaxLinesHeight {
+    assert(_webOnlyIsLaidOut);
+    if (_paragraphGeometricStyle.maxLines == null) {
+      return null;
+    }
+    return _paragraphGeometricStyle.maxLines * _lineHeight;
+  }
+
   /// Called by the text measurement system to report the layout attributes
   /// computed for this paragraph.
   ///
@@ -1261,6 +1285,7 @@ class Paragraph {
   void webOnlySetComputedLayout({
     @required double width,
     @required double height,
+    @required double lineHeight,
     @required double minIntrinsicWidth,
     @required double maxIntrinsicWidth,
     @required double alphabeticBaseline,
@@ -1274,8 +1299,14 @@ class Paragraph {
         minIntrinsicWidth <= maxIntrinsicWidth &&
         alphabeticBaseline != null &&
         ideographicBaseline != null);
+    if (!isSingleLine && _paragraphGeometricStyle.maxLines != null) {
+      // Multi-line paragraphs that have a [maxLines] should have measured their
+      // line-height.
+      assert(lineHeight != null);
+    }
     _width = width;
     _height = height;
+    _lineHeight = lineHeight;
     _minIntrinsicWidth = minIntrinsicWidth;
     _maxIntrinsicWidth = maxIntrinsicWidth;
     _alphabeticBaseline = alphabeticBaseline;
@@ -1660,6 +1691,7 @@ class ParagraphBuilder {
           fontStyle: fontStyle,
           fontSize: fontSize,
           lineHeight: height,
+          maxLines: _paragraphStyle._maxLines,
           letterSpacing: letterSpacing,
           wordSpacing: wordSpacing,
           decoration: _textDecorationToCssString(decoration, decorationStyle),
@@ -1709,6 +1741,7 @@ class ParagraphBuilder {
         fontStyle: fontStyle,
         fontSize: fontSize,
         lineHeight: height,
+        maxLines: _paragraphStyle._maxLines,
         letterSpacing: letterSpacing,
         wordSpacing: wordSpacing,
         decoration: _textDecorationToCssString(decoration, decorationStyle),
@@ -1747,11 +1780,13 @@ class ParagraphBuilder {
     return new Paragraph._(
       paragraphElement: _paragraphElement,
       paragraphGeometricStyle: engine.ParagraphGeometricStyle(
-          fontFamily: _paragraphStyle._fontFamily,
-          fontWeight: _paragraphStyle._fontWeight,
-          fontStyle: _paragraphStyle._fontStyle,
-          fontSize: _paragraphStyle._fontSize,
-          lineHeight: _paragraphStyle._height),
+        fontFamily: _paragraphStyle._fontFamily,
+        fontWeight: _paragraphStyle._fontWeight,
+        fontStyle: _paragraphStyle._fontStyle,
+        fontSize: _paragraphStyle._fontSize,
+        lineHeight: _paragraphStyle._height,
+        maxLines: _paragraphStyle._maxLines,
+      ),
       plainText: null,
       paint: null,
       textAlign: _paragraphStyle._textAlign,
@@ -1949,10 +1984,6 @@ void applyParagraphStyleToElement({
           textAlignToCssValue(
               style._textAlign, style._textDirection ?? TextDirection.ltr));
     }
-    if (style._maxLines != null) {
-      engine.domRenderer
-          .setElementStyle(element, 'max-lines', '${style._maxLines}');
-    }
     if (style._webOnlyLineHeight != null) {
       engine.domRenderer.setElementStyle(
           element, 'line-height', '${style._webOnlyLineHeight}');
@@ -1984,10 +2015,6 @@ void applyParagraphStyleToElement({
           'text-align',
           textAlignToCssValue(
               style._textAlign, style._textDirection ?? TextDirection.ltr));
-    }
-    if (style._maxLines != previousStyle._maxLines) {
-      engine.domRenderer
-          .setElementStyle(element, 'max-lines', '${style._maxLines}');
     }
     if (style._webOnlyLineHeight != style._webOnlyLineHeight) {
       engine.domRenderer.setElementStyle(
