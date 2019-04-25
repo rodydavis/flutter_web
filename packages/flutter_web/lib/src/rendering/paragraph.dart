@@ -247,6 +247,25 @@ class RenderParagraph extends RenderBox {
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     assert(debugHandleEvent(event, entry));
     if (event is! PointerDownEvent) return;
+
+    // TODO(het): Upstream this.
+    // Finding the offset of an event is somewhat expensive on the web,
+    // and if there is no gesture recognizer on this paragraph, there is
+    // no reason to try to calculate the offset. Check if there is a
+    // gesture recognizer before calculating the offset position.
+    bool hasGestureRecognizer = false;
+    _textPainter.text.visitTextSpan((span) {
+      if (span.recognizer != null) {
+        hasGestureRecognizer = true;
+        return false;
+      }
+      // Return 'true' to keep looking for recognizers in child spans.
+      return true;
+    });
+    if (!hasGestureRecognizer) {
+      return;
+    }
+
     _layoutTextWithConstraints(constraints);
     final Offset offset = entry.localPosition;
     final TextPosition position = _textPainter.getPositionForOffset(offset);
