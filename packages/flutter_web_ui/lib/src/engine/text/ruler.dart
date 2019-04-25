@@ -28,6 +28,10 @@ class ParagraphGeometricStyle {
   final double wordSpacing;
   final String decoration;
 
+  // Since all fields above are primitives, cache hashcode since ruler lookups
+  // use this style as key.
+  int _cachedHashCode;
+
   /// Returns the font-family that should be used to style the paragraph. It may
   /// or may not be different from [fontFamily]:
   ///
@@ -107,7 +111,7 @@ class ParagraphGeometricStyle {
   }
 
   @override
-  int get hashCode => ui.hashValues(
+  int get hashCode => _cachedHashCode ??= ui.hashValues(
         fontWeight,
         fontStyle,
         fontFamily,
@@ -146,13 +150,10 @@ class ParagraphGeometricStyle {
 /// The rationale behind this is to minimize browser reflows by batching dom
 /// writes first, then performing all the reads.
 class TextDimensions {
-  TextDimensions(this._element) : _probe = null;
-  TextDimensions.withProbe(this._element) : _probe = html.DivElement();
+  TextDimensions(this._element);
 
   final html.HtmlElement _element;
-  final html.HtmlElement _probe;
   html.Rectangle<num> _cachedBoundingClientRect;
-  double _cachedAlphabeticBaseline;
 
   /// Attempts to efficiently copy text from [from].
   ///
@@ -234,24 +235,17 @@ class TextDimensions {
   /// TextStyle.
   void appendToHost(html.HtmlElement hostElement) {
     hostElement.append(_element);
-    if (_probe != null) hostElement.append(_probe);
     _invalidateBoundsCache();
   }
 
-  html.Rectangle<num> _readAndCacheMetrics() {
-    _cachedBoundingClientRect ??= _element.getBoundingClientRect();
-    return _cachedBoundingClientRect;
-  }
+  html.Rectangle<num> _readAndCacheMetrics() =>
+      _cachedBoundingClientRect ??= _element.getBoundingClientRect();
 
   /// The width of the paragraph being measured.
   double get width => _readAndCacheMetrics().width;
 
   /// The height of the paragraph being measured.
   double get height => _readAndCacheMetrics().height;
-
-  /// The alphabetic baseline of the paragraph being measured.
-  double get alphabeticBaseline =>
-      _cachedAlphabeticBaseline ??= _probe.getBoundingClientRect().bottom;
 }
 
 /// Performs 4 types of measurements:
@@ -296,19 +290,33 @@ class TextDimensions {
 /// This class optimizes for plain text paragraphs, which should constitute the
 /// majority of paragraphs in typical apps.
 class ParagraphRuler {
+  /// The only style that this [ParagraphRuler] measures text.
+  final ParagraphGeometricStyle style;
+
+  /// Probe to use for measuring alphabetic base line.
+  final _probe = html.DivElement();
+
+  /// Cached value of alphabetic base line.
+  double _cachedAlphabeticBaseline = null;
+
   ParagraphRuler(this.style) {
     _configureSingleLineHostElements();
+    // Since alphabeticbaseline will be same regardless of constraints.
+    // We can measure it using a probe on the single line dimensions
+    // host.
+    _singleLineHost.append(_probe);
     _configureMinIntrinsicHostElements();
     _configureConstrainedHostElements();
   }
 
-  /// The only style that this [ParagraphRuler] measures text.
-  final ParagraphGeometricStyle style;
+  /// The alphabetic baseline of the paragraph being measured.
+  double get alphabeticBaseline =>
+      _cachedAlphabeticBaseline ??= _probe.getBoundingClientRect().bottom;
 
   // Elements used to measure single-line metrics.
   final html.DivElement _singleLineHost = html.DivElement();
   final TextDimensions singleLineDimensions =
-      TextDimensions.withProbe(html.ParagraphElement());
+      TextDimensions(html.ParagraphElement());
 
   // Elements used to measure minIntrinsicWidth.
   final html.DivElement _minIntrinsicHost = html.DivElement();

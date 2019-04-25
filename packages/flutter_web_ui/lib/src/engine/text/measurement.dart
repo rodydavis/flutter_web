@@ -233,8 +233,7 @@ class TextMeasurementService {
     final double width = constraints.width;
     final double minIntrinsicWidth = ruler.minIntrinsicDimensions.width;
     double maxIntrinsicWidth = ruler.singleLineDimensions.width;
-    final double alphabeticBaseline =
-        ruler.singleLineDimensions.alphabeticBaseline;
+    final double alphabeticBaseline = ruler.alphabeticBaseline;
     final double height = ruler.singleLineDimensions.height;
 
     maxIntrinsicWidth =
@@ -266,8 +265,7 @@ class TextMeasurementService {
     final double width = constraints.width;
     final double minIntrinsicWidth = ruler.minIntrinsicDimensions.width;
     double maxIntrinsicWidth = ruler.singleLineDimensions.width;
-    final double alphabeticBaseline =
-        ruler.singleLineDimensions.alphabeticBaseline;
+    final double alphabeticBaseline = ruler.alphabeticBaseline;
     final double height = ruler.constrainedDimensions.height;
 
     double lineHeight;
