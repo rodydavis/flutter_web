@@ -134,6 +134,32 @@ Clone the repository locally.
       moment the default for the development server generates code that may only
       work in Chrome.
 
+### Using from VS Code
+
+- [install](https://flutter.dev/docs/get-started/install) the Flutter SDK
+- [set up](https://flutter.dev/docs/get-started/editor?tab=vscode) your copy of
+  VS Code
+- configure VS Code to point to your local Flutter SDK
+- run the `Flutter: New Web Project` command from VS Code
+- after the project is created, run your app by pressing F5 or
+  "Debug -> Start Debugging"
+- VS Code will use the `webdev` command-line tool to build and run your app; a
+  new Chrome window should open, showing your running app
+
+### Using from IntelliJ
+
+- [install](https://flutter.dev/docs/get-started/install) the Flutter SDK
+- [set up](https://flutter.dev/docs/get-started/editor) your copy of IntelliJ or
+  Android Studio
+- configure IntelliJ or Android Studio to point to your local Flutter SDK
+- create a new Dart project; note, for a Flutter for web app, you want to start
+  from the Dart project wizard, not the Flutter project wizard
+- from the Dart project wizard, select the 'Flutter for web' option for the
+  application template
+- create the project; `pub get` will be run automatically
+- once the project is created, hit the `run` button on the main toolbar
+- IntelliJ will use the `webdev` command-line tool to build and run your app; a
+  new Chrome window should open, showing your running app
 
 ## Workflow
 
