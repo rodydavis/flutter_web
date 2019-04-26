@@ -193,3 +193,15 @@ ui.Rect localClipToGlobalClip({
         pointData[7]),
   );
 }
+
+/// Returns true if [rect] contains every point that is also contained by the
+/// [other] rect.
+///
+/// Points on the edges of both rectangles are also considered. For example,
+/// this returns true when the two rects are equal to each other.
+bool rectContainsOther(ui.Rect rect, ui.Rect other) {
+  return rect.left <= other.left &&
+      rect.top <= other.top &&
+      rect.right >= other.right &&
+      rect.bottom >= other.bottom;
+}

@@ -167,12 +167,11 @@ void testLayerLifeCycle(
   // scene starts from the "build" phase.
   SceneBuilder.debugForgetFrameScene();
 
-  final Object paintedBy1 = Object();
-  final Object paintedBy2 = Object();
+  final Object paintedBy = Object();
 
   // Build: builds a brand new layer.
   SceneBuilder sceneBuilder = SceneBuilder();
-  final EngineLayer layer1 = layerBuilder(sceneBuilder, paintedBy1);
+  final EngineLayer layer1 = layerBuilder(sceneBuilder, paintedBy);
   final Type surfaceType = layer1.runtimeType;
   sceneBuilder.pop();
 
@@ -203,41 +202,34 @@ void testLayerLifeCycle(
 
   // Reuse: reuses a layer's DOM elements by matching it.
   sceneBuilder = SceneBuilder();
-  final EngineLayer layer3 = layerBuilder(sceneBuilder, paintedBy1);
+  final EngineLayer layer3 = layerBuilder(sceneBuilder, paintedBy);
   sceneBuilder.pop();
   expect(layer3, isNot(same(layer1)));
   tester = SceneTester(sceneBuilder.build());
   tester.expectSceneHtml(expectedHtmlGetter());
 
   final PersistedSurface surface3 = findSurface();
+  expect(surface3, same(layer3));
   final html.Element surfaceElement3 = surface3.rootElement;
   expect(surface3, isNot(same(surface2)));
   expect(surfaceElement3, isNotNull);
   expect(surfaceElement3, same(surfaceElement2));
 
-  // Recycle: discards the layer due to painter switch.
+  // Recycle: discards all the layers.
   sceneBuilder = SceneBuilder();
-  final EngineLayer layer4 = layerBuilder(sceneBuilder, paintedBy2);
-  sceneBuilder.pop();
-  expect(layer4, isNot(same(layer3)));
   tester = SceneTester(sceneBuilder.build());
-  tester.expectSceneHtml(expectedHtmlGetter());
+  tester.expectSceneHtml('<s></s>');
 
   expect(surface3.rootElement, isNull); // offset3 should be recycled.
-
-  final PersistedSurface surface4 = findSurface();
-  final html.Element surfaceElement4 = surface4.rootElement;
-  expect(surface4, isNot(same(surface3)));
-  expect(surfaceElement4, isNotNull);
-  expect(surfaceElement4, isNot(same(surfaceElement3)));
 
   // Retain again: the framework should be able to request that a layer is added
   //               as retained even after it has been recycled. In this case the
   //               engine would "rehydrate" the layer with new DOM elements.
   sceneBuilder = SceneBuilder();
-  sceneBuilder.addRetained(layer1);
+  sceneBuilder.addRetained(layer3);
   tester = SceneTester(sceneBuilder.build());
   tester.expectSceneHtml(expectedHtmlGetter());
+  expect(surface3.rootElement, isNotNull); // offset3 should be rehydrated.
 }
 
 class MockPersistedPicture extends PersistedPicture {
