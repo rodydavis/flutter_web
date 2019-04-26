@@ -1275,6 +1275,11 @@ class Paragraph {
     if (_paragraphGeometricStyle.maxLines == null) {
       return null;
     }
+    // If this assertion fails, it means we somehow forgot to measure lineHeight
+    // when we actually needed it.
+    //
+    // See [TextMeasurement._measureMultiLineParagraph].
+    assert(_lineHeight != null);
     return _paragraphGeometricStyle.maxLines * _lineHeight;
   }
 
@@ -1299,11 +1304,6 @@ class Paragraph {
         minIntrinsicWidth <= maxIntrinsicWidth &&
         alphabeticBaseline != null &&
         ideographicBaseline != null);
-    if (!isSingleLine && _paragraphGeometricStyle.maxLines != null) {
-      // Multi-line paragraphs that have a [maxLines] should have measured their
-      // line-height.
-      assert(lineHeight != null);
-    }
     _width = width;
     _height = height;
     _lineHeight = lineHeight;
@@ -1327,6 +1327,7 @@ class Paragraph {
   bool get webOnlyDrawOnCanvas =>
       _webOnlyIsSingleLine &&
       _plainText != null &&
+      _paragraphGeometricStyle.ellipsis == null &&
       _paragraphGeometricStyle.decoration == null &&
       _paragraphGeometricStyle.letterSpacing == null &&
       _paragraphGeometricStyle.wordSpacing == null;
@@ -1695,6 +1696,7 @@ class ParagraphBuilder {
           letterSpacing: letterSpacing,
           wordSpacing: wordSpacing,
           decoration: _textDecorationToCssString(decoration, decorationStyle),
+          ellipsis: _paragraphStyle._ellipsis,
         ),
         plainText: '',
         paint: paint,
@@ -1745,6 +1747,7 @@ class ParagraphBuilder {
         letterSpacing: letterSpacing,
         wordSpacing: wordSpacing,
         decoration: _textDecorationToCssString(decoration, decorationStyle),
+        ellipsis: _paragraphStyle._ellipsis,
       ),
       plainText: plainText,
       paint: paint,
@@ -1786,6 +1789,7 @@ class ParagraphBuilder {
         fontSize: _paragraphStyle._fontSize,
         lineHeight: _paragraphStyle._height,
         maxLines: _paragraphStyle._maxLines,
+        ellipsis: _paragraphStyle._ellipsis,
       ),
       plainText: null,
       paint: null,

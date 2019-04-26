@@ -723,8 +723,10 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   void drawParagraph(ui.Paragraph paragraph, ui.Offset offset) {
     assert(paragraph.webOnlyIsLaidOut);
 
+    final ParagraphGeometricStyle style =
+        paragraph.webOnlyGetParagraphGeometricStyle();
+
     if (paragraph.webOnlyDrawOnCanvas) {
-      var style = paragraph.webOnlyGetParagraphGeometricStyle();
       if (style != _cachedLastStyle) {
         ctx.font = style.cssFontString;
         _cachedLastStyle = style;
@@ -759,7 +761,17 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
       ..whiteSpace = 'pre-wrap'
       ..width = '${paragraph.width}px';
 
-    if (paragraph.didExceedMaxLines) {
+    // TODO(flutter_web): Implement the ellipsis overflow for multi-line text
+    //  too. As a pre-requisite, we need to be able to programmatically find
+    //  line breaks.
+    if (style.ellipsis != null &&
+        (style.maxLines == null || style.maxLines == 1)) {
+      paragraphStyle
+        ..height = '${paragraph.webOnlyMaxLinesHeight}px'
+        ..whiteSpace = 'pre'
+        ..overflow = 'hidden'
+        ..textOverflow = 'ellipsis';
+    } else if (paragraph.didExceedMaxLines) {
       paragraphStyle
         ..height = '${paragraph.webOnlyMaxLinesHeight}px'
         ..overflowY = 'hidden';

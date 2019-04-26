@@ -16,6 +16,7 @@ class ParagraphGeometricStyle {
     this.letterSpacing,
     this.wordSpacing,
     this.decoration,
+    this.ellipsis,
   });
 
   final ui.FontWeight fontWeight;
@@ -27,6 +28,7 @@ class ParagraphGeometricStyle {
   final double letterSpacing;
   final double wordSpacing;
   final String decoration;
+  final String ellipsis;
 
   // Since all fields above are primitives, cache hashcode since ruler lookups
   // use this style as key.
@@ -99,15 +101,16 @@ class ParagraphGeometricStyle {
     if (identical(this, other)) return true;
     if (other.runtimeType != runtimeType) return false;
     final ParagraphGeometricStyle typedOther = other;
-    if (fontWeight != typedOther.fontWeight ||
-        fontStyle != typedOther.fontStyle ||
-        fontFamily != typedOther.fontFamily ||
-        fontSize != typedOther.fontSize ||
-        lineHeight != typedOther.lineHeight ||
-        letterSpacing != typedOther.letterSpacing ||
-        wordSpacing != typedOther.wordSpacing ||
-        decoration != typedOther.decoration) return false;
-    return true;
+    return fontWeight == typedOther.fontWeight &&
+        fontStyle == typedOther.fontStyle &&
+        fontFamily == typedOther.fontFamily &&
+        fontSize == typedOther.fontSize &&
+        lineHeight == typedOther.lineHeight &&
+        maxLines == typedOther.maxLines &&
+        letterSpacing == typedOther.letterSpacing &&
+        wordSpacing == typedOther.wordSpacing &&
+        decoration == typedOther.decoration &&
+        ellipsis == typedOther.ellipsis;
   }
 
   @override
@@ -117,9 +120,11 @@ class ParagraphGeometricStyle {
         fontFamily,
         fontSize,
         lineHeight,
+        maxLines,
         letterSpacing,
         wordSpacing,
         decoration,
+        ellipsis,
       );
 
   @override
@@ -127,10 +132,13 @@ class ParagraphGeometricStyle {
     if (assertionsEnabled) {
       return '$runtimeType(fontWeight: $fontWeight, fontStyle: $fontStyle,'
           ' fontFamily: $fontFamily, fontSize: $fontSize,'
-          ' lineHeight: $lineHeight)'
-          ' letterSpacing: $letterSpacing)'
-          ' wordSpacing: $wordSpacing)'
-          ' decoration: $decoration)';
+          ' lineHeight: $lineHeight,'
+          ' maxLines: $maxLines,'
+          ' letterSpacing: $letterSpacing,'
+          ' wordSpacing: $wordSpacing,'
+          ' decoration: $decoration,'
+          ' ellipsis: $ellipsis,'
+          ')';
     } else {
       return super.toString();
     }
@@ -297,7 +305,7 @@ class ParagraphRuler {
   final _probe = html.DivElement();
 
   /// Cached value of alphabetic base line.
-  double _cachedAlphabeticBaseline = null;
+  double _cachedAlphabeticBaseline;
 
   ParagraphRuler(this.style) {
     _configureSingleLineHostElements();
