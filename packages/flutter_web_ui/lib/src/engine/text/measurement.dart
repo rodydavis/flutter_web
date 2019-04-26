@@ -118,6 +118,13 @@ class TextMeasurementService {
       }
     }
 
+    RulerCacheEntry cacheEntry = ruler.cacheLookup(paragraph, constraints);
+    if (cacheEntry != null) {
+      cacheEntry.applyToParagraph(paragraph);
+      ruler._hitCount++;
+      return;
+    }
+
     ruler.willMeasure(paragraph);
     ruler.measureAll(constraints);
 
@@ -238,17 +245,18 @@ class TextMeasurementService {
 
     maxIntrinsicWidth =
         _applySubPixelRoundingHack(minIntrinsicWidth, maxIntrinsicWidth);
-
-    paragraph.webOnlySetComputedLayout(
-      isSingleLine: true,
-      width: width,
-      height: height,
-      lineHeight: height,
-      minIntrinsicWidth: minIntrinsicWidth,
-      maxIntrinsicWidth: maxIntrinsicWidth,
-      alphabeticBaseline: alphabeticBaseline,
-      ideographicBaseline: alphabeticBaseline * _baselineRatioHack,
-    );
+    final ideographicBaseline = alphabeticBaseline * _baselineRatioHack;
+    final cacheEntry = RulerCacheEntry(constraints.width,
+        isSingleLine: true,
+        width: width,
+        height: height,
+        lineHeight: height,
+        minIntrinsicWidth: minIntrinsicWidth,
+        maxIntrinsicWidth: maxIntrinsicWidth,
+        alphabeticBaseline: alphabeticBaseline,
+        ideographicBaseline: ideographicBaseline);
+    ruler.cacheMeasurement(paragraph, constraints, cacheEntry);
+    cacheEntry.applyToParagraph(paragraph);
   }
 
   /// Called when we have determined that the paragraph needs to wrap into
@@ -268,7 +276,7 @@ class TextMeasurementService {
     final double alphabeticBaseline = ruler.alphabeticBaseline;
     final double height = ruler.constrainedDimensions.height;
 
-    double lineHeight;
+    double lineHeight = height;
     if (paragraph.webOnlyGetParagraphGeometricStyle().maxLines != null) {
       lineHeight = ruler.lineHeightDimensions.height;
     }
@@ -276,16 +284,18 @@ class TextMeasurementService {
     maxIntrinsicWidth =
         _applySubPixelRoundingHack(minIntrinsicWidth, maxIntrinsicWidth);
     assert(minIntrinsicWidth <= maxIntrinsicWidth);
-    paragraph.webOnlySetComputedLayout(
-      isSingleLine: false,
-      width: width,
-      height: height,
-      lineHeight: lineHeight,
-      minIntrinsicWidth: minIntrinsicWidth,
-      maxIntrinsicWidth: maxIntrinsicWidth,
-      alphabeticBaseline: alphabeticBaseline,
-      ideographicBaseline: alphabeticBaseline * _baselineRatioHack,
-    );
+    final ideographicBaseline = alphabeticBaseline * _baselineRatioHack;
+    final cacheEntry = RulerCacheEntry(constraints.width,
+        isSingleLine: false,
+        width: width,
+        height: height,
+        lineHeight: lineHeight,
+        minIntrinsicWidth: minIntrinsicWidth,
+        maxIntrinsicWidth: maxIntrinsicWidth,
+        alphabeticBaseline: alphabeticBaseline,
+        ideographicBaseline: ideographicBaseline);
+    ruler.cacheMeasurement(paragraph, constraints, cacheEntry);
+    cacheEntry.applyToParagraph(paragraph);
   }
 
   /// This hack is needed because `offsetWidth` rounds the value to the nearest

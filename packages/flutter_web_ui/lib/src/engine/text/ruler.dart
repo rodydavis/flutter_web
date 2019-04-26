@@ -635,4 +635,89 @@ class ParagraphRuler {
       return true;
     }());
   }
+
+  // Bounded cache for text measurement for a particular width constraint.
+  Map<String, List<RulerCacheEntry>> _measurementCache =
+      Map<String, List<RulerCacheEntry>>();
+  // Mru list for cache.
+  final List<String> _mruList = [];
+  static const int _cacheLimit = 2400;
+  // Number of items to evict when cache limit is reached.
+  static const int _cacheBlockFactor = 100;
+  // Number of constraint results per unique text item.
+  // This limit prevents growth during animation where the size of a container
+  // is changing.
+  static const int _constraintCacheSize = 8;
+
+  void cacheMeasurement(ui.Paragraph paragraph,
+      ui.ParagraphConstraints constraints, RulerCacheEntry item) {
+    final plainText = paragraph.webOnlyGetPlainText();
+    List<RulerCacheEntry> constraintCache = _measurementCache[plainText];
+    if (constraintCache == null) {
+      constraintCache = _measurementCache[plainText] = List<RulerCacheEntry>();
+    }
+    constraintCache.add(item);
+    if (constraintCache.length > _constraintCacheSize) {
+      constraintCache.removeAt(0);
+    }
+    _mruList.add(plainText);
+    if (_mruList.length > _cacheLimit) {
+      // Evict a range.
+      for (int i = 0; i < _cacheBlockFactor; i++) {
+        _measurementCache.remove(_mruList[i]);
+      }
+      _mruList.removeRange(0, _cacheBlockFactor);
+    }
+  }
+
+  RulerCacheEntry cacheLookup(
+      ui.Paragraph paragraph, ui.ParagraphConstraints constraints) {
+    List<RulerCacheEntry> constraintCache =
+        _measurementCache[paragraph.webOnlyGetPlainText()];
+    if (constraintCache == null) {
+      return null;
+    }
+    for (int i = 0, len = constraintCache.length; i < len; i++) {
+      RulerCacheEntry item = constraintCache[i];
+      if (item.constraintWidth == constraints.width) {
+        return item;
+      }
+    }
+    return null;
+  }
+}
+
+/// Item used to cache mru measurements.
+class RulerCacheEntry {
+  final double constraintWidth;
+  final bool isSingleLine;
+  final double width;
+  final double height;
+  final double lineHeight;
+  final double minIntrinsicWidth;
+  final double maxIntrinsicWidth;
+  final double alphabeticBaseline;
+  final double ideographicBaseline;
+
+  RulerCacheEntry(this.constraintWidth,
+      {this.isSingleLine,
+      this.width,
+      this.height,
+      this.lineHeight,
+      this.minIntrinsicWidth,
+      this.maxIntrinsicWidth,
+      this.alphabeticBaseline,
+      this.ideographicBaseline});
+
+  void applyToParagraph(ui.Paragraph paragraph) {
+    paragraph.webOnlySetComputedLayout(
+        isSingleLine: isSingleLine,
+        width: width,
+        height: height,
+        lineHeight: lineHeight,
+        minIntrinsicWidth: minIntrinsicWidth,
+        maxIntrinsicWidth: maxIntrinsicWidth,
+        alphabeticBaseline: alphabeticBaseline,
+        ideographicBaseline: ideographicBaseline);
+  }
 }
