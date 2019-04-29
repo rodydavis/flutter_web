@@ -1832,35 +1832,31 @@ void applyTextStyleToElement({
   assert(element != null);
   assert(style != null);
   bool updateDecoration = false;
+  html.CssStyleDeclaration cssStyle = element.style;
   if (previousStyle == null) {
     var color = style._color;
     if (style._foreground?.color != null) color = style._foreground.color;
     if (color != null) {
-      engine.domRenderer.setElementStyle(element, 'color', color.toCssString());
+      cssStyle.color = color.toCssString();
     }
     if (style._fontSize != null) {
-      engine.domRenderer.setElementStyle(
-          element, 'font-size', '${style._fontSize.floor()}px');
+      cssStyle.fontSize = '${style._fontSize.floor()}px';
     }
     if (style._fontWeight != null) {
-      engine.domRenderer.setElementStyle(
-          element, 'font-weight', webOnlyFontWeightToCss(style._fontWeight));
+      cssStyle.fontWeight = webOnlyFontWeightToCss(style._fontWeight);
     }
     if (style._fontStyle != null) {
-      engine.domRenderer.setElementStyle(element, 'font-style',
-          style._fontStyle == FontStyle.normal ? 'normal' : 'italic');
+      cssStyle.fontStyle =
+          style._fontStyle == FontStyle.normal ? 'normal' : 'italic';
     }
     if (style._effectiveFontFamily != null) {
-      engine.domRenderer
-          .setElementStyle(element, 'font-family', style._effectiveFontFamily);
+      cssStyle.fontFamily = style._effectiveFontFamily;
     }
     if (style._letterSpacing != null) {
-      engine.domRenderer.setElementStyle(
-          element, 'letter-spacing', '${style._letterSpacing}px');
+      cssStyle.letterSpacing = '${style._letterSpacing}px';
     }
     if (style._wordSpacing != null) {
-      engine.domRenderer
-          .setElementStyle(element, 'word-spacing', '${style._wordSpacing}px');
+      cssStyle.wordSpacing = '${style._wordSpacing}px';
     }
     if (style._decoration != null) {
       updateDecoration = true;
@@ -1872,39 +1868,31 @@ void applyTextStyleToElement({
       if (style._foreground?.color != null) {
         color = style._foreground.color;
       }
-      engine.domRenderer
-          .setElementStyle(element, 'color', color?.toCssString());
+      cssStyle.color = color?.toCssString();
     }
 
     if (style._fontSize != previousStyle._fontSize) {
-      engine.domRenderer.setElementStyle(element, 'font-size',
-          style._fontSize != null ? '${style._fontSize.floor()}px' : null);
+      cssStyle.fontSize =
+          style._fontSize != null ? '${style._fontSize.floor()}px' : null;
     }
 
     if (style._fontWeight != previousStyle._fontWeight) {
-      engine.domRenderer.setElementStyle(
-          element, 'font-weight', webOnlyFontWeightToCss(style._fontWeight));
+      cssStyle.fontWeight = webOnlyFontWeightToCss(style._fontWeight);
     }
 
     if (style._fontStyle != previousStyle._fontStyle) {
-      engine.domRenderer.setElementStyle(
-          element,
-          'font-style',
-          style._fontStyle != null
-              ? style._fontStyle == FontStyle.normal ? 'normal' : 'italic'
-              : null);
+      cssStyle.fontStyle = style._fontStyle != null
+          ? style._fontStyle == FontStyle.normal ? 'normal' : 'italic'
+          : null;
     }
     if (style._fontFamily != previousStyle._fontFamily) {
-      engine.domRenderer
-          .setElementStyle(element, 'font-family', style._fontFamily);
+      cssStyle.fontFamily = style._fontFamily;
     }
     if (style._letterSpacing != previousStyle._letterSpacing) {
-      engine.domRenderer.setElementStyle(
-          element, 'letter-spacing', '${style._letterSpacing}px');
+      cssStyle.letterSpacing = '${style._letterSpacing}px';
     }
     if (style._wordSpacing != previousStyle._wordSpacing) {
-      engine.domRenderer
-          .setElementStyle(element, 'word-spacing', '${style._wordSpacing}px');
+      cssStyle.wordSpacing = '${style._wordSpacing}px';
     }
     if (style._decoration != previousStyle._decoration ||
         style._decorationStyle != previousStyle._decorationStyle ||
@@ -1918,12 +1906,10 @@ void applyTextStyleToElement({
       String textDecoration =
           _textDecorationToCssString(style._decoration, style._decorationStyle);
       if (textDecoration != null) {
-        engine.domRenderer
-            .setElementStyle(element, 'text-decoration', textDecoration);
+        cssStyle.textDecoration = textDecoration;
         var decorationColor = style._decorationColor;
         if (decorationColor != null) {
-          engine.domRenderer.setElementStyle(
-              element, 'text-decoration-color', decorationColor.toCssString());
+          cssStyle.textDecorationColor = decorationColor.toCssString();
         }
       }
     }
@@ -1980,73 +1966,56 @@ void applyParagraphStyleToElement({
   assert(element != null);
   assert(style != null);
   // TODO(yjbanov): What do we do about ParagraphStyle._locale and ellipsis?
+  html.CssStyleDeclaration cssStyle = element.style;
   if (previousStyle == null) {
     if (style._textAlign != null) {
-      engine.domRenderer.setElementStyle(
-          element,
-          'text-align',
-          textAlignToCssValue(
-              style._textAlign, style._textDirection ?? TextDirection.ltr));
+      cssStyle.textAlign = textAlignToCssValue(
+          style._textAlign, style._textDirection ?? TextDirection.ltr);
     }
     if (style._webOnlyLineHeight != null) {
-      engine.domRenderer.setElementStyle(
-          element, 'line-height', '${style._webOnlyLineHeight}');
+      cssStyle.lineHeight = '${style._webOnlyLineHeight}';
     }
     if (style._textDirection != null) {
-      engine.domRenderer.setElementStyle(
-          element, 'direction', textDirectionToCssValue(style._textDirection));
+      cssStyle.direction = textDirectionToCssValue(style._textDirection);
     }
     if (style._fontSize != null) {
-      engine.domRenderer.setElementStyle(
-          element, 'font-size', '${style._fontSize.floor()}px');
+      cssStyle.fontSize = '${style._fontSize.floor()}px';
     }
     if (style._fontWeight != null) {
-      engine.domRenderer.setElementStyle(
-          element, 'font-weight', webOnlyFontWeightToCss(style._fontWeight));
+      cssStyle.fontWeight = webOnlyFontWeightToCss(style._fontWeight);
     }
     if (style._fontStyle != null) {
-      engine.domRenderer.setElementStyle(element, 'font-style',
-          style._fontStyle == FontStyle.normal ? 'normal' : 'italic');
+      cssStyle.fontStyle =
+          style._fontStyle == FontStyle.normal ? 'normal' : 'italic';
     }
     if (style._effectiveFontFamily != null) {
-      engine.domRenderer
-          .setElementStyle(element, 'font-family', style._effectiveFontFamily);
+      cssStyle.fontFamily = style._effectiveFontFamily;
     }
   } else {
     if (style._textAlign != previousStyle._textAlign) {
-      engine.domRenderer.setElementStyle(
-          element,
-          'text-align',
-          textAlignToCssValue(
-              style._textAlign, style._textDirection ?? TextDirection.ltr));
+      cssStyle.textAlign = textAlignToCssValue(
+          style._textAlign, style._textDirection ?? TextDirection.ltr);
     }
     if (style._webOnlyLineHeight != style._webOnlyLineHeight) {
-      engine.domRenderer.setElementStyle(
-          element, 'line-height', '${style._webOnlyLineHeight}');
+      cssStyle.lineHeight = '${style._webOnlyLineHeight}';
     }
     if (style._textDirection != previousStyle._textDirection) {
-      engine.domRenderer.setElementStyle(
-          element, 'direction', textDirectionToCssValue(style._textDirection));
+      cssStyle.direction = textDirectionToCssValue(style._textDirection);
     }
     if (style._fontSize != previousStyle._fontSize) {
-      engine.domRenderer.setElementStyle(element, 'font-size',
-          style._fontSize != null ? '${style._fontSize.floor()}px' : null);
+      cssStyle.fontSize =
+          style._fontSize != null ? '${style._fontSize.floor()}px' : null;
     }
     if (style._fontWeight != previousStyle._fontWeight) {
-      engine.domRenderer.setElementStyle(
-          element, 'font-weight', webOnlyFontWeightToCss(style._fontWeight));
+      cssStyle.fontWeight = webOnlyFontWeightToCss(style._fontWeight);
     }
     if (style._fontStyle != previousStyle._fontStyle) {
-      engine.domRenderer.setElementStyle(
-          element,
-          'font-style',
-          style._fontStyle != null
-              ? style._fontStyle == FontStyle.normal ? 'normal' : 'italic'
-              : null);
+      cssStyle.fontStyle = style._fontStyle != null
+          ? (style._fontStyle == FontStyle.normal ? 'normal' : 'italic')
+          : null;
     }
     if (style._fontFamily != previousStyle._fontFamily) {
-      engine.domRenderer
-          .setElementStyle(element, 'font-family', style._fontFamily);
+      cssStyle.fontFamily = style._fontFamily;
     }
   }
 }
