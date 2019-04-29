@@ -3,7 +3,7 @@
 Welcome to the Flutter Web Early Access Program.
 
 This repository contains the source code for an experimental
-[Flutter](https://flutter.dev/) Web runtime. Our goal is to add web
+[Flutter](https://flutter.dev/) runtime for the Web. Our goal is to add Web
 support as a first-tier platform in the Flutter SDK alongside iOS and Android.
 The code in this repository represents a stepping stone to that goal by
 providing web-only packages that implement (almost) the entire Flutter API
@@ -43,6 +43,26 @@ there are a number of exceptions:
   libraries that give you access to the vast majority of browser APIs. However,
   expect that these libraries will be replaced by a different plugin API.
 
+### Browser support
+
+We are still working on expanding our browser support. As of right now, our
+browser support matrix is as follows:
+
+| Browser                     | Support level                |
+| --------------------------- | ---------------------------- |
+| Chrome for Android          | Supported, feedback welcome  |
+| Chrome for desktop          | Supported, feedback welcome  |
+| Chromium-based browsers*    | Supported, feedback welcome  |
+| Safari for iOS              | Supported, feedback welcome  |
+| Safari for Mac              | Supported, feedback welcome  |
+| Safari-based iOS browsers** | Supported, feedback welcome  |
+| Firefox                     | Developing, feedback welcome |
+| Edge                        | Developing, feedback welcome |
+| Internet Explorer           | Support not planned          |
+
+`*` Chromium-based browsers include: UC Browser, Samsung Internet Browser, Opera for Android, Edge for Android.
+`**` Safari-based iOS browsers include: Chrome for iOS, Edge for iOS.
+
 ## Testing Flutter Web
 
 While we are far from code complete, we're ready for you to start developing
@@ -67,10 +87,8 @@ We'd love to see repros that demonstrate crashes, rendering fidelity issues or
 extreme performance issues. We'd also love general feedback on the quality of
 the release and the developer experience.
 
-Of particular interest to us is testing across a variety of development
-(Windows, Linux, Mac) and deployment
-(Chrome/Firefox/Edge on Windows, Linux, Mac, Chrome/Android, Safari/iOS etc.)
-platforms and form factors.
+Of particular interest to us is testing across a variety of operating systems
+used for development (Windows, Linux, Mac) and browsers used for deployment.
 
 Since we are developing this in a separate fork to the main Flutter repo, we are
 not yet ready to accept GitHub pull requests at this time. However,
