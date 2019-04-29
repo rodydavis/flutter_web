@@ -5,7 +5,6 @@ directories:
 - examples/flex_playground/web
 - examples/gallery/web
 - examples/hello_world/web
-- examples/slide_puzzle/web
 - examples/spinning_square/web
 
 post-build-dart-script: tool/peanut_post_build.dart
