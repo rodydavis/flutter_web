@@ -1,3 +1,9 @@
+Our goal is to enable building applications targeting mobile and Web
+simultaneously from a single codebase. However, in order to facilitate safe
+experimentation, during the tech preview Flutter Web is developed in a separate
+namespace from Flutter mobile. So, as of today you cannot run an existing mobile
+Flutter application on the Web without changes.
+
 This document outlines the changes you'll need to make to existing Flutter code
 to run it on the flutter_web preview.
 
