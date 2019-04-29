@@ -805,15 +805,26 @@ class SemanticsObject {
       return;
     }
 
-    Matrix4 effectiveTransform =
-        Matrix4.fromFloat64List(_transform ?? Matrix4.identity());
+    Matrix4 effectiveTransform;
+    bool effectiveTransformIsIdentity = true;
     if (!hasZeroRectOffset) {
-      // Clone to avoid mutating _transform.
-      effectiveTransform = effectiveTransform.clone();
-      effectiveTransform.translate(_rect.left, _rect.top, 0.0);
+      if (_transform == null) {
+        final double left = _rect.left;
+        final double top = _rect.top;
+        effectiveTransform = Matrix4.translationValues(left, top, 0.0);
+        effectiveTransformIsIdentity = (left == 0.0 && top == 0.0);
+      } else {
+        // Clone to avoid mutating _transform.
+        effectiveTransform = Matrix4.fromFloat64List(_transform).clone()
+          ..translate(_rect.left, _rect.top, 0.0);
+        effectiveTransformIsIdentity = effectiveTransform.isIdentity();
+      }
+    } else if (!hasIdentityTransform) {
+      effectiveTransform = Matrix4.fromFloat64List(_transform);
+      effectiveTransformIsIdentity = false;
     }
 
-    if (!effectiveTransform.isIdentity()) {
+    if (!effectiveTransformIsIdentity) {
       element.style
         ..transformOrigin = '0 0 0'
         ..transform = matrix4ToCssTransform(effectiveTransform);
