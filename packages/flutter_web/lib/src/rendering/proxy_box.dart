@@ -1564,8 +1564,15 @@ abstract class _RenderPhysicalModelBase<T> extends _RenderCustomClip<T> {
     markNeedsPaint();
   }
 
+  static final Paint _transparentPaint = Paint()
+    ..color = const Color(0x00000000);
+
+  // TODO(het): We are re-enabling this optimization for the web to work around issues
+  // with the physical shape clipping anti-aliased arc paths.
+  // TODO(flutter_web): Upstream this.
   @override
-  bool get alwaysNeedsCompositing => true;
+  bool get alwaysNeedsCompositing =>
+      _elevation != 0.0 && defaultTargetPlatform == TargetPlatform.fuchsia;
 
   @override
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
@@ -1691,15 +1698,40 @@ class RenderPhysicalModel extends _RenderPhysicalModelBase<RRect> {
         }
         return true;
       }());
-      final PhysicalModelLayer physicalModel = PhysicalModelLayer(
-        clipPath: offsetRRectAsPath,
-        clipBehavior: clipBehavior,
-        elevation: paintShadows ? elevation : 0.0,
-        color: color,
-        shadowColor: shadowColor,
-      );
-      context.pushLayer(physicalModel, super.paint, offset,
-          childPaintBounds: offsetBounds);
+      if (needsCompositing) {
+        final PhysicalModelLayer physicalModel = PhysicalModelLayer(
+          clipPath: offsetRRectAsPath,
+          clipBehavior: clipBehavior,
+          elevation: paintShadows ? elevation : 0.0,
+          color: color,
+          shadowColor: shadowColor,
+        );
+        context.pushLayer(physicalModel, super.paint, offset,
+            childPaintBounds: offsetBounds);
+      } else {
+        final Canvas canvas = context.canvas;
+        if (elevation != 0.0 && paintShadows) {
+          // The drawShadow call doesn't add the region of the shadow to the
+          // picture's bounds, so we draw a hardcoded amount of extra space to
+          // account for the maximum potential area of the shadow.
+          // TODO(jsimmons): remove this when Skia does it for us.
+          canvas.drawRect(
+            offsetBounds.inflate(20.0),
+            _RenderPhysicalModelBase._transparentPaint,
+          );
+          canvas.drawShadow(
+            offsetRRectAsPath,
+            shadowColor,
+            elevation,
+            color.alpha != 0xFF,
+          );
+        }
+        canvas.drawRRect(offsetRRect, Paint()..color = color);
+        context.clipRRectAndPaint(offsetRRect, clipBehavior, offsetBounds,
+            () => super.paint(context, offset));
+        assert(context.canvas == canvas,
+            'canvas changed even though needsCompositing was false');
+      }
     }
   }
 
@@ -1781,15 +1813,44 @@ class RenderPhysicalShape extends _RenderPhysicalModelBase<Path> {
         }
         return true;
       }());
-      final PhysicalModelLayer physicalModel = PhysicalModelLayer(
-        clipPath: offsetPath,
-        clipBehavior: clipBehavior,
-        elevation: paintShadows ? elevation : 0.0,
-        color: color,
-        shadowColor: shadowColor,
-      );
-      context.pushLayer(physicalModel, super.paint, offset,
-          childPaintBounds: offsetBounds);
+      if (needsCompositing) {
+        final PhysicalModelLayer physicalModel = PhysicalModelLayer(
+          clipPath: offsetPath,
+          clipBehavior: clipBehavior,
+          elevation: paintShadows ? elevation : 0.0,
+          color: color,
+          shadowColor: shadowColor,
+        );
+        context.pushLayer(physicalModel, super.paint, offset,
+            childPaintBounds: offsetBounds);
+      } else {
+        final Canvas canvas = context.canvas;
+        if (elevation != 0.0 && paintShadows) {
+          // The drawShadow call doesn't add the region of the shadow to the
+          // picture's bounds, so we draw a hardcoded amount of extra space to
+          // account for the maximum potential area of the shadow.
+          // TODO(jsimmons): remove this when Skia does it for us.
+          canvas.drawRect(
+            offsetBounds.inflate(20.0),
+            _RenderPhysicalModelBase._transparentPaint,
+          );
+          canvas.drawShadow(
+            offsetPath,
+            shadowColor,
+            elevation,
+            color.alpha != 0xFF,
+          );
+        }
+        canvas.drawPath(
+            offsetPath,
+            Paint()
+              ..color = color
+              ..style = PaintingStyle.fill);
+        context.clipPathAndPaint(offsetPath, clipBehavior, offsetBounds,
+            () => super.paint(context, offset));
+        assert(context.canvas == canvas,
+            'canvas changed even though needsCompositing was false');
+      }
     }
   }
 

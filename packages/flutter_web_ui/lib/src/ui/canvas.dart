@@ -1636,6 +1636,9 @@ class Path {
     }
     var size = window.physicalSize / window.devicePixelRatio;
     _rawRecorder ??= new RawRecordingCanvas(size);
+    // Account for the shift due to padding.
+    _rawRecorder.translate(-engine.BitmapCanvas.paddingPixels.toDouble(),
+        -engine.BitmapCanvas.paddingPixels.toDouble());
     _rawRecorder.drawPath(
         this, (new Paint()..color = Color(0xFF000000)).webOnlyPaintData);
     bool result = _rawRecorder.ctx.isPointInPath(pointX, pointY);

@@ -236,7 +236,7 @@ class RecordingCanvas {
   void drawOval(ui.Rect rect, ui.Paint paint) {
     _hasArbitraryPaint = true;
     _didDraw = true;
-    if (paint.strokeWidth != null && paint.strokeWidth > 1.0) {
+    if (paint.strokeWidth != null) {
       _paintBounds.grow(rect.inflate(paint.strokeWidth));
     } else {
       _paintBounds.grow(rect);
@@ -260,7 +260,7 @@ class RecordingCanvas {
     _hasArbitraryPaint = true;
     _didDraw = true;
     ui.Rect pathBounds = path.getBounds();
-    if (paint.strokeWidth != null && paint.strokeWidth > 1.0) {
+    if (paint.strokeWidth != null) {
       pathBounds = pathBounds.inflate(paint.strokeWidth);
     }
     _paintBounds.grow(pathBounds);

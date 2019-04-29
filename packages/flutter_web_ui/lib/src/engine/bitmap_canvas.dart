@@ -12,6 +12,10 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   /// Painting outside these bounds will result in cropping.
   ui.Rect bounds;
 
+  /// The amount of padding to add around the edges of this canvas to
+  /// ensure that anti-aliased arcs are not clipped.
+  static const paddingPixels = 1;
+
   final html.Element rootElement = new html.Element.tag('flt-canvas');
   html.CanvasElement _canvas;
   html.CanvasRenderingContext2D _ctx;
@@ -66,8 +70,8 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     // Adds one extra pixel to the requested size. This is to compensate for
     // _initializeViewport() snapping canvas position to 1 pixel, causing
     // painting to overflow by at most 1 pixel.
-    final double boundsWidth = size.width + 1;
-    final double boundsHeight = size.height + 1;
+    final double boundsWidth = size.width + 1 + 2 * paddingPixels;
+    final double boundsHeight = size.height + 1 + 2 * paddingPixels;
     _widthInBitmapPixels = (boundsWidth * html.window.devicePixelRatio).ceil();
     _heightInBitmapPixels =
         (boundsHeight * html.window.devicePixelRatio).ceil();
@@ -149,27 +153,24 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     // coordinate system. However, canvas' coordinate system's origin is always
     // in the top-left corner of the canvas. We therefore need to inject an
     // initial translation so the paint operations are positioned as expected.
-    if (bounds.left != 0.0 || bounds.top != 0.0) {
-      // The flooring of the value is to ensure that canvas' top-left corner
-      // lands on the physical pixel.
-      final int canvasPositionX = bounds.left.floor();
-      final int canvasPositionY = bounds.top.floor();
-      final double canvasPositionCorrectionX =
-          bounds.left - canvasPositionX.toDouble();
-      final double canvasPositionCorrectionY =
-          bounds.top - canvasPositionY.toDouble();
 
-      rootElement.style.transform =
-          'translate(${canvasPositionX}px, ${canvasPositionY}px)';
+    // The flooring of the value is to ensure that canvas' top-left corner
+    // lands on the physical pixel.
+    final int canvasPositionX = bounds.left.floor() - paddingPixels;
+    final int canvasPositionY = bounds.top.floor() - paddingPixels;
+    final double canvasPositionCorrectionX =
+        bounds.left - paddingPixels - canvasPositionX.toDouble();
+    final double canvasPositionCorrectionY =
+        bounds.top - paddingPixels - canvasPositionY.toDouble();
 
-      // This compensates for the translate on the `rootElement`.
-      translate(
-        -bounds.left + canvasPositionCorrectionX,
-        -bounds.top + canvasPositionCorrectionY,
-      );
-    } else {
-      rootElement.style.transform = null;
-    }
+    rootElement.style.transform =
+        'translate(${canvasPositionX}px, ${canvasPositionY}px)';
+
+    // This compensates for the translate on the `rootElement`.
+    translate(
+      -bounds.left + canvasPositionCorrectionX + paddingPixels,
+      -bounds.top + canvasPositionCorrectionY + paddingPixels,
+    );
   }
 
   /// The `<canvas>` element used by this bitmap canvas.

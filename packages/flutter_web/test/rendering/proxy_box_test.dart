@@ -44,7 +44,7 @@ void main() {
     final RenderPhysicalModel root =
         RenderPhysicalModel(color: const Color(0xffff00ff));
     layout(root, phase: EnginePhase.composite);
-    expect(root.needsCompositing, isTrue);
+    expect(root.needsCompositing, isFalse);
 
     // On Fuchsia, the system compositor is responsible for drawing shadows
     // for physical model layers with non-zero elevation.
@@ -54,7 +54,7 @@ void main() {
 
     root.elevation = 0.0;
     pumpFrame(phase: EnginePhase.composite);
-    expect(root.needsCompositing, isTrue);
+    expect(root.needsCompositing, isFalse);
 
     debugDefaultTargetPlatformOverride = null;
   });
@@ -65,16 +65,16 @@ void main() {
     final RenderPhysicalModel root =
         RenderPhysicalModel(color: const Color(0xffff00ff));
     layout(root, phase: EnginePhase.composite);
-    expect(root.needsCompositing, isTrue);
+    expect(root.needsCompositing, isFalse);
 
-    // Flutter now composites physical shapes on all platforms.
+    // On non-Fuchsia platforms, Flutter draws its own shadows.
     root.elevation = 1.0;
     pumpFrame(phase: EnginePhase.composite);
-    expect(root.needsCompositing, isTrue);
+    expect(root.needsCompositing, isFalse);
 
     root.elevation = 0.0;
     pumpFrame(phase: EnginePhase.composite);
-    expect(root.needsCompositing, isTrue);
+    expect(root.needsCompositing, isFalse);
 
     debugDefaultTargetPlatformOverride = null;
   });
@@ -94,8 +94,10 @@ void main() {
     expect(config.getActionHandler(SemanticsAction.scrollRight), isNotNull);
 
     config = SemanticsConfiguration();
-    renderObj.validActions = Set<SemanticsAction>.from(
-        [SemanticsAction.tap, SemanticsAction.scrollLeft]);
+    renderObj.validActions = <SemanticsAction>[
+      SemanticsAction.tap,
+      SemanticsAction.scrollLeft
+    ].toSet();
 
     renderObj.describeSemanticsConfiguration(config);
     expect(config.getActionHandler(SemanticsAction.tap), isNotNull);
@@ -131,16 +133,16 @@ void main() {
         clipper: const ShapeBorderClipper(shape: CircleBorder()),
       );
       layout(root, phase: EnginePhase.composite);
-      expect(root.needsCompositing, isTrue);
+      expect(root.needsCompositing, isFalse);
 
-      // On non-Fuchsia platforms, we composite physical shape layers
+      // On non-Fuchsia platforms, Flutter draws its own shadows.
       root.elevation = 1.0;
       pumpFrame(phase: EnginePhase.composite);
-      expect(root.needsCompositing, isTrue);
+      expect(root.needsCompositing, isFalse);
 
       root.elevation = 0.0;
       pumpFrame(phase: EnginePhase.composite);
-      expect(root.needsCompositing, isTrue);
+      expect(root.needsCompositing, isFalse);
 
       debugDefaultTargetPlatformOverride = null;
     });
