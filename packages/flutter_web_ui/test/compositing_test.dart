@@ -230,6 +230,9 @@ void testLayerLifeCycle(
   tester = SceneTester(sceneBuilder.build());
   tester.expectSceneHtml(expectedHtmlGetter());
   expect(surface3.rootElement, isNotNull); // offset3 should be rehydrated.
+
+  // Make sure we clear retained surface list.
+  expect(debugRetainedSurfaces, isEmpty);
 }
 
 class MockPersistedPicture extends PersistedPicture {

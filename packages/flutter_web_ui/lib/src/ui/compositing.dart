@@ -529,6 +529,7 @@ class SceneBuilder {
         _retainedSurfaces[i].reuseStrategy =
             PersistedSurfaceReuseStrategy.match;
       }
+      _retainedSurfaces = <PersistedSurface>[];
     }
     if (_debugExplainSurfaceStats) {
       _debugPrintSurfaceStats(_persistedScene, _debugFrameNumber);
@@ -1870,6 +1871,7 @@ List<_PaintRequest> _paintQueue = <_PaintRequest>[];
 ///
 /// Surfaces should be added to this list directly. Instead, if a surface needs
 /// to be retained call [_retainSurface].
+List<PersistedSurface> get debugRetainedSurfaces => _retainedSurfaces;
 List<PersistedSurface> _retainedSurfaces = <PersistedSurface>[];
 
 /// Marks the subtree of surfaces rooted at [surface] as retained.
