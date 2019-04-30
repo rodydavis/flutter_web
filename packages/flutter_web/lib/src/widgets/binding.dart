@@ -6,8 +6,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter_web_ui/ui.dart'
     show AppLifecycleState, Locale, AccessibilityFeatures;
-import 'package:flutter_web_ui/ui.dart' as ui
-    show isWeb, webOnlyInitializeEngine;
+import 'package:flutter_web_ui/ui.dart' as ui show isWeb, webOnlyIsInitialized;
 
 import 'package:flutter_web/foundation.dart';
 import 'package:flutter_web/gestures.dart';
@@ -785,7 +784,10 @@ mixin WidgetsBinding
 ///  * [WidgetsBinding.handleBeginFrame], which pumps the widget pipeline to
 ///    ensure the widget, element, and render trees are all built.
 void runApp(Widget app) {
-  ui.webOnlyInitializeEngine();
+  assert(
+      ui.webOnlyIsInitialized,
+      'The platform has not been initialized. '
+      'It is required to call `ui.webOnlyInitializePlatform()` before `runApp`.');
   WidgetsFlutterBinding.ensureInitialized()
     ..attachRootWidget(app)
     ..scheduleWarmUpFrame();

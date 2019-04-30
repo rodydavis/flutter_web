@@ -17,10 +17,15 @@ Future<void> webOnlyInitializePlatform({
   }
   await webOnlySetAssetManager(assetManager);
   await _fontCollection.ensureFontsLoaded();
+  engine.webOnlyInitializeEngine();
+  _webOnlyIsInitialized = true;
 }
 
 engine.AssetManager _assetManager;
 engine.FontCollection _fontCollection;
+
+bool _webOnlyIsInitialized = false;
+bool get webOnlyIsInitialized => _webOnlyIsInitialized;
 
 /// Specifies that the platform should use the given [AssetManager] to load
 /// assets.

@@ -20,8 +20,6 @@ import 'src/engine.dart' as engine;
 
 import 'package:meta/meta.dart';
 
-export 'src/engine.dart' show webOnlyInitializeEngine;
-
 part 'src/ui/canvas.dart';
 part 'src/ui/compositing.dart';
 part 'src/ui/geometry.dart';
