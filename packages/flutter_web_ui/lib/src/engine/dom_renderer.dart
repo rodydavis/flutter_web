@@ -14,7 +14,10 @@ class DomRenderer {
 
     TextMeasurementService.initialize(rulerCacheCapacity: 10);
 
-    _setupHotRestart();
+    assert(() {
+      _setupHotRestart();
+      return true;
+    }());
   }
 
   static const int vibrateLongPress = 50;
@@ -94,7 +97,10 @@ class DomRenderer {
       _sceneElement = sceneElement;
       append(_sceneHostElement, sceneElement);
     }
-    _clearOnHotRestart();
+    assert(() {
+      _clearOnHotRestart();
+      return true;
+    }());
   }
 
   /// The element that captures input events, such as pointer events.
