@@ -29,6 +29,17 @@ void _styleEditingElement(html.HtmlElement domElement) {
       ..width = '1px'
       ..height = '1px';
   }
+  if (browserEngine == BrowserEngine.webkit) {
+    // TODO(flutter_web): Remove once webkit issue of paragraphs incorrectly
+    // rendering (shifting up) is resolved. Temporarily force relayout
+    // a frame after input is created.
+    html.window.animationFrame.then((num _) {
+      domElement.style
+        ..position = 'absolute'
+        ..bottom = '0'
+        ..right = '0';
+    });
+  }
 }
 
 html.InputElement _createInputElement() {
