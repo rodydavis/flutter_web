@@ -58,6 +58,12 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   /// was created.
   final double _devicePixelRatio = html.window.devicePixelRatio;
 
+  // Cached current filter, fill and stroke style to reduce updates to
+  // CanvasRenderingContext2D that are slow even when resetting to null.
+  String _prevFilter = 'none';
+  Object _prevFillStyle = null;
+  Object _prevStrokeStyle = null;
+
   /// Allocates a canvas with enough memory to paint a picture within the given
   /// [bounds].
   ///
@@ -198,15 +204,13 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     }
     if (paint.shader != null) {
       var paintStyle = paint.shader.createPaintStyle(ctx);
-      ctx.fillStyle = paintStyle;
-      ctx.strokeStyle = paintStyle;
+      _setFillAndStrokeStyle(paintStyle, paintStyle);
     } else if (paint.color != null) {
       var colorString = paint.color.toCssString();
-      ctx.fillStyle = colorString;
-      ctx.strokeStyle = colorString;
+      _setFillAndStrokeStyle(colorString, colorString);
     }
     if (paint.maskFilter != null) {
-      ctx.filter = 'blur(${paint.maskFilter.webOnlySigma}px)';
+      _setFilter('blur(${paint.maskFilter.webOnlySigma}px)');
     }
   }
 
@@ -232,9 +236,24 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
   ///
   /// This needs to be called after [_applyPaint].
   void _resetPaint() {
-    ctx.filter = 'none';
-    ctx.fillStyle = null;
-    ctx.strokeStyle = null;
+    _setFilter('none');
+    _setFillAndStrokeStyle(null, null);
+  }
+
+  void _setFilter(String value) {
+    if (_prevFilter != value) {
+      _prevFilter = ctx.filter = value;
+    }
+  }
+
+  void _setFillAndStrokeStyle(Object fillStyle, Object strokeStyle) {
+    final _ctx = ctx;
+    if (!identical(_prevFillStyle, fillStyle)) {
+      _prevFillStyle = _ctx.fillStyle = fillStyle;
+    }
+    if (!identical(_prevStrokeStyle, strokeStyle)) {
+      _prevStrokeStyle = _ctx.strokeStyle = strokeStyle;
+    }
   }
 
   @override
