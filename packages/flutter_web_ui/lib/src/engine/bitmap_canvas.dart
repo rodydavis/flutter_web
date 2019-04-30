@@ -105,6 +105,17 @@ class BitmapCanvas extends EngineCanvas with SaveStackTracking {
     _initializeViewport();
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+    // Webkit has a threshold for the amount of canvas pixel an app allocates.
+    // Even though our canvases are being garbage-collected as expected when we
+    // don't need them, Webkit keeps track of their sizes towards the threshold.
+    // Setting width and height to zero tricks Webkit into thinking that this
+    // canvas has a zero size so it doesn't count it towards the threshold.
+    _canvas.width = _canvas.height = 0;
+  }
+
   /// Prepare to reuse this canvas by clearing it's current contents.
   @override
   void clear() {

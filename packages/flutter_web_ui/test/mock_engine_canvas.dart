@@ -44,6 +44,11 @@ class MockEngineCanvas implements EngineCanvas {
   }
 
   @override
+  void dispose() {
+    _called('dispose');
+  }
+
+  @override
   void clear() {
     _called('clear');
   }

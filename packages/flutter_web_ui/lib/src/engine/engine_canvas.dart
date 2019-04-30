@@ -12,6 +12,10 @@ abstract class EngineCanvas {
   /// The element that is attached to the DOM.
   html.Element get rootElement;
 
+  void dispose() {
+    clear();
+  }
+
   void clear();
 
   void save();

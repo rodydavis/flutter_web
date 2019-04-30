@@ -1884,7 +1884,8 @@ void _recycleCanvas(engine.EngineCanvas canvas) {
   if (canvas is engine.BitmapCanvas && canvas.isReusable()) {
     _recycledCanvases.add(canvas);
     if (_recycledCanvases.length > _kCanvasCacheSize) {
-      _recycledCanvases.removeAt(0);
+      final engine.BitmapCanvas removedCanvas = _recycledCanvases.removeAt(0);
+      removedCanvas.dispose();
     }
   }
 }
@@ -1988,10 +1989,17 @@ class PersistedStandardPicture extends PersistedPicture {
     picture.recordingCanvas.apply(_canvas);
   }
 
+  bool _doesCanvasFitBounds(engine.BitmapCanvas canvas, Rect newBounds) {
+    final Rect canvasBounds = canvas.bounds;
+    return canvasBounds.width >= newBounds.width &&
+        canvasBounds.height >= newBounds.height;
+  }
+
   void _applyBitmapPaint(engine.EngineCanvas oldCanvas) {
     if (oldCanvas is engine.BitmapCanvas &&
-        _localCullRect == oldCanvas.bounds &&
+        _doesCanvasFitBounds(oldCanvas, _localCullRect) &&
         oldCanvas.isReusable()) {
+      oldCanvas.bounds = _localCullRect;
       _canvas = oldCanvas;
       _canvas.clear();
       picture.recordingCanvas.apply(_canvas);
@@ -2045,8 +2053,7 @@ class PersistedStandardPicture extends PersistedPicture {
       Size candidateSize = candidate.size;
       double candidatePixelCount = candidateSize.width * candidateSize.height;
 
-      final bool fits = candidateSize.width >= canvasSize.width &&
-          candidateSize.height >= canvasSize.height;
+      final bool fits = _doesCanvasFitBounds(candidate, bounds);
       final bool isSmaller = candidatePixelCount < lastPixelCount;
       if (fits && isSmaller) {
         bestRecycledCanvas = candidate;
@@ -2268,10 +2275,12 @@ abstract class PersistedPicture extends PersistedLeafSurface {
       _applyTranslate();
     }
 
+    // We need to inherit the previous cull rects to allow [_recomputeCullRect]
+    // to be smarter.
+    _localCullRect = oldSurface._localCullRect;
+    _globalCullRect = oldSurface._globalCullRect;
     if (identical(picture, oldSurface.picture)) {
       // The picture is the same. Attempt to avoid repaint.
-      _localCullRect = oldSurface._localCullRect;
-      _globalCullRect = oldSurface._globalCullRect;
       if (_recomputeCullRect()) {
         // Cull rect changed such that a repaint is still necessary.
         _applyPaint(oldSurface._canvas);
