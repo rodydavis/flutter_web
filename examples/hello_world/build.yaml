@@ -11,8 +11,11 @@ targets:
         - web/**.dart
         options:
           dart2js_args:
+            # Generate `.info.json` files for complied libraries.
             - --dump-info
-            - --minify
+            # Reduces diffs between builds, but increases JS output size slightly
             - --no-frequency-based-minification
+            # Deployed example does not include Dart source. Not needed.
             - --no-source-maps
+            # Enable all dart2js optimizations. Not recommended without thorough testing
             - -O4
