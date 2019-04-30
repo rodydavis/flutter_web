@@ -1127,6 +1127,7 @@ class Paragraph {
     @required Paint paint,
     @required TextAlign textAlign,
     @required TextDirection textDirection,
+    @required Paint background,
   })  : assert((plainText == null && paint == null) ||
             (plainText != null && paint != null)),
         _paragraphElement = paragraphElement,
@@ -1134,7 +1135,8 @@ class Paragraph {
         _plainText = plainText,
         _textAlign = textAlign,
         _textDirection = textDirection,
-        _paint = paint;
+        _paint = paint,
+        _background = background;
 
   final html.HtmlElement _paragraphElement;
   final engine.ParagraphGeometricStyle _paragraphGeometricStyle;
@@ -1142,6 +1144,7 @@ class Paragraph {
   final Paint _paint;
   final TextAlign _textAlign;
   final TextDirection _textDirection;
+  final Paint _background;
 
   /// Do not use this method other than for painting on the [ParagraphSurface].
   /// Instead use [ParagraphSurface] itself.
@@ -1330,7 +1333,8 @@ class Paragraph {
       _paragraphGeometricStyle.ellipsis == null &&
       _paragraphGeometricStyle.decoration == null &&
       _paragraphGeometricStyle.letterSpacing == null &&
-      _paragraphGeometricStyle.wordSpacing == null;
+      _paragraphGeometricStyle.wordSpacing == null &&
+      _background == null;
 
   /// Whether this paragraph has been laid out.
   // TODO(yjbanov): This is Engine-internal API. We should make it private.
@@ -1402,6 +1406,7 @@ class Paragraph {
       paint: _paint,
       textAlign: _textAlign,
       textDirection: _textDirection,
+      background: _background,
     );
   }
 
@@ -1702,6 +1707,7 @@ class ParagraphBuilder {
         paint: paint,
         textAlign: textAlign,
         textDirection: textDirection,
+        background: cumulativeStyle._background,
       );
     }
 
@@ -1753,6 +1759,7 @@ class ParagraphBuilder {
       paint: paint,
       textAlign: textAlign,
       textDirection: textDirection,
+      background: cumulativeStyle._background,
     );
   }
 
@@ -1795,6 +1802,7 @@ class ParagraphBuilder {
       paint: null,
       textAlign: _paragraphStyle._textAlign,
       textDirection: _paragraphStyle._textDirection,
+      background: null,
     );
   }
 }
