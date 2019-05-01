@@ -22,6 +22,7 @@ import 'package:meta/meta.dart';
 
 part 'src/ui/canvas.dart';
 part 'src/ui/compositing.dart';
+part 'src/ui/debug_canvas_reuse_overlay.dart';
 part 'src/ui/geometry.dart';
 part 'src/ui/hash_codes.dart';
 part 'src/ui/initialization.dart';

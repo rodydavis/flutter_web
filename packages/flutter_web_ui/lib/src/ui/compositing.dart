@@ -10,6 +10,11 @@ part of ui;
 /// Also paints an on-screen overlay with the numbers visualized as a timeline.
 const _debugExplainSurfaceStats = false;
 
+/// When `true` shows an overlay that contains stats about canvas reuse.
+///
+/// The overlay also includes a button to reset the stats.
+const _debugShowCanvasReuseStats = false;
+
 /// When `true` renders the outlines of clip layers on the screen instead of
 /// clipping the contents.
 ///
@@ -1886,6 +1891,13 @@ void _recycleCanvas(engine.EngineCanvas canvas) {
     if (_recycledCanvases.length > _kCanvasCacheSize) {
       final engine.BitmapCanvas removedCanvas = _recycledCanvases.removeAt(0);
       removedCanvas.dispose();
+      if (_debugShowCanvasReuseStats) {
+        DebugCanvasReuseOverlay.instance.disposedCount++;
+      }
+    }
+    if (_debugShowCanvasReuseStats) {
+      DebugCanvasReuseOverlay.instance.inRecycleCount =
+          _recycledCanvases.length;
     }
   }
 }
@@ -1999,6 +2011,9 @@ class PersistedStandardPicture extends PersistedPicture {
     if (oldCanvas is engine.BitmapCanvas &&
         _doesCanvasFitBounds(oldCanvas, _localCullRect) &&
         oldCanvas.isReusable()) {
+      if (_debugShowCanvasReuseStats) {
+        DebugCanvasReuseOverlay.instance.keptCount++;
+      }
       oldCanvas.bounds = _localCullRect;
       _canvas = oldCanvas;
       _canvas.clear();
@@ -2072,10 +2087,20 @@ class PersistedStandardPicture extends PersistedPicture {
         _surfaceStatsFor(this).reuseCanvasCount++;
       }
       _recycledCanvases.remove(bestRecycledCanvas);
+      if (_debugShowCanvasReuseStats) {
+        DebugCanvasReuseOverlay.instance.inRecycleCount =
+            _recycledCanvases.length;
+      }
+      if (_debugShowCanvasReuseStats) {
+        DebugCanvasReuseOverlay.instance.reusedCount++;
+      }
       bestRecycledCanvas.bounds = bounds;
       return bestRecycledCanvas;
     }
 
+    if (_debugShowCanvasReuseStats) {
+      DebugCanvasReuseOverlay.instance.createdCount++;
+    }
     final engine.BitmapCanvas canvas = engine.BitmapCanvas(bounds);
     if (_debugExplainSurfaceStats) {
       _surfaceStatsFor(this)
