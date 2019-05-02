@@ -2477,13 +2477,13 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
     _clipElement =
         html.Element.html(svgClipPath, treeSanitizer: _NullTreeSanitizer());
     engine.domRenderer.append(rootElement, _clipElement);
-    rootElement.style.overflow = '';
     engine.domRenderer.setElementStyle(
         rootElement, 'clip-path', 'url(#svgClip${_clipCounter})');
     engine.domRenderer.setElementStyle(
         rootElement, '-webkit-clip-path', 'url(#svgClip${_clipCounter})');
-    var style = rootElement.style;
-    style
+    final html.CssStyleDeclaration rootElementStyle = rootElement.style;
+    rootElementStyle
+      ..overflow = ''
       ..transform = 'translate(${bounds.left}px, ${bounds.top}px)'
       ..width = '${bounds.width}px'
       ..height = '${bounds.height}px'
@@ -2509,7 +2509,6 @@ class PersistedPhysicalShape extends PersistedContainerSurface with _DomClip {
       var style = rootElement.style;
       style.transform = '';
       style.borderRadius = '';
-      style.overflow = '';
       engine.domRenderer.setElementStyle(rootElement, 'clip-path', '');
       engine.domRenderer.setElementStyle(rootElement, '-webkit-clip-path', '');
       _applyShape();
