@@ -51,16 +51,35 @@ void main() {
 }
 
 void _testEngineSemanticsOwner() {
-  testWidgets('instantiates a singleton', (_) async {
+  test('instantiates a singleton', () {
     expect(semantics(), same(semantics()));
   });
 
-  testWidgets('semantics is off by default', (_) async {
+  test('semantics is off by default', () {
     expect(semantics().semanticsEnabled, false);
   });
 
-  testWidgets('default mode is "unknown"', (_) async {
+  test('default mode is "unknown"', () {
     expect(semantics().mode, AccessibilityMode.unknown);
+  });
+
+  test('auth-enables semantics', () async {
+    domRenderer.reset(); // triggers `autoEnableOnTap` to be called
+    expect(semantics().semanticsEnabled, false);
+
+    // Synthesize a click on the placeholder.
+    final html.Element placeholder =
+        html.document.querySelectorAll('flt-semantics-placeholder').single;
+    final html.Rectangle rect = placeholder.getBoundingClientRect();
+    placeholder.dispatchEvent(html.MouseEvent(
+      'click',
+      clientX: (rect.left + (rect.right - rect.left) / 2).floor(),
+      clientY: (rect.top + (rect.bottom - rect.top) / 2).floor(),
+    ));
+    while (!semantics().semanticsEnabled) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    expect(semantics().semanticsEnabled, true);
   });
 
   testWidgets('produces an aria-label', (WidgetTester tester) async {

@@ -1158,6 +1158,190 @@ class EngineSemanticsOwner {
     _now = () => DateTime.now();
   }
 
+  /// A temporary placeholder used to capture a request to activate semantics.
+  html.Element _semanticsPlaceholder;
+
+  /// We do not immediately enable semantics when the user requests it, but
+  /// instead wait for a short period of time before doing it. This is because
+  /// the request comes as a tap on the [_semanticsPlaceholder]. The tap,
+  /// depending on the browser, comes as a burst of events. For example, Safari
+  /// sends "touchstart", "touchend", and "click". So during a short time period
+  /// we consume all events and prevent forwarding to the framework. Otherwise,
+  /// the events will be interpreted twice, once as a request to activate
+  /// semantics, and a second time by Flutter's gesture recognizers.
+  Timer _semanticsActivationTimer;
+
+  /// The number of events we processed that could potentially activate
+  /// semantics.
+  int _semanticsActivationAttempts = 0;
+
+  /// The maximum [_semanticsActivationAttempts] before we give up waiting for
+  /// the user to enable semantics.
+  ///
+  /// This number is arbitrary and can be adjusted if it doesn't work well.
+  static const int _kMaxSemanticsActivationAttempts = 20;
+
+  /// Whether we are waiting for the user to enable semantics.
+  bool get _isWaitingToEnableSemantics => _semanticsPlaceholder != null;
+
+  /// Instructs [_tryEnableSemantics] to remove [_semanticsPlaceholder].
+  ///
+  /// On Chrome the placeholder is removed upon any next event.
+  ///
+  /// On Safari the placeholder is removed upon the next "touchend" event. This
+  /// is to prevent Safari from swallowing the event that happens on an element
+  /// that's being removed. Chrome doesn't have this issue.
+  bool _schedulePlaceholderRemoval = false;
+
+  /// Attempts to activate semantics.
+  ///
+  /// Returns true if the `event` is not related to semantics activation and
+  /// should be forwarded to the framework.
+  bool _tryEnableSemantics(html.Event event) {
+    if (_schedulePlaceholderRemoval) {
+      final bool removeNow =
+          browserEngine != BrowserEngine.webkit || event.type == 'touchend';
+      if (removeNow) {
+        _semanticsPlaceholder.remove();
+        _semanticsPlaceholder = null;
+        _semanticsActivationTimer = null;
+      }
+      return true;
+    }
+
+    if (semanticsEnabled) {
+      // Semantics already enabled, forward to framework as normal.
+      return true;
+    }
+
+    _semanticsActivationAttempts += 1;
+    if (_semanticsActivationAttempts >= _kMaxSemanticsActivationAttempts) {
+      // We have received multiple user events, none of which resulted in
+      // semantics activation. This is a signal that the user is not interested
+      // in semantics, and so we will stop waiting for it.
+      _schedulePlaceholderRemoval = true;
+      return true;
+    }
+
+    const List<String> kInterestingEventTypes = <String>[
+      'click',
+      'touchstart',
+      'touchend',
+    ];
+
+    if (!kInterestingEventTypes.contains(event.type)) {
+      // The event is not relevant, forward to framework as normal.
+      return true;
+    }
+
+    if (_semanticsActivationTimer != null) {
+      // We are in a waiting period to activate a timer. While the timer is
+      // active we should consume events pertaining to semantics activation.
+      // Otherwise the event will also be interpreted by the framework and
+      // potentially result in activating a gesture in the app.
+      return false;
+    }
+
+    // In Chrome the debouncing works well enough to detect accessibility
+    // request.
+    final bool blinkEnableConditionPassed =
+        (browserEngine == BrowserEngine.blink &&
+            _gestureMode == GestureMode.browserGestures);
+
+    // In Safari debouncing doesn't work. Instead we look at where exactly
+    // (within 1 pixel) the event landed. If it landed exactly in the middle of
+    // the placeholder we interpret it as a signal to enable accessibility. This
+    // is because when VoiceOver generates a tap it lands it in the middle of
+    // the focused element. This method is a bit flawed in that a user's finger
+    // could theoretically land in the middle of the element too. However, the
+    // chance of that happening is very small. Even low-end phones typically
+    // have >2 million pixels (e.g. Moto G4). It is very unlikely that a user
+    // will land their finger exactly in the middle. In the worst case an
+    // unlucky user would accidentally enable accessibility and the app will be
+    // slightly slower than normal, but the app will continue functioning as
+    // normal. Our semantics tree is designed to not interfere with Flutter's
+    // gesture detection.
+    bool safariEnableConditionPassed = false;
+    if (browserEngine == BrowserEngine.webkit) {
+      html.Point activationPoint;
+
+      switch (event.type) {
+        case 'click':
+          final html.MouseEvent click = event;
+          activationPoint = click.offset;
+          break;
+        case 'touchstart':
+        case 'touchend':
+          final html.TouchEvent touch = event;
+          activationPoint = touch.changedTouches.first.client;
+          break;
+        default:
+          // The event is not relevant, forward to framework as normal.
+          return true;
+      }
+
+      assert(activationPoint != null);
+
+      final html.Rectangle activatingElementRect =
+          domRenderer.glassPaneElement.getBoundingClientRect();
+      final double midX = activatingElementRect.left +
+          (activatingElementRect.right - activatingElementRect.left) / 2;
+      final double midY = activatingElementRect.top +
+          (activatingElementRect.bottom - activatingElementRect.top) / 2;
+      final double deltaX = activationPoint.x - midX;
+      final double deltaY = activationPoint.y - midY;
+      final double deltaSquared = deltaX * deltaX + deltaY * deltaY;
+      if (deltaSquared < 1.0) {
+        safariEnableConditionPassed = true;
+      }
+    }
+
+    if (blinkEnableConditionPassed || safariEnableConditionPassed) {
+      assert(_semanticsActivationTimer == null);
+      _semanticsActivationTimer = Timer(const Duration(milliseconds: 300), () {
+        semanticsEnabled = true;
+        _schedulePlaceholderRemoval = true;
+      });
+      return false;
+    }
+
+    // This was not a semantics activating event; forward as normal.
+    return true;
+  }
+
+  /// The message in the label for the placeholder element used to enable
+  /// accessibility.
+  ///
+  /// This uses US English as the default message. Set this value prior to
+  /// calling `runApp` to translate to another language.
+  static String placeholderMessage = 'Enable accessibility';
+
+  /// Enables accessibility when the user taps on the glasspane via an
+  /// accessibility focus.
+  ///
+  /// This creates a placeholder inside the glasspane, which, when focused,
+  /// announces that accessibility can be enabled by tapping.
+  void autoEnableOnTap(DomRenderer domRenderer) {
+    _semanticsPlaceholder = html.Element.tag('flt-semantics-placeholder');
+
+    // Only listen to "click" because other kinds of events are reported via
+    // PointerBinding.
+    _semanticsPlaceholder.addEventListener('click', (html.Event event) {
+      _tryEnableSemantics(event);
+    }, true);
+
+    _semanticsPlaceholder
+      ..setAttribute('role', 'button')
+      ..setAttribute('aria-label', placeholderMessage);
+    _semanticsPlaceholder.style
+      ..position = 'absolute'
+      ..left = '0'
+      ..top = '0'
+      ..right = '0'
+      ..bottom = '0';
+    domRenderer.glassPaneElement.append(_semanticsPlaceholder);
+  }
+
   /// Whether the user has requested that [updateSemantics] be called when
   /// the semantic contents of window changes.
   ///
@@ -1249,7 +1433,8 @@ class EngineSemanticsOwner {
   }
 
   /// Receives DOM events from the pointer event system to correlate with the
-  /// semantics events.
+  /// semantics events; returns true if the event should be forwarded to the
+  /// framework.
   ///
   /// The browser sends us both raw pointer events and gestures from
   /// [SemanticsObject.element]s. There could be three possibilities:
@@ -1257,6 +1442,9 @@ class EngineSemanticsOwner {
   /// 1. Assistive technology is enabled and we know that it is.
   /// 2. Assistive technology is disabled and we know that it isn't.
   /// 3. We do not know whether an assistive technology is enabled.
+  ///
+  /// If [autoEnableOnTap] was called, this will automatically enable semantics
+  /// if the user requests it.
   ///
   /// In the first case we can ignore raw pointer events and only interpret
   /// high-level gestures, e.g. "click".
@@ -1274,7 +1462,7 @@ class EngineSemanticsOwner {
   /// is likely that the gesture detected from the pointer even will do the
   /// right thing. However, if we receive a standalone gesture we will map it
   /// onto a [ui.SemanticsAction] to be processed by the framework.
-  void receiveGlobalEvent(html.Event event) {
+  bool receiveGlobalEvent(html.Event event) {
     // For pointer event reference see:
     //
     // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
@@ -1294,6 +1482,13 @@ class EngineSemanticsOwner {
 
     if (_pointerEventTypes.contains(event.type)) {
       _temporarilyDisableBrowserGestureMode();
+    }
+
+    if (!_isWaitingToEnableSemantics) {
+      // Forward to framework as normal.
+      return true;
+    } else {
+      return _tryEnableSemantics(event);
     }
   }
 
@@ -1383,6 +1578,11 @@ class EngineSemanticsOwner {
     if (_rootSemanticsElement == null) {
       final SemanticsObject root = _semanticsTree[0];
       _rootSemanticsElement = root.element;
+      // We render semantics inside the glasspane for proper focus and event
+      // handling. If semantics is behind the glasspane, the phone will disable
+      // focusing by touch, only by tabbing around the UI. If semantics is in
+      // front of glasspane, then DOM event won't bubble up to the glasspane so
+      // it can forward events to the framework.
       domRenderer.glassPaneElement.append(_rootSemanticsElement);
     }
 

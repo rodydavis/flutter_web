@@ -13,7 +13,6 @@ import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:html' as html;
-import 'dart:js' as js;
 import 'dart:js_util' as js_util;
 
 import 'src/engine.dart' as engine;
@@ -30,7 +29,6 @@ part 'src/ui/lerp.dart';
 part 'src/ui/natives.dart';
 part 'src/ui/painting.dart';
 part 'src/ui/pointer.dart';
-part 'src/ui/pointer_binding.dart';
 part 'src/ui/semantics.dart';
 part 'src/ui/browser_location.dart';
 part 'src/ui/text.dart';

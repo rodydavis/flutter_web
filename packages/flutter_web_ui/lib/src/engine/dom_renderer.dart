@@ -223,6 +223,7 @@ class DomRenderer {
       '$defaultFontStyle $defaultFontWeight $defaultFontSize $defaultFontFamily';
 
   void reset() {
+    _styleElement?.remove();
     _styleElement = new html.StyleElement();
     html.document.head.append(_styleElement);
     html.CssStyleSheet sheet = _styleElement.sheet;
@@ -327,17 +328,20 @@ flt-glass-pane * {
       viewportMeta.remove();
     }
 
+    _viewportMeta?.remove();
     _viewportMeta = html.MetaElement()
       ..name = 'viewport'
       ..content = 'width=device-width, initial-scale=1.0, '
           'maximum-scale=1.0, user-scalable=no';
     html.document.head.append(_viewportMeta);
 
+    _sceneHostElement?.remove();
     _sceneHostElement = createElement('flt-scene-host');
     bodyElement.append(_sceneHostElement);
 
     // IMPORTANT: the glass pane element must come after the scene element in the DOM node list so
     //            it can intercept input events.
+    _glassPaneElement?.remove();
     _glassPaneElement = createElement('flt-glass-pane');
     _glassPaneElement.style
       ..position = 'absolute'
@@ -346,6 +350,9 @@ flt-glass-pane * {
       ..bottom = '0'
       ..left = '0';
     bodyElement.append(_glassPaneElement);
+
+    EngineSemanticsOwner.instance.autoEnableOnTap(this);
+    PointerBinding(this);
 
     // Hide the DOM nodes used to render the scene from accessibility, because
     // the accessibility tree is built from the SemanticsNode tree as a parallel

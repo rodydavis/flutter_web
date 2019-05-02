@@ -11,6 +11,7 @@ import 'dart:developer' as developer;
 import 'dart:collection';
 import 'dart:convert' hide Codec;
 import 'dart:html' as html;
+import 'dart:js' as js;
 import 'dart:js_util' as js_util;
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -41,6 +42,7 @@ part 'engine/html_image_codec.dart';
 part 'engine/keyboard.dart';
 part 'engine/onscreen_logging.dart';
 part 'engine/path_to_svg.dart';
+part 'engine/pointer_binding.dart';
 part 'engine/recording_canvas.dart';
 part 'engine/semantics/checkable.dart';
 part 'engine/semantics/incrementable.dart';
@@ -137,6 +139,5 @@ void webOnlyInitializeEngine() {
     }
   };
 
-  ui.PointerBinding();
   Keyboard.initialize();
 }
