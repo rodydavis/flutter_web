@@ -1,15 +1,12 @@
-Our goal is to enable building applications targeting mobile and Web
-simultaneously from a single codebase. However, in order to facilitate safe
-experimentation, during the tech preview Flutter Web is developed in a separate
-namespace from Flutter mobile. So, as of today you cannot run an existing mobile
-Flutter application on the Web without changes.
+Our goal is to enable building applications for mobile and web
+simultaneously from a single codebase. However, to allow experimentation,
+the tech preview Flutter Web is developed in a separate
+namespace. So, as of today an existing mobile
+Flutter application will not run on the web without changes.
 
 This document outlines the changes you'll need to make to existing Flutter code
-to run it on the flutter_web preview.
-
-You cannot add support for the flutter_web preview to an existing application.
-You have to create a copy of your existing application code and modify it to add
-web support.
+to run it on the flutter_web preview. You should create a copy of your
+existing application code and modify it to add web support.
 
 If you're using Git, we suggest creating a web-specific branch in your project
 repository.
@@ -25,7 +22,7 @@ version: 1.0.0
 
 dependencies:
   ## REPLACE
-  ## You need to update your dependencies to use `flutter_web`
+  ## Update your dependencies to use `flutter_web`
   #flutter:
   #  sdk: flutter
   flutter_web: any
@@ -38,14 +35,14 @@ dev_dependencies:
   flutter_web_test: any
 
   ## ADD
-  ## You also need to add these dependencies to enable the Dart web build system
+  ## Add these dependencies to enable the Dart web build system
   build_runner: ^1.2.2
   build_web_compilers: ^1.1.0
 
   test: ^1.3.4
 
 ## REMOVE
-## For the preview, assets are handled differently. You can remove or comment
+## For the preview, assets are handled differently. Remove or comment
 ## out this section. See `Assets` below for more details
 # flutter:
 #   uses-material-design: true
@@ -73,10 +70,10 @@ dependency_overrides:
 
 # `lib/`
 
-You must change imports of `package:flutter` to `package:flutter_web` throughout
+Change imports of `package:flutter` to `package:flutter_web` throughout
 your application code.
 
-You must also change imports of `dart:ui` to `package:flutter_ui/ui.dart`.
+Change imports of `dart:ui` to `package:flutter_ui/ui.dart`.
 
 <!-- TODO: asset references -->
 <!-- TODO: flutter plugin imports -->
@@ -84,13 +81,13 @@ You must also change imports of `dart:ui` to `package:flutter_ui/ui.dart`.
 
 # `web/`
 
-For the preview, you need to create a 
+For the preview, you need to create 
 
 ## `web/index.html` and `web/main.dart`
 
-These files are required to provide an entrypoint for your application.
+These provide an entrypoint for your application.
 In general, you should be able to copy-paste the files below – other than
-changing the `package:` import for the `main.dart` file in your `lib` directory.
+changing the `package:` import to match your application.
 
 ```html
 <!DOCTYPE html>
@@ -107,6 +104,7 @@ changing the `package:` import for the `main.dart` file in your `lib` directory.
 
 ```dart
 import 'package:flutter_web_ui/ui.dart' as ui;
+
 // TODO: change `my_app` to refer to your app package name.
 import 'package:my_app/main.dart' as app;
 
@@ -118,13 +116,13 @@ main() async {
 
 ## `web/assets` (optional)
 
-If your application has assets, they need to be in the `web/assets` directory.
+If the application has assets, they need to be in the `web/assets` directory.
 You may also have to update paths within your source code that reference these
 assets.
 
 ## `web/assets/FontManifest.json` (optional)
 
-If your app has costom fonts, they need to be included in this file.
+If the app has costom fonts, they need to be included in this file.
 
 Example:
 

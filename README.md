@@ -3,11 +3,10 @@
 Welcome to the Flutter Web Early Access Program.
 
 This repository contains the source code for an experimental
-[Flutter](https://flutter.dev/) runtime for the Web. Our goal is to add Web
+[Flutter](https://flutter.dev/) runtime for the web. Our goal is to add web
 support as a first-tier platform in the Flutter SDK alongside iOS and Android.
-The code in this repository represents a stepping stone to that goal by
-providing web-only packages that implement (almost) the entire Flutter API
-surface.
+The code in this repository is a stepping stone to that goal,
+providing web-only packages that implement (almost) the entire Flutter API.
 
 ## Important Notes
 
@@ -26,20 +25,19 @@ surface.
 ### Limitations
 
 We intend to completely support all of Flutter's API and functionality across
-modern browsers – with few, if any, exceptions. However, during this preview,
-there are a number of exceptions:
+modern browsers. However, during this preview, there are a number of exceptions:
 
 * Existing Flutter code, pub packages, and plugins do not work as-is.
-* Not all Flutter APIs are implemented on Flutter Web at this time.
-* Currently, UI built with `flutter_web` will feel like a mobile app when
-  running on a desktop browser. For example:
+* Not all Flutter APIs are implemented on Flutter Web yet.
+* Currently, a UI built with `flutter_web` will feel like a mobile app, even
+  when running on a desktop browser. For example:
   * Mouse wheel scrolling is not yet enabled – use drag instead.
   * Text selection may scroll the view instead.
-* The API is not stable at this stage.
+* The API is not yet stable.
 * Some widgets will be janky as we have not yet optimized all paint operations.
 * The development workflow only works with Chrome at the moment.
 * `flutter_web` does not have a plugin system yet. _Temporarily_, we provide
-  access to `dart:html`, `dart:js`, `dart:svg`, `dart:indexed_db` and other Web
+  access to `dart:html`, `dart:js`, `dart:svg`, `dart:indexed_db` and other web
   libraries that give you access to the vast majority of browser APIs. However,
   expect that these libraries will be replaced by a different plugin API.
 
@@ -60,7 +58,8 @@ browser support matrix is as follows:
 | Edge                        | Developing, feedback welcome |
 | Internet Explorer           | Support not planned          |
 
-`*` Chromium-based browsers include: UC Browser, Samsung Internet Browser, Opera for Android, Edge for Android.
+`*` Chromium-based browsers include: UC Browser, Samsung Internet Browser, Opera
+  for Android, Edge for Android.
 `**` Safari-based iOS browsers include: Chrome for iOS, Edge for iOS.
 
 ## Testing Flutter Web
@@ -68,16 +67,16 @@ browser support matrix is as follows:
 While we are far from code complete, we're ready for you to start developing
 and experimenting with Flutter Web. We are building the product around a number
 of target scenarios, and we'd appreciate your feedback on feature gaps or
-suitability against these scenarios, as well as other scenarios for which you
+suitability for these scenarios, as well as other scenarios for which you
 find Flutter Web useful. The five scenarios that are informing our development
-of Flutter Web to date are:
+to date are:
 
 1. *Standalone app*: an experience built entirely in Flutter Web;
-1. *Content island*: a fixed-size `iframe`-like component that is embedded
+1. *Content island*: a fixed-size "iframe"-like component that is embedded
    within a specific web page and is self-sufficient in content;
 1. *Embedded control*: a reusable web component that can be embedded in multiple
    pages and communicates with other content on the page;
-1. *Flutter mobile web companion*: a 'lite' version of an existing Flutter
+1. *Flutter mobile web companion*: a "light" version of an existing Flutter
    mobile app that can be used in scenarios where a full mobile app is
    undesirable (for example, try-before-buy).
 1. *Embedded Flutter content*: dynamic content for an existing Flutter app
@@ -100,7 +99,7 @@ not yet ready to accept GitHub pull requests at this time. However,
 
 ### Get the Dart web compilers
 
-The Dart web compilers were just recently added to the Flutter dev SDK.
+The Dart web compilers were recently added to the Flutter dev SDK.
 
 To use the Flutter SDK with the flutter_web preview make sure you are on the
 dev channel and have upgraded to at least `v1.3.1`.
@@ -148,7 +147,7 @@ Clone the repository locally.
     Open <http://localhost:8080> in Chrome and you should see `Hello World` in
     red text in the upper-left corner.
 
-    > Note: We plan to support all modern browsers `flutter_web`, but at the
+    > Note: We plan to support all modern browsers in Flutter Web, but at the
       moment the default for the development server generates code that may only
       work in Chrome.
 
@@ -215,7 +214,7 @@ dependency_overrides:
       path: packages/flutter_web_ui
 ```
 
-> Note: again, `github.com/flutter/flutter_web` this is a private repository.
+> Note: again, `github.com/flutter/flutter_web` is a private repository.
   Your git client must be authenticated with your white-listed GitHub alias.
 
 ### Getting (stateless) hot-reload with `webdev`
