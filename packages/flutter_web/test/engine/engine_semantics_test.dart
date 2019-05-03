@@ -63,7 +63,7 @@ void _testEngineSemanticsOwner() {
     expect(semantics().mode, AccessibilityMode.unknown);
   });
 
-  test('auth-enables semantics', () async {
+  test('auto-enables semantics', () async {
     domRenderer.reset(); // triggers `autoEnableOnTap` to be called
     expect(semantics().semanticsEnabled, false);
 

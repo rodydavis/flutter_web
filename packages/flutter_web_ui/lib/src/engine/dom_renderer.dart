@@ -319,17 +319,27 @@ flt-glass-pane * {
     for (html.Element viewportMeta
         in html.document.head.querySelectorAll('meta[name="viewport"]')) {
       if (assertionsEnabled) {
-        print(
-          'WARNING: found an existing <meta name="viewport"> tag. Flutter Web '
-          'uses its own viewport configuration for better compatibility '
-          'with Flutter. This tag will be replaced.',
-        );
+        // Filter out the meta tag that we ourselves placed on the page. This is
+        // to avoid UI flicker during hot restart. Hot restart will clean up the
+        // old meta tag synchronously with the first post-restart frame.
+        if (!viewportMeta.hasAttribute('flt-viewport')) {
+          print(
+            'WARNING: found an existing <meta name="viewport"> tag. Flutter '
+            'Web uses its own viewport configuration for better compatibility '
+            'with Flutter. This tag will be replaced.',
+          );
+        }
       }
       viewportMeta.remove();
     }
 
+    // This removes a previously created meta tag. Note, however, that this does
+    // not remove the meta tag during hot restart. Hot restart resets all static
+    // variables, so this will be null upon hot restart. Instead, this tag is
+    // removed by _clearOnHotRestart.
     _viewportMeta?.remove();
     _viewportMeta = html.MetaElement()
+      ..setAttribute('flt-viewport', '')
       ..name = 'viewport'
       ..content = 'width=device-width, initial-scale=1.0, '
           'maximum-scale=1.0, user-scalable=no';
