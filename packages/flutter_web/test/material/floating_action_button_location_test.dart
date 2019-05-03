@@ -245,7 +245,7 @@ void main() {
       ),
     );
     expect(tester.getRect(find.byType(FloatingActionButton)),
-        Rect.fromLTWH(16.0, 28.0, 56.0, 56.0));
+        rectMoreOrLessEquals(Rect.fromLTWH(16.0, 28.0, 56.0, 56.0)));
   });
 
   testWidgets('End-top floating action button location RTL',
@@ -263,7 +263,7 @@ void main() {
       ),
     );
     expect(tester.getRect(find.byType(FloatingActionButton)),
-        Rect.fromLTWH(16.0, 28.0, 56.0, 56.0));
+        rectMoreOrLessEquals(Rect.fromLTWH(16.0, 28.0, 56.0, 56.0)));
   });
 
   testWidgets('Start-top floating action button location RTL',
@@ -280,8 +280,10 @@ void main() {
         ),
       ),
     );
-    expect(tester.getRect(find.byType(FloatingActionButton)),
-        Rect.fromLTWH(800.0 - 56.0 - 16.0, 28.0, 56.0, 56.0));
+    expect(
+        tester.getRect(find.byType(FloatingActionButton)),
+        rectMoreOrLessEquals(
+            Rect.fromLTWH(800.0 - 56.0 - 16.0, 28.0, 56.0, 56.0)));
   });
 
   testWidgets('End-top floating action button location LTR',
@@ -295,8 +297,10 @@ void main() {
         ),
       ),
     );
-    expect(tester.getRect(find.byType(FloatingActionButton)),
-        Rect.fromLTWH(800.0 - 56.0 - 16.0, 28.0, 56.0, 56.0));
+    expect(
+        tester.getRect(find.byType(FloatingActionButton)),
+        rectMoreOrLessEquals(
+            Rect.fromLTWH(800.0 - 56.0 - 16.0, 28.0, 56.0, 56.0)));
   });
 }
 

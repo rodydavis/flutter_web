@@ -753,7 +753,7 @@ void main() {
     expect(tester.getRect(find.byKey(body)),
         Rect.fromLTRB(0.0, 43.0, 800.0, 348.0));
     expect(tester.getRect(find.byKey(floatingActionButton)),
-        Rect.fromLTRB(36.0, 255.0, 113.0, 332.0));
+        rectMoreOrLessEquals(Rect.fromLTRB(36.0, 255.0, 113.0, 332.0)));
     expect(
         tester.getRect(find.byKey(persistentFooterButton)),
         Rect.fromLTRB(28.0, 357.0, 128.0,
@@ -767,7 +767,7 @@ void main() {
     expect(tester.getRect(find.byKey(insideBody)),
         Rect.fromLTRB(20.0, 43.0, 750.0, 348.0));
     expect(tester.getRect(find.byKey(insideFloatingActionButton)),
-        Rect.fromLTRB(36.0, 255.0, 113.0, 332.0));
+        rectMoreOrLessEquals(Rect.fromLTRB(36.0, 255.0, 113.0, 332.0)));
     expect(tester.getRect(find.byKey(insidePersistentFooterButton)),
         Rect.fromLTRB(28.0, 357.0, 128.0, 447.0));
     expect(tester.getRect(find.byKey(insideDrawer)),
@@ -865,7 +865,7 @@ void main() {
     expect(tester.getRect(find.byKey(body)),
         Rect.fromLTRB(0.0, 43.0, 800.0, 400.0));
     expect(tester.getRect(find.byKey(floatingActionButton)),
-        Rect.fromLTRB(36.0, 307.0, 113.0, 384.0));
+        rectMoreOrLessEquals(Rect.fromLTRB(36.0, 307.0, 113.0, 384.0)));
     expect(
         tester.getRect(find.byKey(persistentFooterButton)),
         Rect.fromLTRB(28.0, 442.0, 128.0,
@@ -877,7 +877,7 @@ void main() {
     expect(tester.getRect(find.byKey(insideBody)),
         Rect.fromLTRB(20.0, 43.0, 750.0, 400.0));
     expect(tester.getRect(find.byKey(insideFloatingActionButton)),
-        Rect.fromLTRB(36.0, 307.0, 113.0, 384.0));
+        rectMoreOrLessEquals(Rect.fromLTRB(36.0, 307.0, 113.0, 384.0)));
     expect(tester.getRect(find.byKey(insidePersistentFooterButton)),
         Rect.fromLTRB(28.0, 442.0, 128.0, 532.0));
     expect(tester.getRect(find.byKey(insideDrawer)),
