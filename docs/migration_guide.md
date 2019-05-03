@@ -1,15 +1,15 @@
 Our goal is to enable building applications for mobile and web
 simultaneously from a single codebase. However, to allow experimentation,
-the tech preview Flutter Web is developed in a separate
+the tech preview Flutter for web is developed in a separate
 namespace. So, as of today an existing mobile
 Flutter application will not run on the web without changes.
 
 This document outlines the changes you'll need to make to existing Flutter code
-to run it on the flutter_web preview. You should create a copy of your
+to run it on the Flutter for web. You should create a copy of your
 existing application code and modify it to add web support.
 
 If you're using Git, we suggest creating a web-specific branch in your project
-repository.
+repository for the time being.
 
 # `pubspec.yaml`
 
@@ -122,7 +122,7 @@ assets.
 
 ## `web/assets/FontManifest.json` (optional)
 
-If the app has costom fonts, they need to be included in this file.
+If the app has custom fonts, they need to be included in this file.
 
 Example:
 

@@ -232,8 +232,11 @@ To use `webdev` with hot-reload, run the following within your `flutter_web`
 project directory:
 
 ```console
-$ flutter packages pub global run webdev serve --hot-reload
+$ flutter packages pub global run webdev serve --auto restart
 ```
+
+You should install version `2.0.4` or later. If you don't install this version
+of `webdev`, update to the latest Flutter SDK in the `dev` channel.
 
 You'll notice a similar output to `flutter packages pub run build_runner serve`
 but now changes to your application code should cause a quick refresh of the
