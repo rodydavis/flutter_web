@@ -130,6 +130,7 @@ mixin SaveStackTracking on EngineCanvas {
   /// Classes that override this method must call `super.clear()`.
   void clear() {
     _saveStack.clear();
+    _clipStack = null;
     _currentTransform = Matrix4.identity();
   }
 
