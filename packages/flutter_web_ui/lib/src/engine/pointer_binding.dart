@@ -99,7 +99,14 @@ abstract class BaseAdapter {
 
   final DomRenderer domRenderer;
   PointerDataCallback _callback;
-  bool _isDown = false;
+  Map<int, bool> _isDownMap = {};
+  bool _isButtonDown(int button) {
+    return _isDownMap[button] == true;
+  }
+
+  void _updateButtonDownState(int button, bool value) {
+    _isDownMap[button] = value;
+  }
 
   BaseAdapter(this._callback, this.domRenderer) {
     _setup();
@@ -134,6 +141,24 @@ abstract class BaseAdapter {
   }
 }
 
+const int _kPrimaryMouseButton = 0x1;
+const int _kSecondaryMouseButton = 0x2;
+
+int _pointerButtonFromHtmlEvent(html.Event event) {
+  if (event is html.PointerEvent) {
+    final html.PointerEvent pointerEvent = event;
+    return pointerEvent.button == 2
+        ? _kSecondaryMouseButton
+        : _kPrimaryMouseButton;
+  } else if (event is html.MouseEvent) {
+    final html.MouseEvent mouseEvent = event;
+    return mouseEvent.button == 2
+        ? _kSecondaryMouseButton
+        : _kPrimaryMouseButton;
+  }
+  return _kPrimaryMouseButton;
+}
+
 /// Adapter class to be used with browsers that support native pointer events.
 class PointerAdapter extends BaseAdapter {
   PointerAdapter(PointerDataCallback callback, DomRenderer domRenderer)
@@ -141,20 +166,31 @@ class PointerAdapter extends BaseAdapter {
 
   void _setup() {
     _addEventListener('pointerdown', (html.Event event) {
-      _isDown = true;
+      int pointerButton = _pointerButtonFromHtmlEvent(event);
+      if (_isButtonDown(pointerButton)) {
+        // TODO(flutter_web): Remove this temporary fix for right click
+        // on web platform once context guesture is implemented.
+        _callback(_convertEventToPointerData(ui.PointerChange.up, event));
+      }
+      _updateButtonDownState(pointerButton, true);
       _callback(_convertEventToPointerData(ui.PointerChange.down, event));
     });
 
     _addEventListener('pointermove', (html.Event event) {
-      if (!_isDown) return;
+      // TODO(flutter_web): During a drag operation pointermove will set
+      // button to -1 as opposed to mouse move which sets it to 2.
+      // This check is currently defaulting to primary button for now.
+      // Change this when context gesture is implemented in flutter framework.
+      if (!_isButtonDown(_pointerButtonFromHtmlEvent(event))) return;
       _callback(_convertEventToPointerData(ui.PointerChange.move, event));
     });
 
     _addEventListener('pointerup', (html.Event event) {
       // The pointer could have been released by a `pointerout` event, in which
       // case `pointerup` should have no effect.
-      if (!_isDown) return;
-      _isDown = false;
+      int pointerButton = _pointerButtonFromHtmlEvent(event);
+      if (!_isButtonDown(pointerButton)) return;
+      _updateButtonDownState(pointerButton, false);
       _callback(_convertEventToPointerData(ui.PointerChange.up, event));
     });
 
@@ -239,18 +275,18 @@ class TouchAdapter extends BaseAdapter {
 
   void _setup() {
     _addEventListener('touchstart', (html.Event event) {
-      _isDown = true;
+      _updateButtonDownState(_kPrimaryMouseButton, true);
       _callback(_convertEventToPointerData(ui.PointerChange.down, event));
     });
 
     _addEventListener('touchmove', (html.Event event) {
       event.preventDefault(); // Prevents standard overscroll on iOS/Webkit.
-      if (!_isDown) return;
+      if (!_isButtonDown(_kPrimaryMouseButton)) return;
       _callback(_convertEventToPointerData(ui.PointerChange.move, event));
     });
 
     _addEventListener('touchend', (html.Event event) {
-      _isDown = false;
+      _updateButtonDownState(_kPrimaryMouseButton, false);
       _callback(_convertEventToPointerData(ui.PointerChange.up, event));
     });
 
@@ -288,17 +324,23 @@ class MouseAdapter extends BaseAdapter {
 
   void _setup() {
     _addEventListener('mousedown', (html.Event event) {
-      _isDown = true;
+      int pointerButton = _pointerButtonFromHtmlEvent(event);
+      if (_isButtonDown(pointerButton)) {
+        // TODO(flutter_web): Remove this temporary fix for right click
+        // on web platform once context guesture is implemented.
+        _callback(_convertEventToPointerData(ui.PointerChange.up, event));
+      }
+      _updateButtonDownState(pointerButton, true);
       _callback(_convertEventToPointerData(ui.PointerChange.down, event));
     });
 
     _addEventListener('mousemove', (html.Event event) {
-      if (!_isDown) return;
+      if (!_isButtonDown(_pointerButtonFromHtmlEvent(event))) return;
       _callback(_convertEventToPointerData(ui.PointerChange.move, event));
     });
 
     _addEventListener('mouseup', (html.Event event) {
-      _isDown = false;
+      _updateButtonDownState(_pointerButtonFromHtmlEvent(event), false);
       _callback(_convertEventToPointerData(ui.PointerChange.up, event));
     });
 
