@@ -115,6 +115,39 @@ void main() {
     expect(text.text.style.fontSize, 20.0);
   });
 
+  testWidgets('Rich text can be styled using TextSpans',
+      (WidgetTester tester) async {
+    const TextStyle normalStyle = TextStyle(fontSize: 20.0);
+    const TextStyle boldStyle =
+        TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold);
+    await tester.pumpWidget(
+      Container(
+        child: RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: 'Hello ',
+                style: normalStyle,
+              ),
+              TextSpan(
+                text: 'bold ',
+                style: boldStyle,
+              ),
+              TextSpan(
+                text: 'World!',
+                style: normalStyle,
+              ),
+            ],
+          ),
+          textDirection: TextDirection.ltr,
+        ),
+      ),
+    );
+
+    final RichText text = tester.firstWidget(find.byType(RichText));
+    expect(text, isNotNull);
+  });
+
   testWidgets('semanticsLabel can override text label',
       (WidgetTester tester) async {
     final SemanticsTester semantics = SemanticsTester(tester);

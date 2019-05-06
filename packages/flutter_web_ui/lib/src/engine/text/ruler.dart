@@ -197,7 +197,7 @@ class TextDimensions {
       // Rich text: deeply copy contents. This is the slow case that should be
       // avoided if fast layout performance is desired.
       final html.Element copy = from.webOnlyGetParagraphElement().clone(true);
-      _element.nodes.addAll(copy.childNodes);
+      _element.children.addAll(copy.children);
     }
   }
 
