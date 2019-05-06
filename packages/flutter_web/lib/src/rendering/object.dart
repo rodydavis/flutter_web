@@ -3704,12 +3704,16 @@ class _SemanticsGeometry {
     }
   }
 
+  // Reduces temporary allocations in _transformRect.
+  static Matrix4 _transformRectTransform;
+
   /// From parent to child coordinate system.
   static Rect _transformRect(
       Rect rect, RenderObject parent, RenderObject child) {
     if (rect == null) return null;
     if (rect.isEmpty) return Rect.zero;
-    final Matrix4 transform = Matrix4.identity();
+    final Matrix4 transform = _transformRectTransform ??= Matrix4.zero();
+    transform.setIdentity();
     parent.applyPaintTransform(child, transform);
     return MatrixUtils.inverseTransformRect(transform, rect);
   }
