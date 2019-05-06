@@ -340,7 +340,13 @@ mixin SaveElementStackTracking on EngineCanvas {
   ///
   /// Classes that override this method must call `super.skew()`.
   void skew(double sx, double sy) {
-    _currentTransform.multiply(Matrix4.skew(sx, sy));
+    // DO NOT USE Matrix4.skew(sx, sy)! It treats sx and sy values as radians,
+    // but in our case they are transform matrix values.
+    final Matrix4 skewMatrix = Matrix4.identity();
+    final Float64List storage = skewMatrix.storage;
+    storage[1] = sy;
+    storage[4] = sx;
+    _currentTransform.multiply(skewMatrix);
   }
 
   /// Multiplies the [currentTransform] matrix by another matrix.

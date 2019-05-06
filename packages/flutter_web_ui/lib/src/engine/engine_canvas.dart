@@ -185,7 +185,11 @@ mixin SaveStackTracking on EngineCanvas {
   ///
   /// Classes that override this method must call `super.skew()`.
   void skew(double sx, double sy) {
-    _currentTransform.multiply(Matrix4.skew(sx, sy));
+    final skewMatrix = Matrix4.identity();
+    final Float64List storage = skewMatrix.storage;
+    storage[1] = sy;
+    storage[4] = sx;
+    _currentTransform.multiply(skewMatrix);
   }
 
   /// Multiplies the [currentTransform] matrix by another matrix.
