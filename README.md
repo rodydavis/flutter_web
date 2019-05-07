@@ -1,4 +1,4 @@
-# Flutter for web
+[![Gitter chat](https://badges.gitter.im/flutter/flutter_web.png)](https://gitter.im/flutter/flutter_web)
 
 Welcome to the code repository for [Flutter for web](https://flutter.dev/web).
 
@@ -80,7 +80,7 @@ Since we are developing this in a separate fork to the main Flutter repo, we are
 not yet ready to accept GitHub pull requests at this time. However,
 [GitHub issues][issue tracker] are very welcome.
 
-[issue tracker]: https://github.com/flutter/flutter/issues
+[issue tracker]: https://goo.gle/flutter_web_issue
 
 ## Getting started
 
